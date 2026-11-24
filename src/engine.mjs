@@ -165,8 +165,8 @@ function makeEngine(){
   function resolve(s,i){
     if(!s.alive||!pending(s)||!Number.isInteger(i)||!pending(s).choices[i])throw Error("Invalid choice.");
     s=copy(s);const e=pending(s),c=e.choices[i];
-    const before={...s.stats},beforeWorth=worth(s),odds=trialChance(s,e,i);s.scenario??={seen:{},counts:{},choices:0,streak:0,last:null};s.scenario.seen[e.id]=(s.scenario.seen[e.id]||0)+1;s.scenario.choices++;
-    const category=eventCategory(e);s.scenario.counts[category]=(s.scenario.counts[category]||0)+1;
+    const before={...s.stats},beforeWorth=worth(s),beforeBonds=new Map(s.people.map(p=>[p.id,p.bond])),odds=trialChance(s,e,i);s.scenario??={seen:{},counts:{},choices:0,streak:0,last:null};s.scenario.seen[e.id]=(s.scenario.seen[e.id]||0)+1;s.scenario.choices++;
+    const category=eventCategory(e);s.scenario.counts[category]=(s.scenario.counts[category]||0)+1;s.scenario.selected??={};s.scenario.selected[e.id+":"+i]=(s.scenario.selected[e.id+":"+i]||0)+1;
     for(let [k,v] of Object.entries(c.effects)){
       if(k==="cash"){if(v<0)bill(s,-v);else s.cash+=v;}
       else if(k==="debt"){if(s.age>=18)s.debt+=v;}
@@ -176,11 +176,12 @@ function makeEngine(){
       else if(k==="jobLoss"&&v>0)s.job=null;
       else if(k==="bond"){let p=relation(s,e.requires)||relation(s,"partner")||relation(s,"parent")||s.people.find(p=>p.alive);if(p)bond(s,p,v,e.title);}
       else change(s,k,v);
-    }s.story??={seen:[],due:[]};if(e.arcStart){s.story.seen.push(e.arcStart);if(i===0)s.story.due.push({id:e.followId,age:s.age+e.delay});}if(e.arcEnd)s.story.due=s.story.due.filter(x=>x.id!==e.id);if(e.trial){const won=rng(s)<odds;s.story.due.push({id:won?e.trial.winId:e.trial.lossId,age:s.age+1});s.scenario.trials=(s.scenario.trials||0)+1;if(won)s.scenario.wins=(s.scenario.wins||0)+1;}
-    s.scenario.last={title:e.title,choice:c.text,category,changes:Object.fromEntries(statNames.filter(k=>s.stats[k]!==before[k]).map(k=>[k,s.stats[k]-before[k]])),netWorth:worth(s)-beforeWorth};
+    }s.story??={seen:[],due:[]};if(e.arcStart){s.story.seen.push(e.arcStart);if(i===0)s.story.due.push({id:e.followId,age:s.age+e.delay});}if(e.arcEnd)s.story.due=s.story.due.filter(x=>x.id!==e.id);if(e.trial){const won=rng(s)<odds;s.story.due.push({id:won?e.trial.winId:e.trial.lossId,age:s.age+1,ambitious:i===0});s.scenario.trials=(s.scenario.trials||0)+1;if(won)s.scenario.wins=(s.scenario.wins||0)+1;}
+    const outcome=s.pendingJourney;if(e.result&&outcome?.id===e.id){if(outcome.ambitious){if(e.result==="success"){change(s,"confidence",6);change(s,"reputation",6);}else{change(s,"confidence",-4);change(s,"stress",5);}}s.pendingJourney=null;}
+    s.scenario.last={title:e.title,choice:c.text,category,changes:Object.fromEntries(statNames.filter(k=>s.stats[k]!==before[k]).map(k=>[k,s.stats[k]-before[k]])),netWorth:worth(s)-beforeWorth,bonds:s.people.filter(p=>beforeBonds.has(p.id)&&p.bond!==beforeBonds.get(p.id)).map(p=>({name:p.name,change:p.bond-beforeBonds.get(p.id)}))};
     s.pending=null;add(s,e.title+": "+c.text+".","decision");return finish(s);
   }
-  function trialChance(s,e,i){if(!e?.trial)return null;return Math.max(.12,Math.min(.92,.15+s.stats[e.trial.stat]*.007+(i===1?.09:0)-Math.max(0,s.stats.stress-60)*.003));}
+  function trialChance(s,e,i){if(!e?.trial)return null;const relevant={knowledge:"technical",performance:"communication",reputation:"communication",creativity:"art",confidence:"communication",kindness:"communication"}[e.trial.stat];const skill=relevant?(s.skills?.[relevant]||0):0;return Math.max(.12,Math.min(.90,.13+s.stats[e.trial.stat]*.0055+skill*.0015+(i===1?.12:0)-Math.max(0,s.stats.stress-45)*.003));}
   function eventCategory(e){return e.category||(e.arcStart||e.arcEnd?"story":({job:"career",business:"business",creator:"fame",partner:"relationship",child:"family",parent:"family",friend:"relationship",pet:"pets"}[e.requires]))||(e.max<=19?"childhood":e.min>=55?"legacy":e.choices.some(c=>Object.keys(c.effects).some(k=>["cash","debt"].includes(k)))?"money":e.choices.some(c=>Object.keys(c.effects).includes("health"))?"health":"personal");}
   function eventWeight(s,e){const seen=s.scenario?.seen?.[e.id]||0;let w=seen===0?7:.35/(1+seen);if(e.arcStart)w*=1.5;if(e.category==="journey")w*=1.45;if(e.requires)w*=1.9;if(e.category)w*=1.5;let category=eventCategory(e);if(s.scenario?.last?.category===category)w*=.42;return w;}
   function drawEvent(s,pool){let weights=pool.map(e=>eventWeight(s,e)),v=rng(s)*weights.reduce((a,b)=>a+b,0);for(let i=0;i<pool.length;i++){v-=weights[i];if(v<=0)return pool[i];}return pool[pool.length-1];}
@@ -216,7 +217,7 @@ function makeEngine(){
       s.alive=false;s.death=s.stats.health===0?"Health complications":"Natural causes";add(s,"Your life ended at "+s.age+".","milestone");return finish(s);
     }
     s.story??={seen:[],due:[]};
-    let due=s.story.due.find(x=>x.age<=s.age);if(due){s.pending=due.id;return finish(s);}
+    let due=s.story.due.find(x=>x.age<=s.age);if(due){s.pending=due.id;s.pendingJourney=events[due.id].result?{id:due.id,ambitious:!!due.ambitious}:null;return finish(s);}
     let pool=events.filter(e=>eligible(s,e)&&!s.recent.includes(e.id));if(!pool.length)pool=events.filter(e=>eligible(s,e));if(pool.length){let e=drawEvent(s,pool);s.pending=e.id;s.recent=[...s.recent,e.id].slice(-12);}return finish(s);
   }
   function commands(s){
@@ -299,7 +300,7 @@ function makeEngine(){
  {id:"explorer",name:"Life explorer",description:"Experience 60 distinct scenarios.",progress:s=>Math.min(100,Math.floor(Object.keys(s.scenario?.seen||{}).length/60*100))},
  {id:"wealth",name:"Million-dollar milestone",description:"Reach a peak net worth of $1 million.",progress:s=>Math.min(100,Math.floor(Math.max(0,s.peakWorth||0)/1000000*100))},
  {id:"wellness",name:"Golden years",description:"Reach age 75 with health and happiness of at least 75.",progress:s=>Math.min(100,Math.floor((Math.min(s.age,75)/75+Math.min(s.stats.health,75)/75+Math.min(s.stats.happiness,75)/75)*100/3))},
- {id:"world",name:"World citizen",description:"Relocate to two different countries during your life.",progress:s=>Math.min(100,(s.relocations||0)*50)}
+ {id:"world",name:"World citizen",description:"Complete two international relocations during your life.",progress:s=>Math.min(100,(s.relocations||0)*50)}
  ];
  function challengeProgress(s){return challenges.map(({progress,...c})=>({...c,progress:progress(s),completed:(s.completedChallenges||[]).includes(c.id)}));}
  const goalProgress=s=>s.goal==="wealth"?Math.min(100,Math.max(0,Math.floor(worth(s)/10000))):s.goal==="family"?Math.min(100,s.people.filter(p=>p.alive&&p.bond>=80).length*25):Math.round((s.stats.health+s.stats.happiness+100-s.stats.stress)/3);

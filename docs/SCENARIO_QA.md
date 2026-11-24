@@ -10,3 +10,7 @@ Four strategies, 250 lives each. Each chooses a deterministic action pattern, wi
 | creator | 22498 | 0.56% | 91 | 839 | 704 | 725 |
 
 Distinct event coverage across strategies: 278/278. Existing event IDs are preserved. Fictional economy and health models are simplified. Actual playtest and comparative user study remain required before claiming superiority over a competitor.
+
+## Final risk tuning
+
+A subsequent 500-life policy-assisted run after reducing trial success odds and adding real ambitious-route bonuses/penalties: 44920 decisions, 0.45% repetition, 278/278 event coverage, 1689 trials, 1198 wins (70.9%). This is a different test cohort from the table above.
