@@ -1,6 +1,6 @@
 # Lifely
 
-An original, offline, choice-driven life simulator. This repository is the **0.2.0 playable foundation**, not an App Store-ready or feature-parity release.
+An original, offline, choice-driven life simulator. This repository is the **0.3.0 playable development version**, not an App Store-ready or feature-parity release.
 
 ## Play and build
 Use Node 22.13+ and npm. Install dependencies, align the Expo versions and run the tests:
@@ -15,7 +15,7 @@ On macOS with Xcode, use `npm run ios`. To run in a browser, `npm run web`. Loca
 
 ## Implemented
 - Character name, six fictionalized country economies, three starting backgrounds and personal goals.
-- 278 original event cards (626 choices), including 20 optional two-stage story threads and 12 branching skill-dependent journeys; age-gated and context-gated selection, deterministic random state and recent-event suppression.
+- 308 original event cards (686 choices), including 20 optional two-stage story threads and 12 branching skill-dependent journeys; age-gated and context-gated selection, deterministic random state and recent-event suppression.
 - School clubs, animal companions, a creator audience with royalties, four business sectors, country relocation and a changing economic climate.
 - Three trainable skill categories, health conditions and medical support.
 - 30 careers, four education levels, promotion and job loss; business ownership, retirement and pension.
@@ -42,3 +42,7 @@ All game events are original. No BitLife code, branding or assets are included.
 Latest scenario QA: 1,000 seeded policy-assisted lifetimes, 89607 decisions, 230/230 distinct cards observed, 2.63% repeated decisions, 10632 third-option choices. These figures describe automated simulation, not human enjoyment or comparative market quality. Browser CI is pinned to Ubuntu 24.04 to address the previous Playwright installation error.
 
 Branching journeys now have preparation, a skill-dependent trial and distinct success/setback cards. Trial odds are displayed and match the pre-choice state. Four 250-life automated strategies observed 278/278 event cards; see docs/SCENARIO_QA.md. These are simulation metrics, not ratings of entertainment value.
+
+## 0.3.0: Living World, Special Careers and Life Sagas
+
+Ten special careers with profession-specific outcomes, five ranks each, preparation, estimated success odds, salaries, contracts and other career-specific records. Independently evolving NPCs have education, ambitions, personalities, jobs, savings, debts, promotion, unemployment, trust and rivalry; financial support transfers actual funds. Six character-linked sagas have four chapters and alternate endings, with six to eight years of scheduled progression (delays possible when other events are pending). Existing version-2 saves and event IDs are retained; missing profile fields initialize on interaction or aging. The game remains fictional, offline and single-player. Special careers use a shared action/odds framework with specialized outcomes, not ten separate fully developed mini-games. No native signed build or comparative human playtest has been completed.
