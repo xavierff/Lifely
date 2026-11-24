@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import E from '../src/engine.mjs';
+test('1000 full lifetimes preserve invariants',()=>{for(let i=1;i<=1000;i++){let s=E.createLife({seed:i,country:i%6});while(s.alive){if(s.pending!==null)s=E.resolve(s,i%2);else{if(s.age>=18&&s.age<60&&!s.job&&!s.retired&&!s.business){let job=E.commands(s).find(c=>c.id.startsWith('job:')&&c.enabled);if(job)s=E.act(s,job.id);}if(s.actions&&s.stats.stress>40)s=E.act(s,'rest');s=E.ageUp(s);}assert.ok(E.validate(s));}assert.ok(s.age<=110);}});
+test('same seed, immutable state and save roundtrip',()=>{let s=E.createLife({seed:42});assert.deepEqual(E.ageUp(s),E.ageUp(s));assert.equal(s.age,0);assert.ok(E.validate(JSON.parse(JSON.stringify(s))));assert.equal(E.validate({version:2}),false);});
+test('asset accounting and inheritance',()=>{let s=E.createLife({seed:9});s.age=30;s.cash=500000;s.stats.knowledge=90;s=E.act(s,'buy:house');assert.equal(E.worth(s),500000);s=E.act(s,'invest:10000');assert.equal(E.worth(s),500000);s=E.act(s,'date');s.actions=3;s=E.act(s,'child');let child=s.people.find(p=>p.role==='child');s.alive=false;s.pending=null;let heir=E.legacy(s,child.id);assert.equal(heir.generation,2);assert.equal(heir.age,child.age);assert.equal(heir.cash,E.worth(s));assert.ok(E.validate(heir));});
+test('gates and decisions',()=>{let s=E.createLife({seed:42});assert.throws(()=>E.act(s,'buy:house'));s=E.ageUp(s);assert.throws(()=>E.ageUp(s));assert.throws(()=>E.resolve(s,99));assert.equal(E.resolve(s,0).pending,null);});
+test('content identifiers and choice coverage',()=>{assert.equal(new Set(E.events.map(e=>e.id)).size,E.events.length);assert.ok(E.events.length>=60);for(let e of E.events){assert.equal(e.choices.length,2);assert.ok(e.min<=e.max);}});
