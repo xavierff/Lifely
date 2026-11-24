@@ -15,7 +15,8 @@ On macOS with Xcode, use `npm run ios`. To run in a browser, `npm run web`. Loca
 
 ## Implemented
 - Character name, six fictionalized country economies, three starting backgrounds and personal goals.
-- 130 original event cards (260 choices), including 20 optional two-stage story threads; age-gated and context-gated selection, deterministic random state and recent-event suppression.
+- 160 original event cards (320 choices), including 20 optional two-stage story threads; age-gated and context-gated selection, deterministic random state and recent-event suppression.
+- School clubs, animal companions, a creator audience with royalties, four business sectors, country relocation and a changing economic climate.
 - Three trainable skill categories, health conditions and medical support.
 - 30 careers, four education levels, promotion and job loss; business ownership, retirement and pension.
 - Household costs, tax, debt and interest, investments, property, rent, asset sales and annual statements.
@@ -24,7 +25,7 @@ On macOS with Xcode, use `npm run ios`. To run in a browser, `npm run web`. Loca
 - Mobile safe-area aware UI, five tabs, decision gates, three independent local save slots, ordered writes, previous-save recovery and explicit new-life flow.
 
 ## Verification
-The expanded engine was also exercised on 1,000 complete lives with 93,291 choices, 17,156 delayed story follow-ups, 2,217 medical actions and 13,000 skill actions. The core engine was exercised in the authoring runtime on 1,000 seeded complete lives, 92,587 choices, plus deterministic replay, accounting, inheritance and invalid-action checks. The committed Node test suite reproduces those checks. Native dependency installation, bundling, UI/device tests, app signing and store submission have not been performed. The prior Life Chapters save format is not imported; this is a fresh Lifely schema.
+The expanded engine was also exercised on 1,000 complete lives with 93,291 choices, 17,156 delayed story follow-ups, 2,217 medical actions and 13,000 skill actions. The core engine was exercised in the authoring runtime on 1,000 seeded complete lives, 92,587 choices, plus deterministic replay, accounting, inheritance and invalid-action checks. The committed Node test suite reproduces those checks. Earlier GitHub Actions commits passed dependency installation, Expo dependency alignment and Android/iOS/web bundle export. Device tests, signing and store submission have not been performed. The prior Life Chapters save format is not imported; this is a fresh Lifely schema.
 
 ## Release gates
 - Expand original event catalog and long-lived narrative chains; add more job-specific mechanics, school clubs, health conditions, location differences, business depth and diverse household scenarios.
