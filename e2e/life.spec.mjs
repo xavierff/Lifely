@@ -1,3 +1,4 @@
+import E from '../src/engine.mjs';
 import {test,expect} from '@playwright/test';
 test('create a life, resolve a year, restore and switch slots',async({page})=>{
  await page.goto('/');
@@ -23,4 +24,35 @@ test('create a life, resolve a year, restore and switch slots',async({page})=>{
  await page.getByRole('button',{name:/Slot 1/}).click();
  await expect(page.getByText('Ada',{exact:true})).toBeVisible();
  await expect(page.getByTestId('advance-year')).toContainText('Age 2');
+});
+
+test('special career and NPC world are accessible and persist',async({page})=>{
+ let s=E.createLife({name:'Ari',seed:99});s.age=25;s.cash=100000;s.education=2;s.stats.health=90;
+ await page.goto('/');
+ await page.evaluate(save=>{localStorage.setItem('lifely.save.v2',JSON.stringify(save));localStorage.setItem('lifely.active.slot','1');},s);
+ await page.reload();await expect(page.getByText('Ari',{exact:true})).toBeVisible();
+ await page.getByText('Work',{exact:true}).click();
+ await page.getByRole('button',{name:/Pursue Professional athlete/}).click();
+ await expect(page.getByText('Rookie',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Train with coach/}).click();
+ await expect(page.getByText('Preparation',{exact:true})).toBeVisible();
+ await expect(page.getByText(/LOCAL LIFE/)).toBeVisible();
+ await page.getByText('People',{exact:true}).click();
+ await expect(page.getByText('Trust',{exact:true}).first()).toBeVisible();
+ await page.getByRole('button',{name:/Offer financial help/}).first().click();
+ await expect(page.getByText(/Received financial support/).first()).toBeVisible();
+ await expect(page.getByText(/LOCAL LIFE/)).toBeVisible();
+ await page.reload();await expect(page.getByText('Ari',{exact:true})).toBeVisible();
+ await page.getByText('Work',{exact:true}).click();await expect(page.getByText('Rookie',{exact:true})).toBeVisible();
+});
+test('named saga shows its participant and survives a reload',async({page})=>{
+ let s=E.createLife({name:'Mika',seed:44});s.age=25;s.cash=100000;s=E.act(s,'date');const p=s.people.find(x=>x.role==='partner');const e=E.events.find(x=>x.saga?.id==='partnership'&&x.saga.stage==='start');s.pending=e.id;s.pendingSagaPerson=p.id;
+ await page.goto('/');await page.evaluate(save=>localStorage.setItem('lifely.save.v2',JSON.stringify(save)),s);await page.reload();
+ const decision=page.getByTestId('life-decision');await expect(decision).toContainText(p.name);
+ await decision.getByRole('button').first().click();
+ await expect(decision).toHaveCount(0);await expect(page.getByText(/LOCAL LIFE/)).toBeVisible();
+ await page.getByText('More',{exact:true}).click();
+ await expect(page.getByText('A life built together',{exact:true})).toBeVisible();
+ await page.reload();await page.getByText('More',{exact:true}).click();
+ await expect(page.getByText('A life built together',{exact:true})).toBeVisible();
 });
