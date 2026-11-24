@@ -15,7 +15,8 @@ On macOS with Xcode, use `npm run ios`. To run in a browser, `npm run web`. Loca
 
 ## Implemented
 - Character name, six fictionalized country economies, three starting backgrounds and personal goals.
-- 70 original branching event cards (140 choices); age-gated and context-gated selection, deterministic random state and recent-event suppression.
+- 130 original event cards (260 choices), including 20 optional two-stage story threads; age-gated and context-gated selection, deterministic random state and recent-event suppression.
+- Three trainable skill categories, health conditions and medical support.
 - 30 careers, four education levels, promotion and job loss; business ownership, retirement and pension.
 - Household costs, tax, debt and interest, investments, property, rent, asset sales and annual statements.
 - Individual family and friend bonds, memory logs, partner, marriage, separation, children, aging and death.
@@ -23,7 +24,7 @@ On macOS with Xcode, use `npm run ios`. To run in a browser, `npm run web`. Loca
 - Mobile safe-area aware UI, five tabs, decision gates, local save/restore and explicit new-life flow.
 
 ## Verification
-The core engine was exercised in the authoring runtime on 1,000 seeded complete lives, 92,587 choices, plus deterministic replay, accounting, inheritance and invalid-action checks. The committed Node test suite reproduces those checks. Native dependency installation, bundling, UI/device tests, app signing and store submission have not been performed. The prior Life Chapters save format is not imported; this is a fresh Lifely schema.
+The expanded engine was also exercised on 1,000 complete lives with 93,291 choices, 17,156 delayed story follow-ups, 2,217 medical actions and 13,000 skill actions. The core engine was exercised in the authoring runtime on 1,000 seeded complete lives, 92,587 choices, plus deterministic replay, accounting, inheritance and invalid-action checks. The committed Node test suite reproduces those checks. Native dependency installation, bundling, UI/device tests, app signing and store submission have not been performed. The prior Life Chapters save format is not imported; this is a fresh Lifely schema.
 
 ## Release gates
 - Expand original event catalog and long-lived narrative chains; add more job-specific mechanics, school clubs, health conditions, location differences, business depth and diverse household scenarios.
