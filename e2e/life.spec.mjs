@@ -1,0 +1,26 @@
+import {test,expect} from '@playwright/test';
+test('create a life, resolve a year, restore and switch slots',async({page})=>{
+ await page.goto('/');
+ await page.getByRole('textbox',{name:'Character name'}).fill('Ada');
+ await page.getByRole('button',{name:'Begin my life'}).click();
+ await expect(page.getByText('Ada',{exact:true})).toBeVisible();
+ await page.getByTestId('advance-year').click();
+ const decision=page.getByTestId('life-decision');
+ await expect(decision).toBeVisible();
+ await decision.getByRole('button').first().click();
+ await expect(decision).toHaveCount(0);
+ await expect(page.getByText(/LOCAL LIFE/)).toBeVisible();
+ await page.reload();
+ await expect(page.getByText('Ada',{exact:true})).toBeVisible();
+ await expect(page.getByTestId('advance-year')).toContainText('Age 2');
+ await page.getByText('More',{exact:true}).click();
+ await page.getByRole('button',{name:/Slot 2/}).click();
+ await page.getByRole('textbox',{name:'Character name'}).fill('Ben');
+ await page.getByRole('button',{name:'Begin my life'}).click();
+ await expect(page.getByText('Ben',{exact:true})).toBeVisible();
+ await expect(page.getByText(/LOCAL LIFE/)).toBeVisible();
+ await page.getByText('More',{exact:true}).click();
+ await page.getByRole('button',{name:/Slot 1/}).click();
+ await expect(page.getByText('Ada',{exact:true})).toBeVisible();
+ await expect(page.getByTestId('advance-year')).toContainText('Age 2');
+});

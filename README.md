@@ -22,15 +22,15 @@ On macOS with Xcode, use `npm run ios`. To run in a browser, `npm run web`. Loca
 - Household costs, tax, debt and interest, investments, property, rent, asset sales and annual statements.
 - Individual family and friend bonds, memory logs, partner, marriage, separation, children, aging and death.
 - Continue as a living child at their current age with a simplified estate inheritance; achievement and ancestor summaries.
-- Mobile safe-area aware UI, five tabs, decision gates, three independent local save slots, ordered writes, previous-save recovery and explicit new-life flow.
+- Original app icon and Android adaptive icon, mobile safe-area aware UI, five tabs, decision gates, three independent local save slots, ordered writes, previous-save recovery and explicit new-life flow.
 
 ## Verification
-The expanded engine was also exercised on 1,000 complete lives with 93,291 choices, 17,156 delayed story follow-ups, 2,217 medical actions and 13,000 skill actions. The core engine was exercised in the authoring runtime on 1,000 seeded complete lives, 92,587 choices, plus deterministic replay, accounting, inheritance and invalid-action checks. The committed Node test suite reproduces those checks. Earlier GitHub Actions commits passed dependency installation, Expo dependency alignment and Android/iOS/web bundle export. Device tests, signing and store submission have not been performed. The prior Life Chapters save format is not imported; this is a fresh Lifely schema.
+The expanded engine was also exercised on 1,000 complete lives with 93,291 choices, 17,156 delayed story follow-ups, 2,217 medical actions and 13,000 skill actions. The core engine was exercised in the authoring runtime on 1,000 seeded complete lives, 92,587 choices, plus deterministic replay, accounting, inheritance and invalid-action checks. The committed Node test suite reproduces those checks. Earlier GitHub Actions commits passed dependency installation, Expo dependency alignment and Android/iOS/web bundle export. A browser end-to-end test for age progression, saving and switching slots is now included in CI; check its actual status under Actions. Device tests, signing and store submission have not been performed. The prior Life Chapters save format is not imported; this is a fresh Lifely schema.
 
 ## Release gates
 - Expand original event catalog and long-lived narrative chains; add more job-specific mechanics, school clubs, health conditions, location differences, business depth and diverse household scenarios.
 - Balance salary/cost progression, education accessibility and estate mechanics; current country data is fictional, displayed in USD equivalents.
-- Add portable save export/import, accessibility testing, app icon/splash, sound and optional haptics.
+- Add portable save export/import, accessibility testing, native launch screen, sound and optional haptics.
 - Run npm install and lock dependencies, run expo-doctor and native exports, play-test small/large phones and tablets, fix failures and verify signed releases.
 - Complete content review, privacy policy, app age rating, app name/trademark clearance, store metadata and screenshots. Monetization is intentionally not implemented.
 - Do not market as superior to BitLife until user testing supports that claim.

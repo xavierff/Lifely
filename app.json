@@ -13,10 +13,15 @@
     },
     "android": {
       "package": "com.xavierff.lifely",
-      "versionCode": 1
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#101C1B"
+      }
     },
     "web": {
       "bundler": "metro"
-    }
+    },
+    "icon": "./assets/icon.png"
   }
 }
