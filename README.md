@@ -15,7 +15,7 @@ On macOS with Xcode, use `npm run ios`. To run in a browser, `npm run web`. Loca
 
 ## Implemented
 - Character name, six fictionalized country economies, three starting backgrounds and personal goals.
-- 230 original event cards (530 choices), including 20 optional two-stage story threads; age-gated and context-gated selection, deterministic random state and recent-event suppression.
+- 278 original event cards (626 choices), including 20 optional two-stage story threads and 12 branching skill-dependent journeys; age-gated and context-gated selection, deterministic random state and recent-event suppression.
 - School clubs, animal companions, a creator audience with royalties, four business sectors, country relocation and a changing economic climate.
 - Three trainable skill categories, health conditions and medical support.
 - 30 careers, four education levels, promotion and job loss; business ownership, retirement and pension.
@@ -40,3 +40,5 @@ The expanded engine was also exercised on 1,000 complete lives with 93,291 choic
 All game events are original. No BitLife code, branding or assets are included.
 
 Latest scenario QA: 1,000 seeded policy-assisted lifetimes, 89607 decisions, 230/230 distinct cards observed, 2.63% repeated decisions, 10632 third-option choices. These figures describe automated simulation, not human enjoyment or comparative market quality. Browser CI is pinned to Ubuntu 24.04 to address the previous Playwright installation error.
+
+Branching journeys now have preparation, a skill-dependent trial and distinct success/setback cards. Trial odds are displayed and match the pre-choice state. Four 250-life automated strategies observed 278/278 event cards; see docs/SCENARIO_QA.md. These are simulation metrics, not ratings of entertainment value.
