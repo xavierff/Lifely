@@ -200,7 +200,7 @@ export function worldYear(s,ctx){
  if(e.path||e.releases){e.fame=cl(e.fame-(e.path?2:5));const royalty=Math.round(e.catalog*340*c.salary*(.5+e.fame/75));income+=royalty;if(e.path&&e.fame>=65&&rng(s)<.08){e.awards++;news(s,'Your latest creative work received industry recognition.',ctx,'entertainment');}}
  if(t.sport){t.form=cl(t.form-3);if(t.injury)t.injury--;if(t.contractYears){income+=Math.round((8000+t.rank*4000)*c.salary);t.contractYears--;}if(s.age>47){t.sport=null;t.contractYears=0;news(s,'Ended active sporting career after years of competition.',ctx,'sports');}}
  if(p.party){p.approval=cl(p.approval-1+(s.stats.reputation>75?2:0)-(s.record?1:0));if(p.term){income+=Math.round(34000*c.salary);p.term--;if(!p.term){p.office=null;news(s,'Your fictional term in office ended.',ctx,'politics');}}if(p.office&&w.entertainment.fame>=65)p.approval=cl(p.approval+1);}
- if(r.title){r.years++;r.support=cl(r.support-2+(d.reputation>=75?1:0));income+=Math.round((r.title==='Monarch'?15000:4500)*c.salary);if(s.record)r.support=cl(r.support-3);}
+ if(r.title){r.years++;r.support=cl(r.support-2+(d.reputation>=75?1:0));if(s.age>=18)income+=Math.round((r.title==='Monarch'?15000:4500)*c.salary);if(s.record)r.support=cl(r.support-3);}
  if(d.trustFund){trustInterest=Math.round(d.trustFund*.015);d.trustFund+=trustInterest;}
  if(d.mentored.length>=2&&s.age%5===0)d.reputation=cl(d.reputation+2);
  // Yearly world chronicle: connected developments, not independent randomized rewards.

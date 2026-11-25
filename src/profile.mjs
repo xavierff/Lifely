@@ -20,6 +20,21 @@ export const ribbons=[
 {id:'early',name:'An Unfinished Chapter',description:'Life ends before age 30.',test:s=>s.age<30},
 {id:'debt',name:'Weathered Storms',description:'Finish with substantial net debt.',test:(s,w)=>w< -25000},
 {id:'ordinary',name:'Everyday Legacy',description:'Complete a lifetime.',test:()=>true}];
+const worldRibbons=[
+{id:"worldstar",name:"Star of the Screen",description:"Finish with at least five creative releases and 80 fame.",test:s=>(s.world?.entertainment?.releases||0)>=5&&(s.world?.entertainment?.fame||0)>=80},
+{id:"grandchampion",name:"Grand Champion",description:"Win two sports trophies and eight matches.",test:s=>(s.world?.sports?.trophies||0)>=2&&(s.world?.sports?.wins||0)>=8},
+{id:"publicvoice",name:"The People's Voice",description:"Win two elections and maintain 75 approval.",test:s=>(s.world?.politics?.wins||0)>=2&&(s.world?.politics?.approval||0)>=75},
+{id:"crown",name:"The Crown and the People",description:"Accept the crown and perform 8 duties.",test:s=>(s.world?.royalty?.successions||0)>=1&&(s.world?.royalty?.duties||0)>=8},
+{id:"passport",name:"Passport of Stories",description:"Visit 12 different cities across four countries.",test:s=>(s.world?.travel?.stamps?.length||0)>=12&&(s.world?.travel?.visitedCountries?.length||0)>=4},
+{id:"familyfund",name:"Family Steward",description:"Preserve $20,000 in the family trust and mentor two children.",test:s=>(s.world?.dynasty?.trustFund||0)>=20000&&(s.world?.dynasty?.mentored?.length||0)>=2},
+{id:"spotlight",name:"A Public Life",description:"Succeed in entertainment and politics.",test:s=>(s.world?.entertainment?.fame||0)>=65&&(s.world?.politics?.wins||0)>=1},
+{id:"scholarathlete",name:"Scholar Athlete",description:"Graduate and win a sporting trophy.",test:s=>s.education>=2&&(s.world?.sports?.trophies||0)>=1},
+{id:"travelking",name:"Ambassador of Stories",description:"Hold a royal title and visit at least eight destinations.",test:s=>!!s.world?.royalty?.title&&(s.world?.travel?.stamps?.length||0)>=8},
+{id:"heritage",name:"Guardian of Family History",description:"Record ten family archives and know two ancestors.",test:s=>(s.world?.dynasty?.archives||0)>=10&&(s.world?.dynasty?.ancestors?.length||0)>=2},
+{id:"benevolent",name:"Civic Benefactor",description:"Improve civic approval and make generous family contributions.",test:s=>(s.world?.politics?.approval||0)>=85&&(s.world?.dynasty?.trustFund||0)>=12000},
+{id:"sixpaths",name:"A Life Without Limits",description:"Try every one of the six connected paths.",test:s=>!!s.world?.entertainment?.releases&&!!s.world?.sports?.sport&&!!s.world?.politics?.party&&!!s.world?.royalty?.title&&(s.world?.travel?.stamps?.length||0)>0&&(s.world?.dynasty?.archives||0)>0}
+];
+ribbons.unshift(...worldRibbons);
 export function lifeEnding(s,w){return ribbons.find(r=>r.test(s,w))||ribbons[ribbons.length-1];}
 export function emptyProfile(){return {version:1,completed:{},achievements:[],challenges:[],ribbons:[],bestAge:0,bestWorth:0,bestGeneration:0};}
 export function validProfile(p){return !!p&&p.version===1&&p.completed&&typeof p.completed==='object'&&['achievements','challenges','ribbons'].every(k=>Array.isArray(p[k])&&p[k].every(x=>typeof x==='string'))&&['bestAge','bestWorth','bestGeneration'].every(k=>Number.isFinite(p[k])&&p[k]>=0)&&Object.values(p.completed).every(x=>x&&Number.isInteger(x.age)&&typeof x.ribbon==='string');}
