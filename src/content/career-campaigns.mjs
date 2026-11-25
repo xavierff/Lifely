@@ -11,15 +11,15 @@ export const careerCampaignTypes=[
    {label:'Chase a commercial trend',detail:'$800 · stronger publicity, creative friction',cost:800,quality:1,team:-8,reach:17,risk:13}]},
   {title:'The casting decision',prompt:'The lead role is unsettled. An established star draws attention; a new performer offers an unexpected perspective.',choices:[
    {label:'Hold open auditions with fair pay',detail:'$650 · diverse cast and collaboration',cost:650,quality:13,team:13,reach:5,risk:-2},
-   {label:'Develop your existing ensemble',detail:'$180 · cohesion over attention',cost:180,quality:7,team:10,reach:1,risk:0},
+   {label:'Develop your existing ensemble',detail:'Use existing resources · cohesion over attention',cost:0,quality:7,team:10,reach:1,risk:0},
    {label:'Hire a famous but demanding lead',detail:'$1,200 · high reach, higher stakes',cost:1200,quality:3,team:-13,reach:21,risk:15}]},
   {title:'A troubled shoot',prompt:'Unexpected scheduling problems threaten the last week of filming. Your team expects a decision.',choices:[
    {label:'Reschedule safely and pay the crew',detail:'$900 · protect quality and morale',cost:900,quality:15,team:12,reach:0,risk:-8},
-   {label:'Reduce scope and complete essential scenes',detail:'$250 · balanced compromise',cost:250,quality:5,team:5,reach:0,risk:1},
+   {label:'Reduce scope and complete essential scenes',detail:'Use the current budget · balanced compromise',cost:0,quality:5,team:5,reach:0,risk:1},
    {label:'Rush overtime without consultation',detail:'No extra upfront budget · major fatigue',cost:0,quality:-14,team:-20,reach:9,risk:25}]},
   {title:'Premiere night',prompt:'The film is finished. Distributors want a plan for audiences, costs and how collaborators receive credit.',choices:[
    {label:'Festival premiere with shared credit',detail:'$700 · reviews and long-term reputation',cost:700,quality:9,team:10,reach:13,risk:0},
-   {label:'Release slowly to a loyal audience',detail:'$200 · less reach, sustainable support',cost:200,quality:4,team:6,reach:7,risk:-3},
+   {label:'Release slowly to a loyal audience',detail:'No extra distribution spend · loyal audience',cost:0,quality:4,team:6,reach:7,risk:-3},
    {label:'Spend heavily on an aggressive launch',detail:'$1,450 · immediate reach, higher downside',cost:1450,quality:0,team:-7,reach:25,risk:15}]}]},
  {id:'sports',icon:'🏆',title:'Play a competitive season',subtitle:'Training to championship',entry:350,
  stages:[
@@ -43,11 +43,11 @@ export const careerCampaignTypes=[
  stages:[
   {title:'The local platform',prompt:'Your fictional civic party must decide which public need to prioritize during the campaign.',choices:[
    {label:'Listen to residents and publish priorities',detail:'$250 · trust and representative policy',cost:250,quality:12,team:11,reach:5,risk:-6},
-   {label:'Publish a concise, costed proposal',detail:'$150 · clarity and credibility',cost:150,quality:9,team:7,reach:3,risk:-3},
+   {label:'Publish a concise, costed proposal',detail:'Use volunteers · clarity and credibility',cost:0,quality:9,team:7,reach:3,risk:-3},
    {label:'Promise everything without a budget',detail:'No fee · short-term attention',cost:0,quality:-8,team:-6,reach:18,risk:22}]},
   {title:'Building a coalition',prompt:'A civic opponent offers to cooperate on one issue, but your volunteers distrust the offer.',choices:[
    {label:'Negotiate a transparent issue agreement',detail:'$200 · bipartisan credibility',cost:200,quality:9,team:14,reach:8,risk:-4},
-   {label:'Host a public panel on the proposal',detail:'$350 · broader feedback',cost:350,quality:8,team:8,reach:11,risk:0},
+   {label:'Host a public panel on the proposal',detail:'Use a community venue · broader feedback',cost:0,quality:8,team:8,reach:11,risk:0},
    {label:'Attack the rival personally',detail:'No fee · polarizing coverage',cost:0,quality:-9,team:-9,reach:14,risk:23}]},
   {title:'The candidate debate',prompt:'A moderator asks a difficult question about your party’s record. The fictional political rival challenges your credibility.',choices:[
    {label:'Acknowledge gaps and explain the plan',detail:'Evidence and accountability',cost:0,quality:14,team:10,reach:8,risk:-7},
@@ -55,13 +55,13 @@ export const careerCampaignTypes=[
    {label:'Spread an unverified accusation',detail:'Attention with serious reputational risk',cost:0,quality:-12,team:-11,reach:17,risk:30}]},
   {title:'Election week',prompt:'Volunteers report competing demands. The final push must stay accountable and respect the fictional vote.',choices:[
    {label:'Organize accessible, lawful outreach',detail:'$500 · trust and broad participation',cost:500,quality:12,team:13,reach:13,risk:-6},
-   {label:'Prioritize a few well-planned events',detail:'$170 · efficient operations',cost:170,quality:8,team:9,reach:7,risk:-2},
+   {label:'Prioritize a few well-planned events',detail:'Volunteer-led · efficient operations',cost:0,quality:8,team:9,reach:7,risk:-2},
    {label:'Stage a sensational media stunt',detail:'$250 · headline reach, unpredictable fallout',cost:250,quality:-4,team:-6,reach:25,risk:21}]}]},
  {id:'medical',icon:'🩺',title:'Coordinate a clinical case',subtitle:'Fictional team-based patient care',entry:250,
  stages:[
   {title:'The first assessment',prompt:'A fictional patient arrives with unclear records. Your healthcare team needs a safe and respectful plan.',choices:[
    {label:'Review records and consult appropriate specialists',detail:'$160 · accuracy and teamwork',cost:160,quality:15,team:12,reach:2,risk:-8},
-   {label:'Request a structured multidisciplinary review',detail:'$250 · careful coordination',cost:250,quality:12,team:15,reach:2,risk:-7},
+   {label:'Request a structured multidisciplinary review',detail:'Use existing team · careful coordination',cost:0,quality:12,team:15,reach:2,risk:-7},
    {label:'Rely on an unverified quick assumption',detail:'No fee · unsafe shortcuts in this fictional case',cost:0,quality:-15,team:-9,reach:8,risk:24}]},
   {title:'Consent and communication',prompt:'The patient and family have different expectations. Your team must communicate options within professional boundaries.',choices:[
    {label:'Seek informed consent with clear explanations',detail:'Time-intensive, protects patient autonomy',cost:0,quality:15,team:12,reach:3,risk:-8},
@@ -69,7 +69,7 @@ export const careerCampaignTypes=[
    {label:'Dismiss concerns to move quickly',detail:'Fictional reputational and safety risks',cost:0,quality:-13,team:-14,reach:8,risk:23}]},
   {title:'An unexpected complication',prompt:'The fictional case becomes more complex than originally expected, and the team needs to reassess.',choices:[
    {label:'Escalate to the appropriately trained senior team',detail:'$280 · safer coordinated response',cost:280,quality:15,team:14,reach:2,risk:-8},
-   {label:'Pause and review the plan collaboratively',detail:'$100 · careful review',cost:100,quality:12,team:9,reach:2,risk:-6},
+   {label:'Pause and review the plan collaboratively',detail:'Use existing team · careful review',cost:0,quality:12,team:9,reach:2,risk:-6},
    {label:'Avoid documenting the concern',detail:'Unsafe fictional shortcut with severe consequences',cost:0,quality:-18,team:-13,reach:11,risk:30}]},
   {title:'Follow-up and learning',prompt:'The episode is ending. Your team must arrange safe follow-up and learn from the experience.',choices:[
    {label:'Document learning and plan patient follow-up',detail:'$160 · better systems and confidence',cost:160,quality:16,team:13,reach:3,risk:-8},
@@ -79,19 +79,19 @@ export const careerCampaignTypes=[
  stages:[
   {title:'The market problem',prompt:'Your company has resources for one initiative. Customers need something reliable, while competitors chase quick growth.',choices:[
    {label:'Interview customers before committing',detail:'$320 · reliable demand evidence',cost:320,quality:13,team:7,reach:9,risk:-6},
-   {label:'Test an affordable small pilot',detail:'$200 · controlled experimentation',cost:200,quality:11,team:6,reach:5,risk:-4},
+   {label:'Test an affordable small pilot',detail:'Use existing resources · controlled experiment',cost:0,quality:11,team:6,reach:5,risk:-4},
    {label:'Copy a fashionable rival product',detail:'$100 · initial buzz, weak differentiation',cost:100,quality:-8,team:-6,reach:19,risk:19}]},
   {title:'The supplier decision',prompt:'Two suppliers offer different prices and working conditions. Your team asks what values should guide the contract.',choices:[
    {label:'Choose an audited, dependable supplier',detail:'$550 · quality and team trust',cost:550,quality:13,team:12,reach:3,risk:-9},
-   {label:'Negotiate milestones and a fair fallback',detail:'$250 · balanced costs',cost:250,quality:9,team:8,reach:4,risk:-4},
+   {label:'Negotiate milestones and a fair fallback',detail:'Use your current team · balanced costs',cost:0,quality:9,team:8,reach:4,risk:-4},
    {label:'Use the cheapest unverified source',detail:'No fee · delivery and quality risks',cost:0,quality:-12,team:-13,reach:10,risk:22}]},
   {title:'The launch deadline',prompt:'A delivery delay threatens the launch. Staff recommend different solutions and your cash runway is limited.',choices:[
    {label:'Protect staff and communicate a revised date',detail:'$400 · team loyalty, lower launch risk',cost:400,quality:14,team:13,reach:1,risk:-7},
-   {label:'Release a smaller verified product',detail:'$180 · sustainable delivery',cost:180,quality:9,team:7,reach:6,risk:-2},
+   {label:'Release a smaller verified product',detail:'Use existing inventory · sustainable delivery',cost:0,quality:9,team:7,reach:6,risk:-2},
    {label:'Ship before quality checks are complete',detail:'No fee · short-term sales, long-term exposure',cost:0,quality:-16,team:-14,reach:20,risk:27}]},
   {title:'The customer response',prompt:'First reviews arrive. A defect affects a small group of customers, and the business must decide how to respond.',choices:[
    {label:'Offer transparent support and resolve the defect',detail:'$620 · strong long-term reputation',cost:620,quality:15,team:13,reach:10,risk:-8},
-   {label:'Prioritize affected users and publish a plan',detail:'$300 · cost-conscious accountability',cost:300,quality:10,team:9,reach:7,risk:-4},
+   {label:'Prioritize affected users and publish a plan',detail:'Use existing support staff · accountability',cost:0,quality:10,team:9,reach:7,risk:-4},
    {label:'Minimize complaints and spend on advertising',detail:'$450 · higher visibility, rising backlash',cost:450,quality:-14,team:-10,reach:20,risk:25}]}]}
 ];
 const clamp=(v,min=0,max=100)=>Math.max(min,Math.min(max,Math.round(v)));
