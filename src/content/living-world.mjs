@@ -87,7 +87,11 @@ export function worldCommands(s,ctx){
    if(!e.path&&s.stats.creativity>=50)for(const path of entertainmentPaths)put('world:ent:start:'+entertainmentPaths.indexOf(path),'Enter '+path+' career','Create a project path · $1,000',affordable(s,1000));
    if(e.path){
      put('world:ent:rehearse','Rehearse and build a portfolio','Creativity, reputation and confidence');
-     put('world:ent:release',e.path==='Recording musician'?'Release an album':e.path==='Film director'?'Premiere an original film':'Audition for a leading role','$1,200 · skill-based chance of success',affordable(s,1200));
+     const releaseCost=e.path==='Film director'?2500:e.path==='Film actor'?650:1200;
+     put('world:ent:release',e.path==='Recording musician'?'Release an album':e.path==='Film director'?'Premiere an original film':'Audition for a leading role','$'+releaseCost.toLocaleString('en-US')+' · skill-based outcome',affordable(s,releaseCost));
+     if(e.path==='Recording musician'&&e.releases>=1)put('world:ent:tour','Organize a concert tour','$700 · ticket sales, fans and fatigue',affordable(s,700)&&e.lastTourAge!==s.age);
+     if(e.path==='Film actor')put('world:ent:screen','Work with an acting coach','$250 · improve audition craft',affordable(s,250)&&e.lastCoachingAge!==s.age);
+     if(e.path==='Film director')put('world:ent:cast','Develop a film ensemble','$800 · improve production quality',affordable(s,800)&&e.lastCastingAge!==s.age);
      put('world:ent:deal','Negotiate a media contract','Requires 2 successful releases · once per year',e.releases>=2&&e.lastDealAge!==s.age);
      put('world:ent:promote','Launch a publicity campaign','$500 · more fame, some public risk',affordable(s,500));
      put('world:ent:leave','Leave entertainment career','Your records and royalties remain');
