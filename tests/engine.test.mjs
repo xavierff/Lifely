@@ -426,3 +426,28 @@ test('some family promises survive into the next generation with a usable due da
  heir.age+=2;heir.actions=3;
  assert.ok(E.commands(heir).some(c=>c.id.startsWith('ripple:'+id+':')&&c.enabled));
 });
+
+test('every authored consequence theme can be triggered by a matching choice',()=>{
+ const cases=[
+  ['trust','relationship',{bond:8}],
+  ['recovery','health',{health:-6}],
+  ['financial','money',{cash:-700}],
+  ['career','career',{performance:8}],
+  ['public','politics',{reputation:-8}],
+  ['creative','entertainment',{creativity:7}],
+  ['community','personal',{kindness:7}],
+  ['family','family',{bond:5}]
+ ];
+ for(let i=0;i<cases.length;i++){const [type,category,effects]=cases[i];
+  let s=E.createLife({seed:i+800});s.age=28;
+  const out=rippleFromChoice(s,{id:5000+i,title:'Original consequential decision',category},0,{text:'Choose the difficult road',effects},category);
+  assert.ok(out);assert.equal(s.ripples.active[0].type,type);assert.ok(E.validate(s));}
+});
+test('a family-originated consequence remembers the relevant relative',()=>{
+ let s=E.createLife({seed:812});s.age=33;s=E.act(s,'date');
+ const partner=s.people.find(p=>p.role==='partner');assert.ok(partner);
+ rippleFromChoice(s,{id:6000,title:'A promise to my partner',requires:'partner',category:'relationship'},0,{text:'Discuss the promise',effects:{bond:7}},'relationship');
+ assert.equal(s.ripples.active[0].contactId,partner.id);
+ assert.equal(s.ripples.active[0].contactName,partner.name);
+ assert.ok(E.validate(s));
+});

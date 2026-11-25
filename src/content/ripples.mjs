@@ -149,7 +149,11 @@ export function rippleFromChoice(s,event,index,choice,category){
  if(!eligible.length)return null;
  // Deliberately no RNG consumption: replay and save/load stay deterministic.
  const type=eligible[0],def=rippleStories[type];
- const relative=s.people.find(p=>p.alive&&["partner","child","parent","friend","sibling"].includes(p.role))||null;
+ const conflict=event.cast==="family"?s.world?.characters?.conflicts?.find(c=>c.status==="open"):null;
+ const personId=conflict?.personId;
+ const matched=s.people.find(p=>p.id===personId&&p.alive);
+ const requested=["partner","child","parent","friend","sibling"].includes(event.requires)?s.people.find(p=>p.role===event.requires&&p.alive):null;
+ const relative=matched||requested||["partner","child","friend","sibling","parent"].map(role=>s.people.find(p=>p.role===role&&p.alive)).find(Boolean)||null;
  const id="r"+r.started+"-"+event.id+"-"+s.age;
  const story={id,type,title:def.title,sourceTitle:event.title,sourceChoice:choice.text,startedAge:s.age,nextAge:s.age+1,stage:0,score:0,choices:[],contactId:relative?.id??null,contactName:relative?.name??null,originGeneration:s.generation,ownerName:s.name,status:"active"};
  r.active.push(story);r.started++;r.lastStartedAge=s.age;r.typeLast[type]=s.age;
