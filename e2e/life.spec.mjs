@@ -98,3 +98,41 @@ test('family tree shows persisted ancestors from inherited lives',async({page})=
  await page.getByText('People',{exact:true}).click();await expect(page.getByText('Family tree',{exact:true})).toBeVisible();
  await expect(page.getByText(/Elena · lived 40 years/)).toBeVisible();
 });
+
+test('named competitors, agents and political rivals appear and persist after a match',async({page})=>{
+ let s=E.createLife({name:'Juno',seed:41});s.age=30;s.cash=100000;s.stats.creativity=95;s.stats.reputation=85;
+ s=E.act(s,'world:sport:start:0');s=E.act(s,'world:pol:join');s=E.act(s,'world:ent:start:0');s.actions=3;
+ const name=s.world.characters.athletes[0].name;
+ await page.goto('/');await page.evaluate(save=>localStorage.setItem('lifely.save.v2',JSON.stringify(save)),s);await page.reload();
+ await page.getByText('World',{exact:true}).click();
+ await page.getByRole('button',{name:'Explore Sports'}).click();
+ await expect(page.getByText('Your sporting rivals',{exact:true})).toBeVisible();
+ await expect(page.getByText(name,{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:new RegExp('Challenge '+name)}).click();
+ await expect(page.getByText(/LOCAL LIFE/)).toBeVisible();
+ await page.reload();await page.getByText('World',{exact:true}).click();
+ await page.getByRole('button',{name:'Explore Sports'}).click();
+ await expect(page.getByText(name,{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Explore Politics'}).click();
+ await expect(page.getByText('Political rivals',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Explore Entertainment'}).click();
+ await expect(page.getByText('Representation & agents',{exact:true})).toBeVisible();
+});
+test('family disagreements and inherited saga chapters are visible in people and world',async({page})=>{
+ let s=E.createLife({name:'Cora',seed:88});s.age=42;s.cash=100000;
+ const parent=s.people.find(p=>p.role==='parent');
+ s=E.act(s,'character:family:start:'+parent.id);s=E.act(s,'character:legacy:start');
+ const title=s.world.characters.arc.title;const childAge=25;s=E.act(s,'date');s.actions=3;s=E.act(s,'child');const child=s.people.find(p=>p.role==='child');child.age=childAge;
+ await page.goto('/');await page.evaluate(save=>localStorage.setItem('lifely.save.v2',JSON.stringify(save)),s);await page.reload();
+ await page.getByText('People',{exact:true}).click();
+ await expect(page.getByText('Family tensions',{exact:true})).toBeVisible();
+ await expect(page.getByText('Unresolved tension').first()).toBeVisible();
+ await page.getByText('World',{exact:true}).click();await page.getByRole('button',{name:'Explore Family dynasty'}).click();
+ await expect(page.getByText('ACTIVE MULTI-YEAR SAGA',{exact:true})).toBeVisible();
+ await expect(page.getByText(title,{exact:true})).toBeVisible();
+ let heir=E.legacy({...s,alive:false,pending:null},child.id);
+ await page.evaluate(save=>localStorage.setItem('lifely.save.v2',JSON.stringify(save)),heir);await page.reload();
+ await page.getByText('World',{exact:true}).click();await page.getByRole('button',{name:'Explore Family dynasty'}).click();
+ await expect(page.getByText(title,{exact:true})).toBeVisible();
+ await expect(page.getByText('2',{exact:true}).first()).toBeVisible();
+});

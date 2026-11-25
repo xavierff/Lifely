@@ -62,3 +62,7 @@ Six connected systems are playable in the World hub: entertainment (three paths,
 ### 0.6.0 refinements
 
 Creative tracks now have genuinely different preparation and financial rewards: actor coaching and auditions, musician albums and live tours, and director casting and film premieres. Sporting competition depends partly on discipline-specific skills. Destinations yield thematic learning rather than identical bonuses. Winning public office ends a regular full-time job. Naming a preferred heir now affects crown succession and estate distribution, while the unselected preferred sibling retains their allocated share. Existing lives with no nominated heir retain their previous inheritance behavior.
+
+## 0.7.0 — Recurring characters, agents and cross-generation drama
+
+Adds ten persistent named NPCs (four sport competitors, three fictional political rivals and three entertainment agents), agency commissions and deal economics, meaningful family tension and reconciliation, and four multi-generational storylines with four decisions each. Includes 25 individually authored character scenes with named participants. Current catalog: 1,109 scenario prompts, 3,089 options, 150 regular and ten special careers, 124 achievements, 62 challenges and 32 ribbons. The World and People screens display the people and storylines. Existing saves stay local and compatible. Not yet a signed/tested physical-device build.
