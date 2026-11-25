@@ -214,3 +214,18 @@ test('character actions require eligibility and cannot be replayed in one year',
  assert.throws(()=>E.act(s,'character:sport:challenge:ath-0'));
  assert.ok(E.validate(s));
 });
+
+test('generational arc chapters use different authored prose and inherited context',()=>{
+ const chapterTexts=new Set();for(let seed=1;seed<=60;seed++){let s=E.createLife({seed});s.age=44;s=E.act(s,'character:legacy:start');chapterTexts.add(E.characterArcView(s).chapterText);}
+ assert.equal(chapterTexts.size,4);
+ let s=E.createLife({name:'Evelyn',seed:14});s.age=45;s.cash=90000;s=E.act(s,'date');s=E.act(s,'child');const child=s.people.find(p=>p.role==='child');child.age=23;s.actions=3;
+ s=E.act(s,'character:legacy:start');s.alive=false;let heir=E.legacy(s,child.id);
+ const chapter=E.characterArcView(heir);assert.ok(chapter.chapterText.includes('Evelyn'));assert.equal(chapter.remainingYears,2);assert.ok(E.validate(heir));
+});
+test('new generation has fresh age-appropriate competitors but retains rivalry archive',()=>{
+ let s=E.createLife({seed:28});s.age=48;s.cash=100000;s=E.act(s,'date');s=E.act(s,'child');const child=s.people.find(p=>p.role==='child');child.age=21;
+ let rival=s.world.characters.athletes[0];rival.wins=11;rival.rivalry=85;const name=rival.name;s.alive=false;
+ let heir=E.legacy(s,child.id);
+ assert.ok(heir.world.characters.legacyRivals.some(r=>r.name===name&&r.wins===11));assert.equal(heir.world.characters.agency,null);
+ assert.ok(heir.world.characters.athletes.every(r=>r.age<=heir.age+5));assert.ok(E.validate(heir));
+});

@@ -19,3 +19,9 @@
 - No dynamic NPC dialogue generation or high-fidelity animated character portraits.
 - Fictional simplified sports/politics/agency mechanics are not real-world simulations. Family conflict outcomes are simplified.
 - Human balancing, accessibility and actual-device testing are still outstanding.
+
+## Additional storytelling polish
+- Each of the four cross-generational saga premises has four different, individually written chapter descriptions (16 additional narrative chapter texts). A descendant receives an explicit inherited hand-off message and a new two-year chapter window.
+- New generations receive age-appropriate newly generated competitors and agents, while distinguished earlier sports and political competitors are retained in a family rivalry archive.
+- Scenario prompts substitute the actual persistent character's name and their decisions change the same character records shown in the World dashboard.
+- Targeted suite extended with chapter variety and archived-rival inheritance tests. CI is still required for native/web bundle and real browser checks.
