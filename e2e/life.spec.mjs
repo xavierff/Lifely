@@ -192,7 +192,7 @@ test('life chronicle reports the results of multiple-year choices',async({page})
  let s=E.createLife({name:'Rowan',seed:457});s.age=28;s.cash=25000;
  const e=E.events.find(x=>x.title==='A new coworker');s.pending=e.id;s=E.resolve(s,0);
  const id=s.ripples.active[0].id;
- for(let i=0;i<3;i++){s.age=s.ripples.active[0].nextAge;s.actions=3;s=E.act(s,'ripple:'+id+':0);}
+ for(let i=0;i<3;i++){s.age=s.ripples.active[0].nextAge;s.actions=3;s=E.act(s,'ripple:'+id+':0');}
  await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
  await page.getByRole('tab',{name:'More'}).click();
  const card=page.getByTestId('life-chronicle');await expect(card).toBeVisible();
