@@ -154,7 +154,7 @@ export function conversationCommands(s){
 }
 export function beginDialogue(s,id){
  const target=findPerson(s,id);
- if(!target||!conversationCommands(s).some(a=>a.id==="dialogue:open:"+id&&a.enabled))throw Error("Conversation unavailable.");
+ if(!target||!conversationCommands({...s,actions:s.actions+1}).some(a=>a.id==="dialogue:open:"+id&&a.enabled))throw Error("Conversation unavailable.");
  const n=ensureNetwork(s),themeIndex=hashPick(s,id+":talk:"+s.age,dialogueThemes.length);
  n.histories[id]??=originalHistory(s,id);
  n.talked[id]=s.age;
