@@ -96,7 +96,6 @@ export const careerCampaignTypes=[
 ];
 const clamp=(v,min=0,max=100)=>Math.max(min,Math.min(max,Math.round(v)));
 const stats=(s,k)=>s.stats?.[k]||0;
-const qual=s=>s.profession?.id==='doctor'||(s.job&&/doctor|nurs|medical|clinical|paramedic|physiother|occupational therapist|speech therapist|dental specialist/i.test(s.careerJobTitle||''));
 export const careerCampaignEligible=(s,type,jobTitle)=>{
  if(!s.alive||s.age<18||(s.justice?.years||0)>0||s.justice?.case)return false;
  const w=s.world||{},prof=s.profession?.id;
@@ -178,7 +177,7 @@ function award(s,a,ctx){
   message=succeeded?'The fictional care team completed a safe, coordinated follow-up.':'The team identified a safety gap and escalated it for supervised review.';
  }else if(a.type==='business'){
   const b=s.business;if(b){b.quality=clamp(b.quality+(succeeded?Math.round(7+rating/14):-6));b.demand=clamp(b.demand+(succeeded?Math.round(7+rating/11):-4));b.competition=clamp(b.competition+(succeeded?2:4));
-   if(succeeded){b.products??=[];if(b.products.length<12)b.products.push('Customer-led launch '+(b.products.length+1));gross=Math.round(Math.max(0,(b.capital||0)*(.08+rating/900)));
+   if(succeeded){b.products??=[];if(b.products.length<10)b.products.push('Customer-led launch '+(b.products.length+1));gross=Math.round(Math.max(0,(b.capital||0)*(.08+rating/900)));
     s.cash+=gross;
     ctx.change(s,'reputation',5);ctx.change(s,'knowledge',3);
    }else{ctx.change(s,'stress',7);ctx.change(s,'reputation',-3);}}
