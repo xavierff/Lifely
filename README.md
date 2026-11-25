@@ -70,3 +70,7 @@ Adds ten persistent named NPCs (four sport competitors, three fictional politica
 Additional polish: four story archetypes now have 16 bespoke chapter descriptions, and heirs see the inherited hand-off. Competitor generations rotate without losing the family's historical rival archives.
 
 Quality refinements: names are unique within each NPC cast; agent networks affect standard releases and take recorded commissions; political rivals influence ordinary election outcomes as well as debates.
+
+## 0.8.0 — branching dialogue, independent social networks and small-screen UX
+
+Six original themes, three authored choice rounds per NPC conversation, deterministic backstories and memories, and autonomous relationships between people that can grow into friendships, alliances, estrangement or betrayal. People shows each contact's history and a living social network; World exposes conversations with professional rivals and agents. Phone widths below 390px use a readable two-row tab bar and single-column NPC cards. Existing version-2 saves remain compatible. Tests cover dialogue state, annual network evolution, save reload and browser phone viewports. Physical device testing is still pending.

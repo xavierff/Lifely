@@ -136,3 +136,41 @@ test('family disagreements and inherited saga chapters are visible in people and
  await expect(page.getByText(title,{exact:true})).toBeVisible();
  await expect(page.getByText('2',{exact:true}).first()).toBeVisible();
 });
+
+test('three-round personal dialogue is responsive, saved, and reveals backstory',async({page})=>{
+ let s=E.createLife({name:'Mara',seed:808});s.age=29;
+ await page.goto('/');await page.evaluate(save=>localStorage.setItem('lifely.save.v2',JSON.stringify(save)),s);await page.reload();
+ await page.getByRole('tab',{name:'People'}).click();
+ await page.getByRole('button',{name:/Talk with /}).first().click();
+ const panel=page.getByTestId('conversation-panel');await expect(panel).toBeVisible();
+ await expect(panel).toContainText('ROUND 1 OF 3');
+ await expect(page.getByTestId('advance-year')).toBeDisabled();
+ await panel.getByRole('button').first().click();await expect(panel).toContainText('ROUND 2 OF 3');
+ await expect(page.getByText(/LOCAL LIFE/)).toBeVisible();await page.reload();
+ await expect(panel).toContainText('ROUND 2 OF 3');
+ await panel.getByRole('button').first().click();await expect(panel).toContainText('ROUND 3 OF 3');
+ await panel.getByRole('button').first().click();await expect(panel).toHaveCount(0);
+ await expect(page.getByTestId('advance-year')).toBeEnabled();
+ await page.getByRole('tab',{name:'People'}).click();
+ await expect(page.getByText(/Shared memory:/).first()).toBeVisible();
+});
+test('small phones keep readable tabs and conversation choices without horizontal overflow',async({page})=>{
+ for(const width of [320,375,430]){
+  await page.setViewportSize({width,height:740});
+  let s=E.createLife({name:'June',seed:809+width});s.age=27;
+  await page.goto('/');await page.evaluate(save=>localStorage.setItem('lifely.save.v2',JSON.stringify(save)),s);await page.reload();
+  await expect(page.getByRole('tab',{name:'People'})).toBeVisible();
+  await expect(page.getByRole('tab',{name:'World'})).toBeVisible();
+  await page.getByRole('tab',{name:'People'}).click();
+  await page.getByRole('button',{name:/Talk with /}).first().click();
+  const panel=page.getByTestId('conversation-panel');await expect(panel).toBeVisible();
+  const box=await panel.boundingBox();expect(box).not.toBeNull();expect(box.width).toBeLessThanOrEqual(width);
+  for(const button of await panel.getByRole('button').all()){
+   const bounds=await button.boundingBox();if(bounds)expect(bounds.height).toBeGreaterThanOrEqual(44);
+  }
+  await page.getByRole('tab',{name:'World'}).click();
+  await page.getByRole('button',{name:'Explore Sports'}).click();
+  await expect(page.getByText('Your sporting rivals',{exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
+ }
+});

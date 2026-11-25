@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import E from '../src/engine.mjs';
 import {emptyProfile,mergeLife,validProfile} from '../src/profile.mjs';
 import {miniRound} from '../src/content/minigames.mjs';
+import {ensureNetwork,conversationPeople,relationshipYear} from '../src/content/relationships.mjs';
 test('1000 full lifetimes preserve invariants',()=>{for(let i=1;i<=1000;i++){let s=E.createLife({seed:i,country:i%6});while(s.alive){if(s.pending!==null)s=E.resolve(s,i%2);else{if(s.age>=18&&s.age<60&&!s.job&&!s.profession&&!s.retired&&!s.business){let job=E.commands(s).find(c=>c.id.startsWith('job:')&&c.enabled);if(job)s=E.act(s,job.id);}if(s.actions&&s.stats.stress>40)s=E.act(s,'rest');s=E.ageUp(s);}assert.ok(E.validate(s));}assert.ok(s.age<=110);}});
 test('same seed, immutable state and save roundtrip',()=>{let s=E.createLife({seed:42});assert.deepEqual(E.ageUp(s),E.ageUp(s));assert.equal(s.age,0);assert.ok(E.validate(JSON.parse(JSON.stringify(s))));assert.equal(E.validate({version:2}),false);});
 test('asset accounting and inheritance',()=>{let s=E.createLife({seed:9});s.age=30;s.cash=500000;s.stats.knowledge=90;s=E.act(s,'buy:house');assert.equal(E.worth(s),500000);s=E.act(s,'invest:10000');assert.equal(E.worth(s),500000);s=E.act(s,'date');s.actions=3;s=E.act(s,'child');let child=s.people.find(p=>p.role==='child');s.alive=false;s.pending=null;let heir=E.legacy(s,child.id);assert.equal(heir.generation,2);assert.equal(heir.age,child.age);assert.equal(heir.cash,E.worth(s));assert.ok(E.validate(heir));});
@@ -254,4 +255,83 @@ test('stronger civic opposition makes player elections harder',()=>{
    weakWins+=weak.world.politics.wins;strongWins+=strong.world.politics.wins;
  }
  assert.ok(weakWins>strongWins);
+});
+
+test('dialogue branches have three rounds, state changes and remembered responses',()=>{
+ let s=E.createLife({seed:301});s.age=27;s.cash=85000;
+ let cmd=E.commands(s).find(c=>c.id==='dialogue:open:person-1'&&c.enabled);assert.ok(cmd);
+ const before=s.people.find(p=>p.id===1).bond;
+ s=E.act(s,cmd.id);assert.equal(E.dialogueView(s).round,1);assert.equal(s.actions,2);
+ assert.throws(()=>E.ageUp(s));assert.equal(E.commands(s).length,0);assert.throws(()=>E.dialogueReply(s,3));
+ let serialized=JSON.parse(JSON.stringify(s));assert.deepEqual(E.dialogueView(serialized),E.dialogueView(s));
+ s=E.dialogueReply(serialized,0);assert.equal(E.dialogueView(s).round,2);assert.equal(E.dialogueView(s).transcript.length,1);
+ s=E.dialogueReply(s,1);assert.equal(E.dialogueView(s).round,3);
+ assert.equal(E.networkProfile(s,'person-1').memoryRevealed,true);
+ s=E.dialogueReply(s,0);assert.equal(E.dialogueView(s),null);
+ assert.equal(s.world.network.dialogues.length,1);assert.equal(s.world.network.dialogues[0].complete,true);
+ assert.ok(s.people.find(p=>p.id===1).bond>before);assert.ok(E.validate(s));
+ assert.ok(!E.commands(s).some(c=>c.id==='dialogue:open:person-1'&&c.enabled));
+});
+test('empathetic and confrontational conversations create different outcomes',()=>{
+ let s=E.createLife({seed:302});s.age=31;
+ let good=E.act(s,'dialogue:open:person-1'),hard=E.act(s,'dialogue:open:person-1');
+ for(let i=0;i<3;i++){good=E.dialogueReply(good,0);hard=E.dialogueReply(hard,2);}
+ assert.equal(good.world.network.dialogues[0].outcome,'trusted');
+ assert.equal(hard.world.network.dialogues[0].outcome,'strained');
+ assert.ok(good.people[0].bond>hard.people[0].bond);
+ assert.ok(good.stats.happiness>hard.stats.happiness);
+ assert.ok(E.validate(good)&&E.validate(hard));
+});
+test('conversations may be left, do not repeat in one year, and reopen next year',()=>{
+ let s=E.createLife({seed:303});s.age=23;
+ s=E.act(s,'dialogue:open:person-2');s=E.dialogueReply(s,'leave');
+ assert.equal(E.dialogueView(s),null);assert.equal(s.world.network.dialogues[0].complete,false);
+ assert.throws(()=>E.act(s,'dialogue:open:person-2'));
+ s=E.ageUp(s);if(s.pending!==null)s=E.resolve(s,0);
+ assert.ok(E.commands(s).some(c=>c.id==='dialogue:open:person-2'&&c.enabled));
+ assert.ok(E.validate(s));
+});
+test('recurring cast and family members receive stable offline backstories',()=>{
+ let s=E.createLife({seed:304});s.age=30;
+ const person=E.networkProfile(s,'person-1'),agent=E.networkProfile(s,'agent-0');
+ assert.ok(person.origin&&person.motivation&&agent.origin);
+ assert.deepEqual(E.networkProfile(JSON.parse(JSON.stringify(s)),'person-1'),person);
+ assert.equal(person.memoryRevealed,false);
+ let t=E.act(s,'dialogue:open:agent-0');
+ t=E.dialogueReply(t,1);t=E.dialogueReply(t,0);
+ assert.equal(E.networkProfile(t,'agent-0').memoryRevealed,true);
+ assert.ok(E.validate(t));
+});
+test('autonomous social ties grow without player dialogue and stay bounded',()=>{
+ let s=E.createLife({seed:305});s.age=19;
+ for(let i=0;i<40;i++){if(s.pending!==null)s=E.resolve(s,0);s=E.ageUp(s);assert.ok(E.validate(s));}
+ assert.ok(s.world.network.edges.length>2);
+ assert.equal(s.world.network.dialogues.length,0);
+ assert.ok(s.world.network.edges.length<=64);
+ assert.ok(s.world.network.news.length<=55);
+ for(const e of s.world.network.edges){assert.ok(e.trust>=0&&e.trust<=100&&e.loyalty>=0&&e.loyalty<=100);}
+});
+test('NPC friendships can become betrayals autonomously',()=>{
+ let s=E.createLife({seed:306});s.age=29;
+ const nodes=conversationPeople(s),a=nodes[0].id,b=nodes[1].id;
+ const n=ensureNetwork(s),key=[a,b].sort().join('|');
+ n.edges.push({key,a,b,firstMetAge:20,trust:80,loyalty:89,status:'allies',betrayals:0,years:0,memories:[]});
+ const sequence=[.01,.12,.1,.5,.001,.01,.12,.5,.5,.9];
+ let i=0;relationshipYear(s,{rng:()=>sequence[i++]??.5,clamp:n=>Math.max(0,Math.min(100,Math.round(n))),add:(state,text,kind)=>state.history.push({age:state.age,text,kind})});
+ assert.ok(n.edges[0].betrayals>=1);
+ assert.equal(n.edges[0].status,'betrayed');
+ assert.ok(n.news.some(news=>news.kind==='betrayed'));
+ assert.ok(E.validate(s));
+});
+test('inherited lives keep surviving family connections but not unfinished conversations',()=>{
+ let s=E.createLife({seed:307});s.age=40;s.cash=100000;
+ s=E.act(s,'date');s=E.act(s,'child');
+ let child=s.people.find(p=>p.role==='child');child.age=20;
+ let n=ensureNetwork(s);n.edges.push({key:'person-1|person-2',a:'person-1',b:'person-2',trust:76,loyalty:80,status:'allies',betrayals:0,years:2,memories:[]});
+ n.edges.push({key:'agent-0|ath-0',a:'agent-0',b:'ath-0',trust:63,loyalty:54,status:'friends',betrayals:0,years:2,memories:[]});
+ s.alive=false;s.pending=null;let heir=E.legacy(s,child.id);
+ assert.ok(heir.world.network.edges.every(e=>e.a.startsWith('person-')&&e.b.startsWith('person-')));
+ assert.equal(heir.world.network.conversation,null);
+ assert.deepEqual(heir.world.network.talked,{});
+ assert.ok(E.validate(heir));
 });
