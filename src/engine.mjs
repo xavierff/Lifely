@@ -466,11 +466,11 @@ function makeEngine(){
     if(s.alive)throw Error("Finish this life before continuing.");
     let child=s.people.find(p=>p.id===id&&p.role==="child"&&p.alive);if(!child)throw Error("Select a living child.");
     let n=createLife({name:child.name,country:s.country,background:s.background,seed:s.rng,goal:s.goal});
-    n.lifeId=(s.lifeId||n.lifeId)+"-g"+(s.generation+1);inheritWorld(n,s,child);characterInheritance(n,s);const estate=Math.max(0,worth(s));
+    n.lifeId=(s.lifeId||n.lifeId)+"-g"+(s.generation+1);inheritWorld(n,s,child);const estate=Math.max(0,worth(s));
     const preferredId=s.world?.dynasty?.heirId;
     const hasPreferred=s.people.some(p=>p.id===preferredId&&p.role==='child'&&p.alive);
     const estateShare=hasPreferred&&preferredId!==id?Math.round(estate*.4):estate;
-    n.age=child.age;n.generation=s.generation+1;n.cash=estateShare+(child.world?.cash||0);n.debt=child.world?.debt||0;n.legacy=[...s.legacy,{name:s.name,age:s.age,netWorth:worth(s),achievements:s.achievements,goal:s.goal}].slice(-50);
+    n.age=child.age;n.generation=s.generation+1;characterInheritance(n,s);n.cash=estateShare+(child.world?.cash||0);n.debt=child.world?.debt||0;n.legacy=[...s.legacy,{name:s.name,age:s.age,netWorth:worth(s),achievements:s.achievements,goal:s.goal}].slice(-50);
     n.people=s.people.filter(p=>p.alive&&p.id!==id&&(p.role==="child"||p.role==="partner"||p.role==="parent")).map(p=>({...copy(p),role:p.role==="child"?"sibling":p.role==="partner"?"parent":"grandparent",married:false}));n.nextId=Math.max(0,...n.people.map(p=>p.id))+1;
     if(hasPreferred&&preferredId!==id){
       const preferredSibling=n.people.find(p=>p.id===preferredId);

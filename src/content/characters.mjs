@@ -13,7 +13,7 @@ export function initialCharacters(s){
   athletes:disciplines.map((sport,i)=>({id:'ath-'+i,name:personName(s,1+i),sport,age:Math.max(18,s.age+value(s,'ath-age-'+i,-3,5)),form:value(s,'ath-form-'+i,42,77),wins:0,losses:0,trophies:0,rivalry:20,respect:48,personality:dispositions[i],history:[]})),
   politicians:[0,1,2].map(i=>({id:'pol-'+i,name:personName(s,7+i),party:['Civic Forum','Community Alliance','Progress Union'][i],age:Math.max(25,s.age+value(s,'pol-age-'+i,1,15)),approval:value(s,'pol-appr-'+i,43,70),campaignFunds:value(s,'pol-funds-'+i,800,2500),wins:0,losses:0,office:null,term:0,rivalry:24,respect:45,personality:dispositions[2+i],history:[]})),
   agents:specialties.map((specialty,i)=>({id:'agent-'+i,name:personName(s,12+i),specialty,network:55+i*12,commission:[14,11,16][i],trust:50,projects:0,agreements:0,personality:dispositions[i+1],history:[]})),
-  agency:null,conflicts:[],arc:null,completedArcs:[],news:[],crossGenerations:0};
+  agency:null,conflicts:[],arc:null,completedArcs:[],legacyRivals:[],news:[],crossGenerations:0};
 }
 export function ensureCharacters(s){s.world??={};return s.world.characters??=initialCharacters(s);}
 export function characterView(s){return s.world?.characters||initialCharacters(s);}
@@ -172,7 +172,7 @@ export function characterAct(s,id,ctx){
  }else throw Error('Unknown character domain.');
 }
 export function characterYear(s,ctx){
- if(s.age<18&&!s.world?.characters)return {income:0};
+ if(s.age<18)return {income:0};
  const ch=ensureCharacters(s),rng=ctx.rng,cl=ctx.clamp;
  for(const rival of ch.athletes){rival.age++;if(rival.age>=49){rival.form=cl(rival.form-5);continue;}
    rival.form=cl(rival.form+Math.round((rng(s)-.48)*12));
@@ -200,22 +200,27 @@ export function characterYear(s,ctx){
 }
 export function characterInheritance(next,previous){
  const prior=previous.world?.characters;if(!prior)return next;
- const newRecord=JSON.parse(JSON.stringify(prior));
- newRecord.crossGenerations=(prior.crossGenerations||0)+1;
- newRecord.agency=null; // professional representation is not transferable by inheritance
- for(const rival of newRecord.athletes)rival.rivalry=Math.max(0,Math.round(rival.rivalry*.6));
- for(const rival of newRecord.politicians)rival.rivalry=Math.max(0,Math.round(rival.rivalry*.6));
- for(const c of newRecord.conflicts){if(c.status==='open'){c.status='resolved';c.outcome='inherited-memory';c.closedAge=next.age;}}
- if(newRecord.arc?.status==='active'){
-   newRecord.arc.generations=(newRecord.arc.generations||1)+1;
-   newRecord.arc.nextAge=next.age+2;
-   newRecord.arc.sourceName=previous.name;
-   newRecord.news.push({age:next.age,text:'Inherited '+newRecord.arc.title+' from '+previous.name+'.',topic:'legacy'});
+ const fresh=initialCharacters(next);fresh.crossGenerations=(prior.crossGenerations||0)+1;
+ fresh.news=(prior.news||[]).slice(-25);
+ fresh.completedArcs=JSON.parse(JSON.stringify((prior.completedArcs||[]).slice(-20)));
+ fresh.conflicts=(prior.conflicts||[]).map(c=>({
+   ...c,status:'resolved',outcome:c.status==='open'?'inherited-memory':c.outcome,
+   closedAge:c.closedAge??next.age
+ })).slice(-25);
+ const older=[...(prior.legacyRivals||[])];
+ for(const a of prior.athletes||[])if(a.wins||a.trophies||a.rivalry>35)older.push({name:a.name,field:a.sport,kind:'athlete',wins:a.wins,years:a.age});
+ for(const p of prior.politicians||[])if(p.wins||p.rivalry>35)older.push({name:p.name,field:p.party,kind:'politician',wins:p.wins,years:p.age});
+ fresh.legacyRivals=older.slice(-30);
+ if(prior.arc?.status==='active'){
+   fresh.arc=JSON.parse(JSON.stringify(prior.arc));
+   fresh.arc.generations=(fresh.arc.generations||1)+1;
+   fresh.arc.nextAge=next.age+2;
+   fresh.arc.sourceName=previous.name;
+   fresh.news.push({age:next.age,text:'Inherited '+fresh.arc.title+' from '+previous.name+'.',topic:'legacy'});
  }
- next.world.characters=newRecord;
+ next.world.characters=fresh;
  return next;
 }
-
 export function characterParticipant(s,e){
  if(!e?.cast)return null;
  const c=characterView(s);
