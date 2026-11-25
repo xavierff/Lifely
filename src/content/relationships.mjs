@@ -240,7 +240,7 @@ export function relationshipYear(s,ctx){
    }
    const name1=findPerson(s,e.a)?.name||"A former friend",name2=findPerson(s,e.b)?.name||"someone";
    let label=e.status==="allies"?"formed a lasting alliance":e.status==="friends"?"became close friends":e.status==="betrayed"?"suffered a betrayal":"grew apart";
-   const record={age:s.age,text:name1+" and "+name2+" "+label+".",kind:e.status,between:[e.a,e.b]};
+   const record={age:s.age,text:(name1===name2?"Two people named "+name1:name1+" and "+name2)+" "+label+".",kind:e.status,between:[e.a,e.b]};
    e.memories.push({age:s.age,event:label});if(e.memories.length>8)e.memories.shift();
    if(n.news.filter(x=>x.age===s.age).length<2)pushNews(s,record,ctx);
   }

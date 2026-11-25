@@ -74,3 +74,5 @@ Quality refinements: names are unique within each NPC cast; agent networks affec
 ## 0.8.0 — branching dialogue, independent social networks and small-screen UX
 
 Six original themes, three authored choice rounds per NPC conversation, deterministic backstories and memories, and autonomous relationships between people that can grow into friendships, alliances, estrangement or betrayal. People shows each contact's history and a living social network; World exposes conversations with professional rivals and agents. Phone widths below 390px use a readable two-row tab bar and single-column NPC cards. Existing version-2 saves remain compatible. Tests cover dialogue state, annual network evolution, save reload and browser phone viewports. Physical device testing is still pending.
+
+Social-network consequences now feed into NPC wellbeing and professional records. New family contacts avoid same-name collisions, while existing saves retain their original names.

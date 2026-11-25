@@ -335,3 +335,16 @@ test('inherited lives keep surviving family connections but not unfinished conve
  assert.deepEqual(heir.world.network.talked,{});
  assert.ok(E.validate(heir));
 });
+
+test('autonomous allies improve the actual wellbeing of the involved NPCs',()=>{
+ let s=E.createLife({seed:201});s.age=29;
+ const nodes=conversationPeople(s),a=nodes[0].id,b=nodes[1].id,n=ensureNetwork(s),key=[a,b].sort().join('|');
+ n.edges.push({key,a,b,trust:73,loyalty:67,status:'friends',betrayals:0,years:0,memories:[]});
+ const previous=s.people[0].world.joy;const sequence=[.01,.12,.9,.1,.9,.01,.12,.5,.5,.9];let i=0;
+ relationshipYear(s,{rng:()=>sequence[i++]??.5,add:(state,text,kind)=>state.history.push({age:state.age,text,kind})});
+ assert.equal(n.edges[0].status,'allies');assert.equal(s.people[0].world.joy,previous+5);
+ assert.equal(n.news[0].kind,'allies');assert.ok(E.validate(s));
+});
+test('freshly generated family names do not collide with each other',()=>{
+ for(let seed=1;seed<=160;seed++){let s=E.createLife({seed});assert.equal(new Set(s.people.map(p=>p.name)).size,s.people.length);}
+});

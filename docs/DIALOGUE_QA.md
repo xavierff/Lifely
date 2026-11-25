@@ -17,3 +17,7 @@
 - Relationship networks should influence more complex career decisions and family alliances beyond the baseline annual-world events.
 - More authorship for culturally varied dialogue, professional contract negotiations and child/teenage characters.
 - Real-device usability, accessibility audits, memory/performance profiling and original portraits/animation before store submission.
+
+## Final social consequences and writing polish
+- Autonomous social changes influence both NPCs' actual wellbeing, sporting form, political approval, or entertainment agent networks. These fields in turn influence later competition, elections and deals.
+- Freshly created characters avoid duplicate names among their family contacts; older saved identities are not rewritten. Social news gracefully handles historical duplicate names.

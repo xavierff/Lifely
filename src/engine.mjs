@@ -184,7 +184,7 @@ function makeEngine(){
     p.world={personality,ambition,talent,education,job,level:0,cash:initial,debt:0,trust:65,rivalry:0,health:80,joy:70,news:[],milestones:0};
     return p.world;
   }
-  const person=(s,role,age,name)=>{let p={id:s.nextId++,name:name||pick(s,names),role,age,bond:65,alive:true,memories:[]};npcProfile(s,p);return p;};
+  const person=(s,role,age,name)=>{let chosen=name||pick(s,names);if(!name&&(s.people||[]).some(p=>p.alive&&p.name===chosen))chosen=names.find(n=>!(s.people||[]).some(p=>p.alive&&p.name===n))||chosen+" "+s.nextId;let p={id:s.nextId++,name:chosen,role,age,bond:65,alive:true,memories:[]};npcProfile(s,p);return p;};
   function npcNews(s,p,message){let w=p.world;w.news.push({age:s.age,text:message});if(w.news.length>10)w.news.shift();w.milestones++;if(p.bond>=65||p.role==="parent"||p.role==="child"||p.role==="partner"){add(s,p.name+": "+message,"world");s.worldNews??=[];s.worldNews.push({age:s.age,name:p.name,text:message});if(s.worldNews.length>30)s.worldNews.shift();}}
   function npcWorth(p){return (p.world?.cash||0)-(p.world?.debt||0);}
   function npcOccupation(p){if(!p.world)return p.age<18?"School age":"Unknown";if(p.age<6)return "Child";if(p.age<18)return "Student";if(p.age>=65)return "Retired";return p.world.job===null?"Seeking work":careers[p.world.job]?.title||"Seeking work";}
@@ -217,7 +217,7 @@ function makeEngine(){
     s.lifeId='life-'+s.rng+'-'+s.name+'-'+s.country+'-'+s.background;s.world=initialWorld(s.country,s.background==='royal'||(s.background==='comfortable'&&(s.rng%11===0)));s.world.characters=initialCharacters(s);s.portfolio={};s.justice={case:null,years:0,probation:0,rehab:0,history:[]};s.mini=null;s.miniHistory={};s.cash={modest:0,ordinary:300,comfortable:3000,royal:5000}[s.background];for(let k of ["health","knowledge","confidence","creativity"])change(s,k,Math.floor(rng(s)*17)-8);
     s.traits=[pick(s,["Curious","Ambitious","Empathetic","Adventurous","Resilient","Creative"])];
     const bonus={Curious:"knowledge",Ambitious:"confidence",Empathetic:"kindness",Adventurous:"social",Resilient:"health",Creative:"creativity"};change(s,bonus[s.traits[0]],6);
-    s.people=[person(s,"parent",25),person(s,"parent",28)];add(s,"Born into a "+s.background+" family in "+country(s).name+".","milestone");return s;
+    s.people=[person(s,"parent",25),person(s,"parent",28)];if(s.people[0].name===s.people[1].name)s.people[1].name=names[(names.indexOf(s.people[1].name)+1)%names.length];add(s,"Born into a "+s.background+" family in "+country(s).name+".","milestone");return s;
   }
   const eligible=(s,e)=>(!e.cast||characterEligible(s,e))&&(!e.domain||domainReady(s,e.domain))&&(!e.saga||sagaEligible(s,e))&&!e.arcEnd&&(!e.arcStart||!(s.story?.seen||[]).includes(e.arcStart))&&s.age>=e.min&&s.age<=e.max&&(!e.requires||(e.requires==="club"?s.club:e.requires==="property"?s.properties.length>0:e.requires==="investor"?s.investments+portfolioWorth(s)>0:e.requires==="job"?s.job:e.requires==="business"?s.business:e.requires==="creator"?(s.projects||0)>0:e.requires==="pet"?(s.pets||[]).some(p=>p.alive):relation(s,e.requires)));
   function sagaEligible(s,e){
