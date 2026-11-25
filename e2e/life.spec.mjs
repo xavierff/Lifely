@@ -56,3 +56,14 @@ test('named saga shows its participant and survives a reload',async({page})=>{
  await page.reload();await page.getByText('More',{exact:true}).click();
  await expect(page.getByText('A life built together',{exact:true})).toBeVisible();
 });
+
+test('career challenge survives reload and player collection is available',async({page})=>{
+ let s=E.createLife({name:'Lina',seed:121});s.age=30;s.cash=100000;s=E.act(s,'job:0');s=E.act(s,'mini:memory');
+ await page.goto('/');await page.evaluate(save=>localStorage.setItem('lifely.save.v2',JSON.stringify(save)),s);await page.reload();
+ const panel=page.getByTestId('career-challenge');await expect(panel).toBeVisible();
+ await panel.getByRole('button',{name:'Ready — hide sequence'}).click();await expect(panel.getByText('Which sequence did you study?')).toBeVisible();
+ await expect(page.getByText(/LOCAL LIFE/)).toBeVisible();await page.reload();await expect(panel.getByText('Which sequence did you study?')).toBeVisible();
+ await panel.getByRole('button').first().click();await expect(panel).toContainText('ROUND 2/5');
+ await panel.getByRole('button',{name:'Abandon challenge'}).click();await expect(panel).toHaveCount(0);
+ await page.getByText('More',{exact:true}).click();await expect(page.getByText('Player collection',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Show all ribbons'}).click();await expect(page.getByText('Everyday Legacy',{exact:true})).toBeVisible();
+});
