@@ -1,4 +1,5 @@
 /* Lifely original deterministic simulation. */
+import {dramaticCards} from './content/drama.mjs';
 import {lifeEnding,ribbons} from './profile.mjs';
 import {gameTypes,miniRound} from './content/minigames.mjs';
 import {instruments,portfolioWorth,portfolioTick,rentalDefaults} from './content/finance.mjs';
@@ -153,7 +154,7 @@ function makeEngine(){
     for(let j=0;j<stages.length;j++){const stage=stages[j],[title,prompt,a,b]=d[stage],id=events.length;sagaCards[d.id][stage]=id;events.push({id,title,prompt,min:stage==="start"?d.min:0,max:stage==="start"?d.max:110,choices:[{text:a,effects:d.effects[j*2]},{text:b,effects:d.effects[j*2+1]}],category:"saga",saga:{id:d.id,stage},requires:stage==="start"?d.role:undefined});}
   }
   // Existing save IDs remain stable: every new card is appended.
-  events.push(...buildScenarioVariants(events.length));
+  events.push(...buildScenarioVariants(events.length));events.push(...dramaticCards(events.length));
   const statNames=["health","happiness","knowledge","confidence","stress","kindness","social","creativity","reputation","performance"];
   const assets=[{id:'duplex',name:'Rental duplex',cost:200000,upkeep:4000,rate:.03,rent:15000},{id:'commercial',name:'Commercial rental',cost:350000,upkeep:8000,rate:.02,rent:30000},{id:"car",name:"Used car",cost:9000,upkeep:900,rate:-.10},{id:"apartment",name:"Apartment",cost:80000,upkeep:1600,rate:.025},{id:"house",name:"Family house",cost:180000,upkeep:3000,rate:.03},{id:"rental",name:"Rental property",cost:120000,upkeep:2400,rate:.025,rent:7200}];
   const rng=s=>{let x=s.rng>>>0;x^=x<<13;x^=x>>>17;x^=x<<5;s.rng=(x>>>0)||12345;return s.rng/4294967296;};
@@ -213,7 +214,7 @@ function makeEngine(){
     const bonus={Curious:"knowledge",Ambitious:"confidence",Empathetic:"kindness",Adventurous:"social",Resilient:"health",Creative:"creativity"};change(s,bonus[s.traits[0]],6);
     s.people=[person(s,"parent",25),person(s,"parent",28)];add(s,"Born into a "+s.background+" family in "+country(s).name+".","milestone");return s;
   }
-  const eligible=(s,e)=>(!e.saga||sagaEligible(s,e))&&!e.arcEnd&&(!e.arcStart||!(s.story?.seen||[]).includes(e.arcStart))&&s.age>=e.min&&s.age<=e.max&&(!e.requires||(e.requires==="club"?s.club:e.requires==="property"?s.properties.length>0:e.requires==="investor"?s.investments>0:e.requires==="job"?s.job:e.requires==="business"?s.business:e.requires==="creator"?(s.projects||0)>0:e.requires==="pet"?(s.pets||[]).some(p=>p.alive):relation(s,e.requires)));
+  const eligible=(s,e)=>(!e.saga||sagaEligible(s,e))&&!e.arcEnd&&(!e.arcStart||!(s.story?.seen||[]).includes(e.arcStart))&&s.age>=e.min&&s.age<=e.max&&(!e.requires||(e.requires==="club"?s.club:e.requires==="property"?s.properties.length>0:e.requires==="investor"?s.investments+portfolioWorth(s)>0:e.requires==="job"?s.job:e.requires==="business"?s.business:e.requires==="creator"?(s.projects||0)>0:e.requires==="pet"?(s.pets||[]).some(p=>p.alive):relation(s,e.requires)));
   function sagaEligible(s,e){
     if(e.saga.stage!=="start")return false;
     const d=sagaDefinitions.find(x=>x.id===e.saga.id);
@@ -278,11 +279,11 @@ function makeEngine(){
   }
   function trialChance(s,e,i){if(!e?.trial)return null;const relevant={knowledge:"technical",performance:"communication",reputation:"communication",creativity:"art",confidence:"communication",kindness:"communication"}[e.trial.stat];const skill=relevant?(s.skills?.[relevant]||0):0;return Math.max(.12,Math.min(.90,.13+s.stats[e.trial.stat]*.0055+skill*.0015+(i===1?.12:0)-Math.max(0,s.stats.stress-45)*.003));}
   function eventCategory(e){return e.category||(e.arcStart||e.arcEnd?"story":({job:"career",business:"business",creator:"fame",partner:"relationship",child:"family",parent:"family",friend:"relationship",pet:"pets"}[e.requires]))||(e.max<=19?"childhood":e.min>=55?"legacy":e.choices.some(c=>Object.keys(c.effects).some(k=>["cash","debt"].includes(k)))?"money":e.choices.some(c=>Object.keys(c.effects).includes("health"))?"health":"personal");}
-  function eventWeight(s,e){const seen=s.scenario?.seen?.[e.id]||0;let w=seen===0?7:.35/(1+seen);if(e.arcStart)w*=1.5;if(e.category==="journey")w*=1.45;if(e.category==="saga")w*=3.5;if(e.origin==="activity-variant"){w*=.32;const prefix=e.premise+" — ";if(s.recent.some(id=>events[id]?.title.startsWith(prefix)))w*=.08;}if(e.requires)w*=1.9;if(e.category)w*=1.5;let category=eventCategory(e);if(s.scenario?.last?.category===category)w*=.42;return w;}
+  function eventWeight(s,e){const seen=s.scenario?.seen?.[e.id]||0;let w=seen===0?7:.35/(1+seen);if(e.arcStart)w*=1.5;if(e.category==="journey")w*=1.45;if(e.category==="saga")w*=3.5;if(e.origin==="dramatic")w*=2.2;if(e.origin==="activity-variant"){w*=.32;const prefix=e.premise+" — ";if(s.recent.some(id=>events[id]?.title.startsWith(prefix)))w*=.08;}if(e.requires)w*=1.9;if(e.category)w*=1.5;let category=eventCategory(e);if(s.scenario?.last?.category===category)w*=.42;return w;}
   function drawEvent(s,pool){let weights=pool.map(e=>eventWeight(s,e)),v=rng(s)*weights.reduce((a,b)=>a+b,0);for(let i=0;i<pool.length;i++){v-=weights[i];if(v<=0)return pool[i];}return pool[pool.length-1];}
   function ageUp(s){
-    ensure(s);s=copy(s);const hist=progressState(s);s.bankSavings??=0;s.financialSkill??=0;s.experience??=0;s.skills??={technical:0,communication:0,art:0};s.pets??=[];s.audience??=0;s.projects??=0;s.relocations??=0;s.market??=1;s.record??=0;s.legalRisk??=0;s.scenario??={seen:{},counts:{},choices:0,streak:0,last:null};s.age++;s.actions=3;const jailed=(s.justice?.years||0)>0;
-    justiceYear(s);const c=country(s);
+    ensure(s);s=copy(s);const hist=progressState(s);s.bankSavings??=0;s.financialSkill??=0;s.experience??=0;s.skills??={technical:0,communication:0,art:0};s.pets??=[];s.audience??=0;s.projects??=0;s.relocations??=0;s.market??=1;s.record??=0;s.legalRisk??=0;s.scenario??={seen:{},counts:{},choices:0,streak:0,last:null};s.age++;s.actions=3;let jailed=(s.justice?.years||0)>0;
+    justiceYear(s);jailed=jailed||(s.justice?.years||0)>0;const c=country(s);
     s.market=Math.max(.65,Math.min(1.35,Math.round((s.market+(rng(s)-.5)*.20)*100)/100));
     if(s.club&&s.age>18){add(s,"Finished school club membership.","milestone");s.club=null;}
     if(s.club){let club=clubs.find(c=>c.id===s.club.id);change(s,club.stat,2);}
@@ -316,9 +317,9 @@ function makeEngine(){
       s.alive=false;s.death=s.stats.health===0?"Health complications":"Natural causes";add(s,"Your life ended at "+s.age+".","milestone");s.ending=lifeEnding(s,worth(s)).id;return finish(s);
     }
     s.story??={seen:[],due:[]};
-    const sagaDue=dueSaga(s);if(sagaDue!==null){s.pending=sagaDue;return finish(s);}
+    if(jailed)return finish(s);const sagaDue=dueSaga(s);if(sagaDue!==null){s.pending=sagaDue;return finish(s);}
     let due=s.story.due.find(x=>x.age<=s.age);if(due){s.pending=due.id;s.pendingJourney=events[due.id].result?{id:due.id,ambitious:!!due.ambitious}:null;return finish(s);}
-    if(jailed)return finish(s);let pool=events.filter(e=>eligible(s,e)&&!s.recent.includes(e.id));if(!pool.length)pool=events.filter(e=>eligible(s,e));if(pool.length){let e=drawEvent(s,pool);s.pending=e.id;if(e.saga)s.pendingSagaPerson=sagaCandidate(s,sagaDefinitions.find(d=>d.id===e.saga.id))?.id||null;s.recent=[...s.recent,e.id].slice(-12);}return finish(s);
+    let pool=events.filter(e=>eligible(s,e)&&!s.recent.includes(e.id));if(!pool.length)pool=events.filter(e=>eligible(s,e));if(pool.length){let e=drawEvent(s,pool);s.pending=e.id;if(e.saga)s.pendingSagaPerson=sagaCandidate(s,sagaDefinitions.find(d=>d.id===e.saga.id))?.id||null;s.recent=[...s.recent,e.id].slice(-12);}return finish(s);
   }
   const professionSpecials={"athlete":{"label":"Negotiate a season contract","detail":"Requires two competition wins · adds a paid season","cost":0,"requires":2},"politics":{"label":"Hold a public policy forum","detail":"Improve approval through a public discussion · fictional civic system","cost":350,"requires":0},"entrepreneur":{"label":"Reinvest in company capacity","detail":"Move personal cash into business capital and improve quality","cost":2500,"requires":0},"actor":{"label":"Sign a production deal","detail":"Requires two successful auditions · contract income","cost":0,"requires":2},"musician":{"label":"Organize a concert tour","detail":"Requires two successful records · fans and ticket revenue","cost":800,"requires":2},"doctor":{"label":"Lead a research review","detail":"Requires two assessments · knowledge and reputation","cost":250,"requires":2},"investor":{"label":"Hedge portfolio risk","detail":"Reduce simulated market exposure for next annual cycle","cost":150,"requires":0},"military":{"label":"Mentor junior officers","detail":"Develop leadership and morale through noncombat mentoring","cost":0,"requires":1},"lawyer":{"label":"Take a pro bono case","detail":"Community service · client experience without a fee","cost":0,"requires":0},"influencer":{"label":"Negotiate brand sponsorship","detail":"Requires 1,000 followers · paid sponsorship","cost":0,"requires":0}};
   const profSpec=s=>professions.find(p=>p.id===s.profession?.id);
