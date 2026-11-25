@@ -140,7 +140,7 @@ function award(s,a,ctx){
  const opponent=a.type==='sports'?w.characters?.athletes?.find(p=>p.id===rival)?.form||50:a.type==='election'?w.characters?.politicians?.find(p=>p.id===rival)?.approval||50:50;
  const pressure=a.type==='sports'||a.type==='election'?Math.max(0,opponent-50)*.12:0;
  const p=a.playfield;
-  const interactiveImpact=a.type==='sports'&&p?(p.ours-p.theirs)*2:a.type==='film'&&p?(p.usable-p.retakes)*1.5:a.type==='business'&&p?Math.min(8,p.orders/12):0;
+  const interactiveImpact=a.type==='sports'&&p?(p.ours-p.theirs)*2:a.type==='film'&&p?(p.usable-p.retakes)*1.5+(p.coverage||[]).filter(n=>n>0).length*2:a.type==='business'&&p?Math.min(8,p.orders/12):0;
   const rating=clamp(a.quality*.37+a.team*.21+a.reach*.22+skill*.22-a.risk*.19-pressure+interactiveImpact,0,100);
  const chance=Math.max(.08,Math.min(.95,.14+rating*.0083-a.risk*.0007));
  // Played match goals decide non-drawn sports results; a draw uses the existing skill/rating tiebreak.
