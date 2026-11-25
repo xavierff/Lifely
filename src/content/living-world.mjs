@@ -223,7 +223,14 @@ export function inheritWorld(next,previous,child){
  nw.dynasty.reputation=Math.min(100,Math.round(old.dynasty.reputation*.88)+5);nw.dynasty.archives=old.dynasty.archives; nw.dynasty.familyNews=(old.dynasty.familyNews||[]).slice(-20);
  nw.dynasty.mentored=[];nw.dynasty.heirId=null;nw.dynasty.trustFund=0; // trust assets are already included in estate cash
  nw.travel.visitedCountries=[next.country];nw.travel.culture=Math.round(old.travel.culture*.45);
- if(old.royalty.title&&child?.role==='child'){nw.royalty.house=old.royalty.house;nw.royalty.title='Royal heir';nw.royalty.support=Math.max(45,old.royalty.support-15);}
+ if(old.royalty.title&&child?.role==='child'){
+  nw.royalty.house=old.royalty.house;
+  const preferred=old.dynasty.heirId;
+  const stillValid=previous.people.some(p=>p.id===preferred&&p.role==='child'&&p.alive);
+  const inheritsCrown=!stillValid||preferred===child.id;
+  nw.royalty.title=inheritsCrown?'Royal heir':null;
+  nw.royalty.support=Math.max(40,old.royalty.support-(inheritsCrown?15:30));
+ }
  next.world=nw;
  return next;
 }

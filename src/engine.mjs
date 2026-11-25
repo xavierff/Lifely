@@ -464,10 +464,18 @@ function makeEngine(){
     if(s.alive)throw Error("Finish this life before continuing.");
     let child=s.people.find(p=>p.id===id&&p.role==="child"&&p.alive);if(!child)throw Error("Select a living child.");
     let n=createLife({name:child.name,country:s.country,background:s.background,seed:s.rng,goal:s.goal});
-    n.lifeId=(s.lifeId||n.lifeId)+"-g"+(s.generation+1);inheritWorld(n,s,child);n.age=child.age;n.generation=s.generation+1;n.cash=Math.max(0,worth(s))+(child.world?.cash||0);n.debt=child.world?.debt||0;n.legacy=[...s.legacy,{name:s.name,age:s.age,netWorth:worth(s),achievements:s.achievements,goal:s.goal}].slice(-50);
+    n.lifeId=(s.lifeId||n.lifeId)+"-g"+(s.generation+1);inheritWorld(n,s,child);const estate=Math.max(0,worth(s));
+    const preferredId=s.world?.dynasty?.heirId;
+    const hasPreferred=s.people.some(p=>p.id===preferredId&&p.role==='child'&&p.alive);
+    const estateShare=hasPreferred&&preferredId!==id?Math.round(estate*.4):estate;
+    n.age=child.age;n.generation=s.generation+1;n.cash=estateShare+(child.world?.cash||0);n.debt=child.world?.debt||0;n.legacy=[...s.legacy,{name:s.name,age:s.age,netWorth:worth(s),achievements:s.achievements,goal:s.goal}].slice(-50);
     n.people=s.people.filter(p=>p.alive&&p.id!==id&&(p.role==="child"||p.role==="partner"||p.role==="parent")).map(p=>({...copy(p),role:p.role==="child"?"sibling":p.role==="partner"?"parent":"grandparent",married:false}));n.nextId=Math.max(0,...n.people.map(p=>p.id))+1;
+    if(hasPreferred&&preferredId!==id){
+      const preferredSibling=n.people.find(p=>p.id===preferredId);
+      if(preferredSibling?.world)preferredSibling.world.cash+=estate-estateShare;
+    }
     if(n.age>=18&&child.world){n.education=child.world.education;n.stats.knowledge=child.world.talent;if(child.world.job!==null&&n.age<65)n.job={id:child.world.job,level:child.world.level};if(n.age>=65){n.retired=true;n.pension=money(8000*country(n).salary);}}
-    n.history=[];add(n,"Inherited "+Math.max(0,worth(s)).toLocaleString("en-US")+" from "+s.name+" and continued at age "+n.age+" with existing savings and qualifications.","milestone");return finish(n);
+    n.history=[];add(n,"Received "+estateShare.toLocaleString("en-US")+" in family estate assets from "+s.name+" and continued at age "+n.age+" with existing savings and qualifications.","milestone");return finish(n);
   }
   function justiceState(s){return s.justice??={case:null,years:0,probation:0,rehab:0,history:[]};}
   function justiceYear(s){const j=justiceState(s);if(j.years>0){j.years--;change(s,"stress",5);if(!j.years){j.probation=2;add(s,"Released from custody. Reintegration begins.","milestone");}return;}if(j.probation>0)j.probation--;if(s.age>=18&&!j.case&&(s.legalRisk||0)>0){if(rng(s)<s.legalRisk/100){j.case={severity:s.legalRisk,counsel:false,opened:s.age};s.legalRisk=0;add(s,"A fictional legal case is pending. Visit Justice in More.","milestone");}else s.legalRisk=Math.max(0,s.legalRisk-3);}if(j.case&&s.age-j.case.opened>=2)justiceAction(s,"hearing");}
