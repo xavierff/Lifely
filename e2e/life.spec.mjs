@@ -80,7 +80,7 @@ test('six-domain World hub and travel journal persist on reload',async({page})=>
  await expect(page.getByRole('button',{name:'Explore Travel'})).toBeVisible();
  await expect(page.getByRole('button',{name:'Explore Family dynasty'})).toBeVisible();
  await page.getByRole('button',{name:/Enter Film actor career/}).click();
- await expect(page.getByText('Film actor',{exact:true})).toBeVisible();
+ await expect(page.getByText('Film actor',{exact:true}).first()).toBeVisible();
  await page.getByRole('button',{name:'Explore Travel'}).click();
  await page.getByRole('textbox',{name:'Search destinations'}).fill('Kyoto');
  await page.getByRole('button',{name:/Visit Kyoto/}).click();
@@ -89,7 +89,7 @@ test('six-domain World hub and travel journal persist on reload',async({page})=>
  await page.getByRole('button',{name:'Explore Travel'}).click();
  await expect(page.getByText(/Age 30 · Kyoto/)).toBeVisible();
  await page.getByRole('button',{name:'Explore Royalty'}).click();
- await expect(page.getByText('Royal heir',{exact:true}).toBeVisible();
+ await expect(page.getByText('Royal heir',{exact:true}).first()).toBeVisible();
 });
 test('family tree shows persisted ancestors from inherited lives',async({page})=>{
  let s=E.createLife({name:'Elena',seed:31});s.age=40;s.cash=100000;s=E.act(s,'date');s=E.act(s,'child');const child=s.people.find(p=>p.role==='child');child.age=18;s.alive=false;s.pending=null;
