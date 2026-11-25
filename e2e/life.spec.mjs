@@ -259,3 +259,37 @@ test('career choices remain readable at compact phone widths',async({page})=>{
    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
  }
 });
+
+test('tactical sports match persists score, fatigue and turn limits after reload',async({page})=>{
+ let s=E.createLife({seed:2410});s.age=32;s.cash=50000;s.world.sports.sport='Football';s.world.sports.form=80;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByRole('tab',{name:'Work'}).click();
+ await page.getByRole('button',{name:/Play a competitive season/}).click();
+ const board=page.getByTestId('tactical-sports-match');await expect(board).toBeVisible();
+ await expect(board).toContainText('PRESEASON TACTICS BOARD');
+ await page.getByTestId('sports-action-0').click();
+ await expect(page.getByTestId('playfield-feedback')).toBeVisible();
+ await page.reload();await expect(page.getByTestId('tactical-sports-match')).toContainText('Plays left');
+ await page.getByTestId('sports-action-2').click();
+ await expect(page.getByTestId('sports-action-1')).toBeDisabled();
+ await expect(page.getByTestId('career-project')).toContainText('Now make the story decision');
+});
+test('film set records takes and renders visual coverage and feedback',async({page})=>{
+ let s=E.createLife({seed:2411});s.age=32;s.cash=50000;s.world.entertainment.path='Film director';s.stats.creativity=95;s.skills.art=95;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByRole('tab',{name:'Work'}).click();await page.getByRole('button',{name:/Produce a film/}).click();
+ const set=page.getByTestId('interactive-film-set');await expect(set).toContainText('DIRECTOR');
+ await page.getByTestId('film-action-0').click();
+ await expect(set).toContainText('Total takes');await expect(set).toContainText('STORYBOARD COVERAGE');
+ await expect(page.getByTestId('playfield-feedback')).toBeVisible();
+});
+test('business dashboard makes planning controls playable without charging cash twice',async({page})=>{
+ let s=E.createLife({seed:2412});s.age=32;s.cash=50000;s.business={sector:'shop',capital:12000,quality:62,demand:51};
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByRole('tab',{name:'Work'}).click();await page.getByRole('button',{name:/Launch a company initiative/}).click();
+ const board=page.getByTestId('business-management-dashboard');await expect(board).toContainText('OPERATIONS LIVEBOARD');
+ await expect(board).toContainText('CUSTOMER INTEREST TREND');
+ await page.getByTestId('business-action-1').click();
+ await expect(board).toContainText('Projected orders');
+ await expect(page.getByTestId('playfield-feedback')).toBeVisible();
+});

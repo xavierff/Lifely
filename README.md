@@ -1,6 +1,12 @@
 # Lifely
 
-An original, offline, choice-driven life simulator. This repository is the **0.4.0 playable development version**, not an App Store-ready or feature-parity release.
+An original, offline, choice-driven life simulator. The repository contains a **1.1.0 interactive-career development candidate (build 10)**. This is not an App Store-ready or externally verified BitLife-parity release.
+
+## 1.1.0 interactive career playfields (build 10 candidate)
+
+Sports, film and business career projects now include playable visual boards integrated into the existing four-stage career campaigns. A tactical sports pitch reveals opponent gaps and tracks match goals and fatigue; film production uses a director's monitor, shot coverage and retakes; the business liveboard tracks demand signals, customer loyalty, projected orders and a trend chart. Each phase allows up to two optional actions, with deterministic results, progress feedback, and an impact on the existing outcome score. Project choices, cash spending, rival results, completed records and dynasty inheritance remain intact. The visual planning turns are free to prevent softlocks and cannot be farmed indefinitely. Career history records the interactive turns. Old saves with no playfield state remain loadable.
+
+The new screens need human usability/playability testing and physical iOS/Android testing before release; synthetic tests alone cannot establish that the game is more entertaining than BitLife. The release build number is reserved but **no signed build or store release has been created**.
 
 ## Play and build
 Use Node 22.13+ and npm. Install dependencies, align the Expo versions and run the tests:
