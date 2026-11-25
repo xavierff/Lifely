@@ -146,10 +146,26 @@ export function worldAct(s,id,ctx){
  if(domain==='ent'){
   if(verb==='start'){cash(s,1000);e.path=entertainmentPaths[Number(arg)];e.fame=15;change(s,'confidence',5);announce('You entered '+e.path+' entertainment.');}
   else if(verb==='rehearse'){change(s,'creativity',6);change(s,'confidence',4);change(s,'stress',4);e.fame=cl(e.fame+3);}
-  else if(verb==='release'){cash(s,1200);const chance=Math.min(.9,.18+s.stats.creativity*.004+(s.skills.art||0)*.002+e.fame*.002);const won=rng(s)<chance;
-   if(won){e.releases++;e.catalog++;e.fame=cl(e.fame+13);e.awards+=rng(s)<.22?1:0;s.audience=(s.audience||0)+Math.round(450*(1+e.fame/30));change(s,'reputation',6);s.cash+=Math.round(1600*c.salary*(1+e.releases*.2));}
-   else{e.fame=cl(e.fame-4);change(s,'stress',7);}
-   e.lastResult=won?'Critical acclaim':'A disappointing opening';announce(e.path+' project: '+e.lastResult+'.');}
+  else if(verb==='release'){
+   const actor=e.path==='Film actor',director=e.path==='Film director';
+   cash(s,director?2500:actor?650:1200);
+   const craft=actor?(e.screenCraft||0)*.003+s.stats.social*.001:director?(e.productionQuality||0)*.003+s.stats.knowledge*.001:(s.audience||0)*.000002;
+   const chance=Math.min(.9,.12+s.stats.creativity*.0037+(s.skills.art||0)*.002+e.fame*.002+craft);
+   const won=rng(s)<chance;
+   if(won){
+    e.releases++;e.catalog+=actor?0:director?2:1;e.fame=cl(e.fame+(director?15:actor?10:13));
+    if(actor)e.contracts++;
+    e.awards+=rng(s)<(director?.28:.18)?1:0;
+    s.audience=(s.audience||0)+Math.round((actor?600:450)*(1+e.fame/30));
+    change(s,'reputation',6);
+    s.cash+=Math.round((director?4200:actor?2800:1600)*c.salary*(1+e.releases*.2));
+   }else{e.fame=cl(e.fame-4);change(s,'stress',7);}
+   e.lastResult=won?(actor?'Leading role booked':director?'Festival premiere well received':'New record resonates with fans'):'Project failed to meet expectations';
+   announce(e.path+' project: '+e.lastResult+'.');
+  }
+  else if(verb==='tour'){cash(s,700);e.lastTourAge=s.age;e.fame=cl(e.fame+9);s.audience=(s.audience||0)+650;s.cash+=Math.round((1000+Math.min(10000,(s.audience||0)*.09))*c.salary);change(s,'stress',7);announce('Completed a concert tour with a growing live audience.');}
+  else if(verb==='screen'){cash(s,250);e.lastCoachingAge=s.age;e.screenCraft=cl((e.screenCraft||0)+12);change(s,'confidence',6);change(s,'social',3);}
+  else if(verb==='cast'){cash(s,800);e.lastCastingAge=s.age;e.productionQuality=cl((e.productionQuality||0)+15);change(s,'knowledge',4);change(s,'stress',3);}
   else if(verb==='deal'){e.contracts++;e.deals++;e.lastDealAge=s.age;s.cash+=Math.round(4000*c.salary*(1+e.fame/80));change(s,'reputation',4);announce('Signed an entertainment contract.');}
   else if(verb==='promote'){cash(s,500);e.fame=cl(e.fame+8);change(s,'stress',3);if(rng(s)<.15)change(s,'reputation',-5);}
   else if(verb==='leave'){e.path=null;announce('Stepped away from active entertainment work.');}
