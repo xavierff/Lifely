@@ -127,8 +127,8 @@ export function rippleView(s){
   return {...t,chapterTitle:chapter.title,chapterText:chapter.body,ready:s.age>=t.nextAge,yearsUntil:Math.max(0,t.nextAge-s.age),choices:chapter.choices.map(([text,effects,points],i)=>({index:i,text,cost:Math.max(0,-(effects.cash||0))}))};
  }),completed:r.completed||[],journal:r.journal||[],started:r.started||0};
 }
-const sourceType=(e,choice,s)=>{
- const x=choice.effects||{},cat=e.category||"";
+const sourceType=(e,choice,s,category)=>{
+ const x=choice.effects||{},cat=category||e.category||"";
  const types=[];
  if((x.bond||0)!==0&&s.people.some(p=>p.alive))types.push("trust");
  if((x.health||0)<=-4||(x.stress||0)>=7)types.push("recovery");
@@ -141,9 +141,9 @@ const sourceType=(e,choice,s)=>{
  const preferred={career:"career",business:"financial",money:"financial",health:"recovery",relationship:"trust",family:"family",legacy:"family",entertainment:"creative",fame:"public",politics:"public",social:"trust",community:"community"}[cat];
  return preferred&&types.includes(preferred)?[preferred,...types.filter(t=>t!==preferred)]:types;
 };
-export function rippleFromChoice(s,event,index,choice,ctx){
+export function rippleFromChoice(s,event,index,choice,category){
  if(s.age<16)return null;
- const r=ensureRipples(s),types=sourceType(event,choice,s);
+ const r=ensureRipples(s),types=sourceType(event,choice,s,category);
  if(r.active.length>=3||s.age-r.lastStartedAge<3||!types.length)return null;
  const eligible=types.filter(type=>!(r.active.some(t=>t.type===type))&&s.age-(r.typeLast[type]??-999)>=7);
  if(!eligible.length)return null;

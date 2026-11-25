@@ -281,7 +281,7 @@ function makeEngine(){
     advanceSaga(s,e,i);
     const outcome=s.pendingJourney;if(e.result&&outcome?.id===e.id){if(outcome.ambitious){if(e.result==="success"){change(s,"confidence",6);change(s,"reputation",6);}else{change(s,"confidence",-4);change(s,"stress",5);}}s.pendingJourney=null;}
     s.scenario.last={title:e.title,choice:c.text,category,changes:Object.fromEntries([...statNames,"financialSkill","experience"].filter(k=>(s.stats[k]??s[k]??0)!==before[k]).map(k=>[k,(s.stats[k]??s[k]??0)-before[k]])),netWorth:worth(s)-beforeWorth,bonds:s.people.filter(p=>beforeBonds.has(p.id)&&p.bond!==beforeBonds.get(p.id)).map(p=>({name:p.name,change:p.bond-beforeBonds.get(p.id)}))};
-    const createdRipple=rippleFromChoice(s,e,i,c);if(createdRipple)s.scenario.last.ripple=createdRipple;
+    const createdRipple=rippleFromChoice(s,e,i,c,category);if(createdRipple)s.scenario.last.ripple=createdRipple;
     s.pending=null;add(s,e.title+": "+c.text+".","decision");return finish(s);
   }
   function trialChance(s,e,i){if(!e?.trial)return null;const relevant={knowledge:"technical",performance:"communication",reputation:"communication",creativity:"art",confidence:"communication",kindness:"communication"}[e.trial.stat];const skill=relevant?(s.skills?.[relevant]||0):0;return Math.max(.12,Math.min(.90,.13+s.stats[e.trial.stat]*.0055+skill*.0015+(i===1?.12:0)-Math.max(0,s.stats.stress-45)*.003));}
