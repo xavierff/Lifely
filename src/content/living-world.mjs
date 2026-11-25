@@ -175,8 +175,8 @@ export function worldAct(s,id,ctx){
   else if(verb==='youthtrain'){t.form=cl(t.form+8);t.youthSeasons=(t.youthSeasons||0)+1;change(s,'health',2);change(s,'stress',3);}
   else if(verb==='start'){cash(s,300);t.sport=sports[Number(arg)];t.form=45;announce('Joined '+t.sport+' competitive sport.');}
   else if(verb==='train'){t.form=cl(t.form+11);change(s,'health',3);change(s,'stress',5);}
-  else if(verb==='compete'){t.seasons++;const chance=Math.max(.1,Math.min(.9,.12+t.form*.006+s.stats.health*.002+(s.stats.confidence||0)*.001-(t.injury||0)*.12));const won=rng(s)<chance;
-    if(won){t.wins++;t.form=cl(t.form+5);change(s,'reputation',5);s.cash+=Math.round((600+t.rank*450)*c.salary);if(t.wins>=3*(t.rank+1)&&t.rank<4){t.rank++;t.trophies++;announce('Won a '+t.sport+' championship and advanced a competition tier.');}}
+  else if(verb==='compete'){t.seasons++;const specialty=t.sport==='Tennis'?(s.skills.technical||0)*.002:t.sport==='Basketball'?s.stats.social*.0015:t.sport==='Football'?s.stats.performance*.0015:s.stats.health*.0015;const chance=Math.max(.1,Math.min(.9,.10+t.form*.006+s.stats.health*.0015+specialty+(s.stats.confidence||0)*.001-(t.injury||0)*.12));const won=rng(s)<chance;
+    if(won){t.wins++;t.form=cl(t.form+5);change(s,'reputation',5);s.cash+=Math.round(((t.sport==='Tennis'?1100:t.sport==='Football'?850:t.sport==='Basketball'?750:650)+t.rank*450)*c.salary);if(t.wins>=3*(t.rank+1)&&t.rank<4){t.rank++;t.trophies++;announce('Won a '+t.sport+' championship and advanced a competition tier.');}}
     else{t.losses++;t.form=cl(t.form-7);change(s,'stress',4);}
     if(rng(s)<.08+(t.form>80?.04:0)){t.injury=2;change(s,'health',-6);announce('Sustained a minor sporting injury.');}
     if(w.entertainment.path&&won)w.entertainment.fame=cl(w.entertainment.fame+3);}
@@ -188,7 +188,7 @@ export function worldAct(s,id,ctx){
   if(verb==='join'){p.party='Civic Renewal';p.approval=cl(Math.max(p.approval,s.stats.reputation-10));announce('Joined a fictional civic political party.');}
   else if(verb==='townhall'){p.approval=cl(p.approval+7);change(s,'social',4);change(s,'reputation',3);if(w.travel.culture>=40)p.approval=cl(p.approval+2);}
   else if(verb==='fundraise'){cash(s,500);p.campaignFunds+=1000+Math.round(rng(s)*950);change(s,'stress',4);}
-  else if(verb==='election'){p.elections++;p.lastElectionAge=s.age;p.campaignFunds-=1500;const chance=Math.max(.12,Math.min(.88,.08+p.approval*.005+s.stats.reputation*.002+s.stats.social*.001+(w.entertainment.fame||0)*.0005-(s.record||0)*.06));if(rng(s)<chance){p.wins++;p.office=p.wins>=3?'Regional executive':p.wins===2?'Representative':'Councillor';p.term=4;p.approval=cl(p.approval+8);announce('Won a fictional election: '+p.office+'.');}else{p.approval=cl(p.approval-7);announce('Lost a fictional election.');}}
+  else if(verb==='election'){p.elections++;p.lastElectionAge=s.age;p.campaignFunds-=1500;const chance=Math.max(.12,Math.min(.88,.08+p.approval*.005+s.stats.reputation*.002+s.stats.social*.001+(w.entertainment.fame||0)*.0005-(s.record||0)*.06));if(rng(s)<chance){p.wins++;p.office=p.wins>=3?'Regional executive':p.wins===2?'Representative':'Councillor';p.term=4;p.approval=cl(p.approval+8);if(s.job){s.job=null;announce('Left full-time employment to serve in public office.');}announce('Won a fictional election: '+p.office+'.');}else{p.approval=cl(p.approval-7);announce('Lost a fictional election.');}}
   else if(verb==='policy'){const item=policies[p.policies.length%policies.length];p.campaignFunds-=500;p.policies.push({id:item.id,age:s.age});p.approval=cl(p.approval+5);change(s,item.stat,6);change(s,'reputation',3);announce('Announced civic policy: '+item.name+'.');}
   else if(verb==='report'){p.approval=cl(p.approval+6);change(s,'reputation',4);}
   else if(verb==='exit'){p.party=null;p.office=null;p.term=0;announce('Left active political work.');}
@@ -203,8 +203,8 @@ export function worldAct(s,id,ctx){
   else throw Error('Unknown royal activity.');
  }else if(domain==='travel'){
   if(verb==='visit'){const dest=destinations.find(x=>x.id===arg);if(!dest)throw Error('Invalid destination.');
-    const cost=Math.round((dest.country===s.country?550:1550)*dest.cost*c.cost);cash(s,cost);v.lastTripAge=s.age;v.trips.push({age:s.age,id:dest.id,country:dest.country,theme:dest.theme});if(v.trips.length>90)v.trips.shift();if(!v.stamps.includes(dest.id))v.stamps.push(dest.id);if(!v.visitedCountries.includes(dest.country))v.visitedCountries.push(dest.country);
-    v.culture=cl(v.culture+7);change(s,'knowledge',3);change(s,'happiness',5);change(s,'stress',-4);if(w.entertainment.path){w.entertainment.fame=cl(w.entertainment.fame+2);change(s,'creativity',3);}
+    const cost=Math.round((dest.country===s.country?550:1550)*dest.cost*c.cost);cash(s,cost);const first=!v.stamps.includes(dest.id);v.lastTripAge=s.age;v.trips.push({age:s.age,id:dest.id,country:dest.country,theme:dest.theme});if(v.trips.length>90)v.trips.shift();if(!v.stamps.includes(dest.id))v.stamps.push(dest.id);if(!v.visitedCountries.includes(dest.country))v.visitedCountries.push(dest.country);
+    v.culture=cl(v.culture+(first?7:3));change(s,'knowledge',3);change(s,'happiness',5);change(s,'stress',-4);if(/art|design|museum|theater|craft/i.test(dest.theme))change(s,'creativity',4);else if(/nature|coast|outdoor|environment/i.test(dest.theme))change(s,'health',3);else change(s,'social',3);if(w.entertainment.path){w.entertainment.fame=cl(w.entertainment.fame+2);change(s,'creativity',3);}
     announce('Visited '+dest.name+' for '+dest.theme.toLowerCase()+'.');}
   else if(verb==='passport'){v.passport++;v.lastJournalAge=s.age;v.culture=cl(v.culture+7);change(s,'knowledge',4);announce('Completed a personal travel journal.');}
   else throw Error('Unknown travel activity.');
