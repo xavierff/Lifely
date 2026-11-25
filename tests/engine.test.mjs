@@ -544,3 +544,59 @@ test('older saves without the career campaign field remain compatible',()=>{
  assert.ok(E.validate(s));s=E.ageUp(s);assert.ok(E.validate(s));
  assert.equal(E.campaignHistory(s).completed.length,0);
 });
+
+test('sports, film and business have replay-safe interactive boards with meaningful actions',()=>{
+ for(const type of ['sports','film','business']){
+  let s=E.createLife({seed:2201});s.age=32;s.cash=90000;s.stats.health=82;s.stats.creativity=80;s.skills.art=85;
+  if(type==='sports'){s.world.sports.sport='Football';s.world.sports.form=85;}
+  if(type==='film')s.world.entertainment.path='Film director';
+  if(type==='business')s.business={sector:'shop',capital:16000,quality:64,demand:55};
+  s=E.act(s,'campaign:start:'+type);const startingActions=s.actions;
+  for(let stage=0;stage<4;stage++){
+   let v=E.campaignView(s);assert.equal(v.playfield.remaining,2);
+   assert.equal(v.playfield.options.length,3);assert.ok(E.validate(s));
+   assert.throws(()=>E.campaignPlay(s,-1),/valid/);
+   s=E.campaignPlay(s,0);assert.equal(s.actions,startingActions);
+   assert.equal(E.campaignView(s).playfield.remaining,1);
+   assert.ok(E.campaignView(s).playfield.last.description.length>10);
+   const copied=JSON.parse(JSON.stringify(s));assert.ok(E.validate(copied));
+   s=E.campaignPlay(copied,2);assert.equal(E.campaignView(s).playfield.remaining,0);
+   assert.throws(()=>E.campaignPlay(s,1),/phase is complete/);
+   s=E.campaignDecision(s,1);assert.ok(E.validate(s));
+  }
+  const completed=E.campaignHistory(s).completed[0];
+  assert.equal(completed.playfield.plays.length,8);
+  assert.equal(completed.result.plays,8);
+  assert.equal(completed.choices.length,4);
+  assert.equal(E.campaignView(s),null);
+ }
+});
+test('career playfields remember different mechanics and remain stable through save migration',()=>{
+ let sports=E.createLife({seed:2202});sports.age=30;sports.cash=60000;sports.world.sports.sport='Basketball';
+ sports=E.act(sports,'campaign:start:sports');
+ const weak=E.campaignView(sports).playfield.weakLane;
+ sports=E.campaignPlay(sports,weak);
+ const board=E.campaignView(sports).playfield;
+ assert.equal(board.ours+board.theirs>=0,true);
+ assert.ok(board.fatigue>8);
+ let film=E.createLife({seed:2203});film.age=30;film.cash=60000;film.world.entertainment.path='Film actor';
+ film=E.act(film,'campaign:start:film');delete film.careerCampaigns.active.playfield;
+ assert.ok(E.validate(film));assert.equal(E.campaignView(film).playfield.takes,0);
+ film=E.campaignPlay(film,0);assert.equal(E.campaignView(film).playfield.takes,1);
+ assert.equal(E.campaignView(film).playfield.coverage.length,3);
+ let business=E.createLife({seed:2204});business.age=30;business.cash=20000;business.business={sector:'shop',capital:9000,quality:70,demand:64};
+ business=E.act(business,'campaign:start:business');business.cash=0;
+ business=E.campaignPlay(business,2);assert.ok(E.validate(business));
+ assert.ok(E.campaignView(business).playfield.orders>0);
+ assert.equal(E.campaignView(business).playfield.actualCash,0);
+ assert.equal(E.campaignView(business).playfield.trend.length,2);
+});
+test('career play actions remain deterministic and do not silently spend money',()=>{
+ let s=E.createLife({seed:2205});s.age=30;s.cash=10000;s.world.sports.sport='Tennis';
+ s=E.act(s,'campaign:start:sports');
+ const first=E.campaignPlay(s,1),replay=E.campaignPlay(s,1);
+ assert.deepEqual(first,replay);
+ assert.equal(first.cash,s.cash);
+ assert.equal(s.careerCampaigns.active.playfield.plays.length,0);
+ assert.equal(E.campaignView(first).playfield.plays,1);
+});
