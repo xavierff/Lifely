@@ -85,6 +85,7 @@ test('six-domain World hub and travel journal persist on reload',async({page})=>
  await page.getByRole('textbox',{name:'Search destinations'}).fill('Kyoto');
  await page.getByRole('button',{name:/Visit Kyoto/}).click();
  await expect(page.getByText(/Age 30 · Kyoto/)).toBeVisible();
+ await expect(page.getByText(/LOCAL LIFE/)).toBeVisible();
  await page.reload();await page.getByText('World',{exact:true}).click();
  await page.getByRole('button',{name:'Explore Travel'}).click();
  await expect(page.getByText(/Age 30 · Kyoto/)).toBeVisible();
