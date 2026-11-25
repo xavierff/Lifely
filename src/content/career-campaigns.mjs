@@ -143,7 +143,9 @@ function award(s,a,ctx){
   const interactiveImpact=a.type==='sports'&&p?(p.ours-p.theirs)*2:a.type==='film'&&p?(p.usable-p.retakes)*1.5:a.type==='business'&&p?Math.min(8,p.orders/12):0;
   const rating=clamp(a.quality*.37+a.team*.21+a.reach*.22+skill*.22-a.risk*.19-pressure+interactiveImpact,0,100);
  const chance=Math.max(.08,Math.min(.95,.14+rating*.0083-a.risk*.0007));
- const succeeded=ctx.rng(s)<chance;
+ // Played match goals decide non-drawn sports results; a draw uses the existing skill/rating tiebreak.
+  const matchDecided=a.type==='sports'&&(p?.plays?.some(x=>x.stage>=2))&&p.ours!==p.theirs;
+  const succeeded=matchDecided?p.ours>p.theirs:ctx.rng(s)<chance;
  const grade=succeeded?(rating>=72?'breakthrough':rating>=48?'successful':'close finish'):(rating>=66?'close loss':'setback');
  let gross=0,fee=0,message='';
  if(a.type==='film'){
@@ -162,7 +164,8 @@ function award(s,a,ctx){
   t.seasons++;if(a.risk>60&&ctx.rng(s)<.22){t.injury=Math.max(t.injury||0,1);ctx.change(s,'health',-5);}
   if(pro?.id==='athlete'){pro.attempts=(pro.attempts||0)+1;if(succeeded)pro.wins=(pro.wins||0)+1;pro.metric=clamp(pro.metric+(succeeded?8:-3));}
   const opponent=w.characters?.athletes?.find(p=>p.id===rival);if(opponent){if(succeeded)opponent.losses++;else opponent.wins++;opponent.rivalry=clamp(opponent.rivalry+5);opponent.respect=clamp(opponent.respect+(succeeded?4:2));}
-  message=succeeded?'The season ended with a competition victory.':'Your rival prevailed this season, leaving a clear rematch to work toward.';
+  const scoreline=p?.plays?.some(x=>x.stage>=2)?' Tournament score '+p.ours+'–'+p.theirs+(p.ours===p.theirs?' (resolved by a rating tiebreak).':'.'):'';
+   message=(succeeded?'The season ended with a competition victory.':'Your rival prevailed this season, leaving a clear rematch to work toward.')+scoreline;
  }else if(a.type==='election'){
   const p=w.politics;p.party??='Civic Renewal';p.elections++;p.lastElectionAge=s.age;p.campaignFunds=Math.max(0,(p.campaignFunds||0)-Math.min(1500,p.campaignFunds||0));
   p.approval=clamp(p.approval+(succeeded?Math.round(7+rating/15):-7));
@@ -206,6 +209,7 @@ export function campaignReply(s,selection,ctx){
  a.choices.push({step:a.stage,index:selection,label:choice.label,cost:choice.cost,age:s.age});
  if(choice.risk>15)ctx.change(s,'stress',4);else if(choice.team>10)ctx.change(s,'social',2);
  a.stage++;
+ if(a.type==='sports'&&a.stage===2&&a.playfield)a.playfield.fatigue=18; // Recovery before elimination match.
  if(a.stage===4){
   const result=award(s,a,ctx),rec={...a,status:'completed',endedAge:s.age,outcome:result.grade,result};
   c.completed.push(rec);c.completed=c.completed.slice(-50);c.active=null;c.totals[a.type]=(c.totals[a.type]||0)+1;
