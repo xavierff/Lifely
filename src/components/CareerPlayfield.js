@@ -13,7 +13,8 @@ function Choice({item,i,disabled,onPlay,testPrefix}){
 function Pitch({v,onPlay}){
  const lanes=['LEFT','CENTER','RIGHT'];
  return <View testID="tactical-sports-match" style={S.board}>
-  <View style={S.rowBetween}><Text style={S.kicker}>LIVE TACTICAL BOARD</Text><Text style={S.kicker}>PHASE {v.stage+1} / 4</Text></View>
+  <View style={S.rowBetween}><Text style={S.kicker}>{v.matchday?'LIVE TACTICAL BOARD':'PRESEASON TACTICS BOARD'}</Text><Text style={S.kicker}>PHASE {v.stage+1} / 4</Text></View>
+  <Text style={S.small}>{v.matchday?'TOURNAMENT GOALS':'TRAINING: '+v.trainingHits+' successful drills · goals begin in round 3'}</Text>
   <View style={S.scoreboard}><View style={S.scoreSide}><Text style={S.scoreLabel}>YOUR TEAM</Text><Text style={S.scoreNumber}>{v.ours}</Text></View><Text style={S.scoreDash}>:</Text><View style={S.scoreSide}><Text style={S.scoreLabel} numberOfLines={1}>{v.opponent}</Text><Text style={S.scoreNumber}>{v.theirs}</Text></View></View>
   <View style={S.pitch}>
    <Text style={S.pitchTitle}>OPPONENT'S HALF</Text>
@@ -31,7 +32,7 @@ function Pitch({v,onPlay}){
 }
 function FilmSet({v,onPlay}){
  return <View testID="interactive-film-set" style={S.board}>
-  <View style={S.rowBetween}><Text style={S.kicker}>DIRECTOR'S MONITOR</Text><Text style={S.kicker}>SCENE {v.stage+1} / 4</Text></View>
+  <View style={S.rowBetween}><Text style={S.kicker}>DIRECTOR'S MONITOR</Text><Text style={S.kicker}>{['LOOK TEST','CAST SCREEN TEST','PRINCIPAL SHOOT','TRAILER CUT'][v.stage]}</Text></View>
   <View style={S.filmScreen}>
    <View style={S.filmHeader}><Text style={S.filmSlate}>▣  LIFELY STUDIOS</Text><Text style={S.filmSlate}>TAKE {v.takes+1}</Text></View>
    <View style={S.filmAction}><Text style={S.filmLight}>✧</Text><View style={S.filmActor}><Text style={S.filmActorText}>◉</Text><Text style={S.small}>TALENT</Text></View><View style={S.filmCamera}><Text style={S.filmCameraText}>▣</Text><Text style={S.small}>CAM A</Text></View></View>
