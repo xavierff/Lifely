@@ -150,7 +150,10 @@ export function worldAct(s,id,ctx){
    const actor=e.path==='Film actor',director=e.path==='Film director';
    cash(s,director?2500:actor?650:1200);
    const craft=actor?(e.screenCraft||0)*.003+s.stats.social*.001:director?(e.productionQuality||0)*.003+s.stats.knowledge*.001:(s.audience||0)*.000002;
-   const chance=Math.min(.9,.12+s.stats.creativity*.0037+(s.skills.art||0)*.002+e.fame*.002+craft);
+   const agency=s.world.characters?.agency;
+   const representative=agency?s.world.characters.agents.find(a=>a.id===agency.agentId&&a.specialty===e.path):null;
+   const agentBoost=representative?(representative.network*.0008+representative.trust*.0003):0;
+   const chance=Math.min(.9,.12+s.stats.creativity*.0037+(s.skills.art||0)*.002+e.fame*.002+craft+agentBoost);
    const won=rng(s)<chance;
    if(won){
     e.releases++;e.catalog+=actor?0:director?2:1;e.fame=cl(e.fame+(director?15:actor?10:13));
@@ -158,7 +161,10 @@ export function worldAct(s,id,ctx){
     e.awards+=rng(s)<(director?.28:.18)?1:0;
     s.audience=(s.audience||0)+Math.round((actor?600:450)*(1+e.fame/30));
     change(s,'reputation',6);
-    s.cash+=Math.round((director?4200:actor?2800:1600)*c.salary*(1+e.releases*.2));
+    const gross=Math.round((director?4200:actor?2800:1600)*c.salary*(1+e.releases*.2));
+    const fee=representative?Math.round(gross*representative.commission/100):0;
+    s.cash+=gross-fee;
+    if(representative){agency.earned+=gross-fee;agency.fees+=fee;agency.deals++;representative.projects++;}
    }else{e.fame=cl(e.fame-4);change(s,'stress',7);}
    e.lastResult=won?(actor?'Leading role booked':director?'Festival premiere well received':'New record resonates with fans'):'Project failed to meet expectations';
    announce(e.path+' project: '+e.lastResult+'.');
@@ -188,7 +194,10 @@ export function worldAct(s,id,ctx){
   if(verb==='join'){p.party='Civic Renewal';p.approval=cl(Math.max(p.approval,s.stats.reputation-10));announce('Joined a fictional civic political party.');}
   else if(verb==='townhall'){p.approval=cl(p.approval+7);change(s,'social',4);change(s,'reputation',3);if(w.travel.culture>=40)p.approval=cl(p.approval+2);}
   else if(verb==='fundraise'){cash(s,500);p.campaignFunds+=1000+Math.round(rng(s)*950);change(s,'stress',4);}
-  else if(verb==='election'){p.elections++;p.lastElectionAge=s.age;p.campaignFunds-=1500;const chance=Math.max(.12,Math.min(.88,.08+p.approval*.005+s.stats.reputation*.002+s.stats.social*.001+(w.entertainment.fame||0)*.0005-(s.record||0)*.06));if(rng(s)<chance){p.wins++;p.office=p.wins>=3?'Regional executive':p.wins===2?'Representative':'Councillor';p.term=4;p.approval=cl(p.approval+8);if(s.job){s.job=null;announce('Left full-time employment to serve in public office.');}announce('Won a fictional election: '+p.office+'.');}else{p.approval=cl(p.approval-7);announce('Lost a fictional election.');}}
+  else if(verb==='election'){p.elections++;p.lastElectionAge=s.age;p.campaignFunds-=1500;
+    const rivals=s.world.characters?.politicians||[];
+    const strongestApproval=Math.max(50,...rivals.map(x=>x.approval));
+    const chance=Math.max(.12,Math.min(.88,.08+p.approval*.005+s.stats.reputation*.002+s.stats.social*.001+(w.entertainment.fame||0)*.0005-(s.record||0)*.06-(strongestApproval-50)*.002));if(rng(s)<chance){p.wins++;p.office=p.wins>=3?'Regional executive':p.wins===2?'Representative':'Councillor';p.term=4;p.approval=cl(p.approval+8);if(s.job){s.job=null;announce('Left full-time employment to serve in public office.');}announce('Won a fictional election: '+p.office+'.');}else{p.approval=cl(p.approval-7);announce('Lost a fictional election.');}}
   else if(verb==='policy'){const item=policies[p.policies.length%policies.length];p.campaignFunds-=500;p.policies.push({id:item.id,age:s.age});p.approval=cl(p.approval+5);change(s,item.stat,6);change(s,'reputation',3);announce('Announced civic policy: '+item.name+'.');}
   else if(verb==='report'){p.approval=cl(p.approval+6);change(s,'reputation',4);}
   else if(verb==='exit'){p.party=null;p.office=null;p.term=0;announce('Left active political work.');}

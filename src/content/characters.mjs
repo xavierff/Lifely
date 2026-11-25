@@ -7,7 +7,7 @@ const disciplines=['Football','Basketball','Tennis','Track and field'];
 const specialties=['Film actor','Recording musician','Film director'];
 const hash=s=>{let x=2166136261;for(const c of String(s)){x=Math.imul(x^c.charCodeAt(0),16777619)>>>0;}return x;};
 const value=(s,offset,min,max)=>min+(hash(String(s.lifeId||s.name)+':'+offset)%(max-min+1));
-const personName=(s,offset)=>names[value(s,'npc-name-'+offset,0,names.length-1)];
+const personName=(s,offset)=>names[(hash(String(s.lifeId||s.name)+':cast')+offset*7)%names.length];
 export function initialCharacters(s){
  return {version:1,
   athletes:disciplines.map((sport,i)=>({id:'ath-'+i,name:personName(s,1+i),sport,age:Math.max(18,s.age+value(s,'ath-age-'+i,-3,5)),form:value(s,'ath-form-'+i,42,77),wins:0,losses:0,trophies:0,rivalry:20,respect:48,personality:dispositions[i],history:[]})),
