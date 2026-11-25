@@ -1,6 +1,6 @@
 # Lifely
 
-An original, offline, choice-driven life simulator. This repository is the **0.3.0 playable development version**, not an App Store-ready or feature-parity release.
+An original, offline, choice-driven life simulator. This repository is the **0.4.0 playable development version**, not an App Store-ready or feature-parity release.
 
 ## Play and build
 Use Node 22.13+ and npm. Install dependencies, align the Expo versions and run the tests:
@@ -46,3 +46,7 @@ Branching journeys now have preparation, a skill-dependent trial and distinct su
 ## 0.3.0: Living World, Special Careers and Life Sagas
 
 Ten special careers with profession-specific outcomes, five ranks each, preparation, estimated success odds, salaries, contracts and other career-specific records. Independently evolving NPCs have education, ambitions, personalities, jobs, savings, debts, promotion, unemployment, trust and rivalry; financial support transfers actual funds. Six character-linked sagas have four chapters and alternate endings, with six to eight years of scheduled progression (delays possible when other events are pending). Existing version-2 saves and event IDs are retained; missing profile fields initialize on interaction or aging. The game remains fictional, offline and single-player. Special careers use a shared action/odds framework with specialized outcomes, not ten separate fully developed mini-games. No native signed build or comparative human playtest has been completed.
+
+## 0.4.0 content expansion
+
+1,000 scenario records (308 existing and 692 activity variants from 173 original premises in 14 categories), 2,762 decision options, 150 regular careers, ten special careers, 100 achievement definitions and 50 challenge definitions. This is not a claim of 1,000 individually hand-written stories. Variant prompts are distinct, but shared structures remain visible. The new modules are in `src/content/`; append order is a save compatibility contract. The job board has search and progressive loading. Bank savings, financial literacy, job experience, industry-specific training, company hiring, product launches, marketing, payroll and competition affect the actual simulation. The initial 200-life simulation covered 912/1,000 cards across 17,507 decisions, not all cards in natural gameplay. No signed build or comparative human playtest is claimed.
