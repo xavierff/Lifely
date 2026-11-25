@@ -138,7 +138,8 @@ const sourceType=(e,choice,s)=>{
  if(s.age>=18&&((x.creativity||0)>=5||cat==="entertainment"))types.push("creative");
  if((x.kindness||0)>=5&&s.age>=16)types.push("community");
  if(s.people.some(p=>p.alive)&&["family","legacy","relationship"].includes(cat))types.push("family");
- return types;
+ const preferred={career:"career",business:"financial",money:"financial",health:"recovery",relationship:"trust",family:"family",legacy:"family",entertainment:"creative",fame:"public",politics:"public",social:"trust",community:"community"}[cat];
+ return preferred&&types.includes(preferred)?[preferred,...types.filter(t=>t!==preferred)]:types;
 };
 export function rippleFromChoice(s,event,index,choice,ctx){
  if(s.age<16)return null;
@@ -147,7 +148,7 @@ export function rippleFromChoice(s,event,index,choice,ctx){
  const eligible=types.filter(type=>!(r.active.some(t=>t.type===type))&&s.age-(r.typeLast[type]??-999)>=7);
  if(!eligible.length)return null;
  // Deliberately no RNG consumption: replay and save/load stay deterministic.
- const type=eligible[(event.id+s.age+index)%eligible.length],def=rippleStories[type];
+ const type=eligible[0],def=rippleStories[type];
  const relative=s.people.find(p=>p.alive&&["partner","child","parent","friend","sibling"].includes(p.role))||null;
  const id="r"+r.started+"-"+event.id+"-"+s.age;
  const story={id,type,title:def.title,sourceTitle:event.title,sourceChoice:choice.text,startedAge:s.age,nextAge:s.age+1,stage:0,score:0,choices:[],contactId:relative?.id??null,contactName:relative?.name??null,originGeneration:s.generation,ownerName:s.name,status:"active"};
@@ -223,7 +224,7 @@ export function rippleInheritance(next,prior){
   r.completed.push({...t,status:"completed",outcome:"inherited memory",endedAge:prior.age,finishReason:"generation"});
  }
  r.completed=r.completed.slice(-65);
- r.lastStartedAge=next.age-2;r.typeLast={...source.typeLast};
+ r.lastStartedAge=next.age-2;r.typeLast={};
  return next;
 }
 export function rippleRecap(s){
