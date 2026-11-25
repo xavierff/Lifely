@@ -228,7 +228,16 @@ export function relationshipYear(s,ctx){
    e.memories.push({age:s.age,event:"A serious breach of trust"});
   }
   e.status=status(e.trust,e.loyalty,e.betrayals>0&&e.trust<42);
-  if(e.status!==previous&&(e.status==="allies"||e.status==="estranged"||e.status==="betrayed"||e.status==="friends")){
+  if(e.status!==previous&&["allies","friends","estranged","betrayed"].includes(e.status)){
+   // Relationships have consequences for both NPCs, not only narrative notifications.
+   const upbeat=e.status==="allies"||e.status==="friends",delta=upbeat?5:e.status==="betrayed"?-11:-6;
+   for(const id of [e.a,e.b]){
+    const node=findPerson(s,id);if(!node)continue;
+    if(node.kind==="person"){const relative=s.people.find(p=>p.id===Number(id.slice(7)));if(relative?.world){relative.world.joy=bound(relative.world.joy+delta);relative.world.trust=bound(relative.world.trust+(upbeat?3:-5));}}
+    else if(node.kind==="athlete"){const athlete=s.world.characters?.athletes?.find(p=>p.id===id);if(athlete)athlete.form=bound(athlete.form+(upbeat?2:-4));}
+    else if(node.kind==="politician"){const politician=s.world.characters?.politicians?.find(p=>p.id===id);if(politician)politician.approval=bound(politician.approval+(upbeat?3:-5));}
+    else if(node.kind==="agent"){const agent=s.world.characters?.agents?.find(p=>p.id===id);if(agent)agent.network=bound(agent.network+(upbeat?3:-5));}
+   }
    const name1=findPerson(s,e.a)?.name||"A former friend",name2=findPerson(s,e.b)?.name||"someone";
    let label=e.status==="allies"?"formed a lasting alliance":e.status==="friends"?"became close friends":e.status==="betrayed"?"suffered a betrayal":"grew apart";
    const record={age:s.age,text:name1+" and "+name2+" "+label+".",kind:e.status,between:[e.a,e.b]};
