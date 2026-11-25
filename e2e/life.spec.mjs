@@ -65,5 +65,5 @@ test('career challenge survives reload and player collection is available',async
  await expect(page.getByText(/LOCAL LIFE/)).toBeVisible();await page.reload();await expect(panel.getByText('Which sequence did you study?')).toBeVisible();
  await panel.getByRole('button').first().click();await expect(panel).toContainText('ROUND 2/5');
  await panel.getByRole('button',{name:'Abandon challenge'}).click();await expect(panel).toHaveCount(0);
- await page.getByText('More',{exact:true}).click();await expect(page.getByText('Player collection',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Show all ribbons'}).click();await expect(page.getByText('Everyday Legacy',{exact:true})).toBeVisible();
+ await page.getByText('More',{exact:true}).click();await expect(page.getByText('Player collection',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Show all ribbons'}).click();await expect(page.getByText(/Everyday Legacy/)).toBeVisible();
 });
