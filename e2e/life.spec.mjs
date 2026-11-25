@@ -266,7 +266,7 @@ test('tactical sports match persists score, fatigue and turn limits after reload
  await page.getByRole('tab',{name:'Work'}).click();
  await page.getByRole('button',{name:/Play a competitive season/}).click();
  const board=page.getByTestId('tactical-sports-match');await expect(board).toBeVisible();
- await expect(board).toContainText('LIVE TACTICAL BOARD');
+ await expect(board).toContainText('PRESEASON TACTICS BOARD');
  await page.getByTestId('sports-action-0').click();
  await expect(page.getByTestId('playfield-feedback')).toBeVisible();
  await page.reload();await expect(page.getByTestId('tactical-sports-match')).toContainText('Plays left');
