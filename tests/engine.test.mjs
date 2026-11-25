@@ -451,3 +451,96 @@ test('a family-originated consequence remembers the relevant relative',()=>{
  assert.equal(s.ripples.active[0].contactName,partner.name);
  assert.ok(E.validate(s));
 });
+
+test('interactive careers provide five four-stage authored simulations with free choices',()=>{
+ assert.equal(E.careerCampaignTypes.length,5);
+ const titles=new Set();
+ for(const mission of E.careerCampaignTypes){assert.equal(mission.stages.length,4);assert.ok(mission.entry>0);
+  for(const stage of mission.stages){assert.equal(stage.choices.length,3);assert.ok(stage.prompt.length>75);
+   assert.ok(stage.choices.some(c=>c.cost===0));titles.add(stage.title);}
+ }
+ assert.equal(titles.size,20);
+});
+test('each career project advances four scenes, updates the world and keeps valid saves',()=>{
+ for(const type of ['film','sports','election','medical','business']){
+  let s=E.createLife({seed:183});s.age=32;s.cash=200000;s.stats.creativity=91;s.stats.health=95;s.stats.knowledge=90;
+  s.stats.reputation=87;s.stats.social=90;s.skills.technical=90;s.skills.art=90;
+  if(type==='film')s.world.entertainment.path='Film director';
+  if(type==='sports'){s.world.sports.sport='Football';s.world.sports.form=85;}
+  if(type==='election'){s.world.politics.party='Civic Renewal';s.world.politics.approval=87;}
+  if(type==='medical')s.job={id:15,level:1,experience:10};
+  if(type==='business')s.business={sector:'studio',capital:18000,quality:75};
+  assert.ok(E.validate(s));const command='campaign:start:'+type;
+  assert.ok(E.commands(s).some(c=>c.id===command&&c.enabled));
+  s=E.act(s,command);assert.ok(E.validate(s));assert.equal(s.actions,2);
+  assert.throws(()=>E.ageUp(s));assert.equal(E.commands(s).length,0);
+  for(let i=0;i<4;i++){const v=E.campaignView(s);assert.equal(v.round,i+1);
+   assert.equal(v.choices.length,3);s=E.campaignDecision(s,1);assert.ok(E.validate(s));}
+  assert.equal(E.campaignView(s),null);assert.equal(E.campaignHistory(s).completed.length,1);
+  const outcome=E.campaignHistory(s).completed[0];
+  assert.equal(outcome.type,type);assert.equal(outcome.choices.length,4);
+  assert.ok(Number.isFinite(outcome.result.rating));assert.ok(s.cash>=0);
+  assert.ok(!E.commands(s).some(c=>c.id===command&&c.enabled));
+ }
+});
+test('career project stages never softlock players with zero remaining cash',()=>{
+ for(const type of ['film','sports','election','medical','business']){
+  let s=E.createLife({seed:188});s.age=35;s.cash=5000;s.stats.creativity=91;
+  s.stats.health=95;s.stats.knowledge=91;s.stats.reputation=87;s.stats.social=91;
+  if(type==='film')s.world.entertainment.path='Film actor';
+  if(type==='sports')s.world.sports.sport='Basketball';
+  if(type==='election')s.world.politics.party='Civic Renewal';
+  if(type==='medical')s.job={id:13,level:0,experience:0};
+  if(type==='business')s.business={sector:'studio',capital:8000,quality:65};
+  const command='campaign:start:'+type;assert.ok(E.commands(s).some(c=>c.id===command&&c.enabled));
+  s=E.act(s,command);s.cash=0;
+  for(let i=0;i<4;i++){const view=E.campaignView(s),free=view.choices.find(c=>c.cost===0);
+   assert.ok(free&&free.enabled);
+   const costly=view.choices.find(c=>c.cost>0);
+   if(costly){assert.equal(costly.enabled,false);assert.throws(()=>E.campaignDecision(s,costly.index));}
+   s=E.campaignDecision(s,free.index);assert.ok(E.validate(s));}
+  assert.equal(E.campaignHistory(s).completed.length,1);
+ }
+});
+test('career projects can be abandoned but entry budgets are not refunded',()=>{
+ let s=E.createLife({seed:190});s.age=30;s.cash=30000;s.world.entertainment.path='Film director';
+ let before=s.cash;s=E.act(s,'campaign:start:film');
+ assert.equal(s.cash,before-850);assert.throws(()=>E.act(s,'campaign:start:film'));
+ s=E.campaignDecision(s,'abandon');
+ assert.equal(s.cash,before-850);assert.equal(E.campaignHistory(s).completed[0].outcome,'abandoned');
+ assert.ok(!E.commands(s).some(x=>x.id==='campaign:start:film'&&x.enabled));
+ assert.ok(E.validate(s));
+});
+test('company projects respect inventory caps and remain financially valid',()=>{
+ let s=E.createLife({seed:191});s.age=31;s.cash=300000;s.stats.knowledge=100;s.skills.technical=100;
+ s.business={sector:'studio',capital:25000,quality:90,products:Array.from({length:10},(_,i)=>'Product '+i),demand:75};
+ s=E.act(s,'campaign:start:business');
+ for(let i=0;i<4;i++)s=E.campaignDecision(s,0);
+ assert.equal(s.business.products.length,10);assert.ok(E.validate(s));
+});
+test('film projects charge their actual budget and record net revenue',()=>{
+ let s=E.createLife({seed:192});s.age=31;s.cash=120000;s.stats.creativity=98;
+ s.skills.art=90;s.world.entertainment.path='Film actor';
+ s=E.act(s,'campaign:start:film');let cost=850;
+ for(let i=0;i<4;i++){const choice=E.campaignView(s).choices[0];cost+=choice.cost;s=E.campaignDecision(s,0);}
+ const record=E.campaignHistory(s).completed[0];
+ assert.equal(s.cash,120000-cost+record.result.net);
+ assert.equal(record.spend,cost);
+ assert.equal(record.result.net,record.result.gross-record.result.fee);
+ assert.ok(E.validate(s));
+});
+test('descendants inherit completed career history but cannot inherit an active project',()=>{
+ let s=E.createLife({seed:193});s.age=40;s.cash=120000;s.world.sports.sport='Tennis';
+ s=E.act(s,'campaign:start:sports');for(let i=0;i<4;i++)s=E.campaignDecision(s,1);
+ s.actions=3;s=E.act(s,'date');s=E.act(s,'child');
+ const child=s.people.find(p=>p.role==='child');child.age=20;
+ s.alive=false;s.pending=null;let heir=E.legacy(s,child.id);
+ assert.ok(E.validate(heir));assert.equal(E.campaignView(heir),null);
+ assert.equal(E.campaignHistory(heir).completed.length,1);
+ assert.equal(E.campaignHistory(heir).completed[0].rememberedFrom,s.name);
+});
+test('older saves without the career campaign field remain compatible',()=>{
+ let s=E.createLife({seed:194});delete s.careerCampaigns;
+ assert.ok(E.validate(s));s=E.ageUp(s);assert.ok(E.validate(s));
+ assert.equal(E.campaignHistory(s).completed.length,0);
+});
