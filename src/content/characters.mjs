@@ -254,3 +254,37 @@ export function characterEffect(s,e,key,amount,ctx){
  if(key==='legacyContribution'&&s.world?.characters?.arc)s.world.characters.arc.contributions+=amount;
  return true;
 }
+
+const sagaChapters={
+ letters:[
+ ['The sealed envelope','A family elder asks you to decide how to read letters that contain memories other relatives might prefer to keep private.'],
+ ['The missing signature','Some letters seem to contradict a cherished account of the family. The people most affected deserve to be heard.'],
+ ['Whose story is this?','You must decide whether to preserve the original voices or create a modern account that risks leaving details behind.'],
+ ['An archive for the future','The letters are finally ready for safekeeping. The next generation can receive them with honesty, discretion and context.']
+ ],
+ workshop:[
+ ['The workshop key','An aging relative offers you the last key to the family workshop. They want the craft to survive without forcing anyone into it.'],
+ ['An apprentice arrives','Someone outside the family wants to learn the craft. The family disagrees over who has a right to preserve its techniques.'],
+ ['Repairing the tools','The workshop cannot continue on goodwill alone. Tools need repair and younger relatives have competing responsibilities.'],
+ ['The next keeper','The craft can become a shared resource, a new enterprise or a treasured memory. Someone must decide how it passes forward.']
+ ],
+ garden:[
+ ['Seeds of a promise','You find a plan for a small community garden your family once helped maintain. Several neighbors remember it differently.'],
+ ['A disputed boundary','New residents need access to the space, but the original plan left unclear who may make decisions.'],
+ ['The difficult season','Weather and maintenance costs threaten the garden. The family must choose practical help over appearances.'],
+ ['The next planting','The community can take ownership of the garden, or the family can preserve a smaller plot with a clear agreement.']
+ ],
+ scholarship:[
+ ['The first recipient','A relative remembers the promise to help young learners, but there is no agreement about who should benefit first.'],
+ ['What counts as fairness?','Two applicants have different needs and abilities. Your family must confront how decisions are made.'],
+ ['Making support sustainable','A single generous payment is not a permanent program. The family has to plan for future generations.'],
+ ['An open invitation','The scholarship can become a transparent family tradition, revised to reflect the needs of descendants who were not yet born.']
+ ]
+};
+export function characterArcView(s){
+ const arc=characterView(s).arc;
+ if(!arc||arc.status!=='active')return null;
+ const chapter=(sagaChapters[arc.kind]||sagaChapters.letters)[Math.min(3,arc.stage)];
+ const handoff=arc.generations>1?'This unfinished promise was passed down by '+arc.sourceName+'. You can continue it or change its meaning. ':'';
+ return {...arc,chapterTitle:chapter[0],chapterText:handoff+chapter[1],ready:s.age>=arc.nextAge,remainingYears:Math.max(0,arc.nextAge-s.age)};
+}

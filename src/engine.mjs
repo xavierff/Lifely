@@ -1,7 +1,7 @@
 /* Lifely original deterministic simulation. */
 import {dramaticCards} from './content/drama.mjs';
 import {characterEventCards} from './content/character-scenes.mjs';
-import {initialCharacters,ensureCharacters,characterView,characterCommands,characterAct,characterYear,characterInheritance,characterEligible,characterParticipant,characterEffect} from './content/characters.mjs';
+import {initialCharacters,ensureCharacters,characterView,characterArcView,characterCommands,characterAct,characterYear,characterInheritance,characterEligible,characterParticipant,characterEffect} from './content/characters.mjs';
 import {worldEventCards} from './content/world-scenes.mjs';
 import {lifeEnding,ribbons} from './profile.mjs';
 import {gameTypes,miniRound} from './content/minigames.mjs';
@@ -499,7 +499,7 @@ function makeEngine(){
  ,...challengeDefinitions()];
  function challengeProgress(s){const snapshot=metricSnapshot(s);return challenges.map(({progress,...c})=>({...c,progress:progress(s,snapshot),completed:(s.completedChallenges||[]).includes(c.id)}));}
  const goalProgress=s=>s.goal==="wealth"?Math.min(100,Math.max(0,Math.floor(worth(s)/10000))):s.goal==="family"?Math.min(100,s.people.filter(p=>p.alive&&p.bond>=80).length*25):Math.round((s.stats.health+s.stats.happiness+100-s.stats.stress)/3);
-  return {countries,careers,domains,destinations,characterView,characterCommands,viewWorld,worldStatus,worldAssets,worldCommands:s=>worldCommands(s,{country}),instruments,portfolioWorth,ribbons,lifeEnding:s=>lifeEnding(s,worth(s)),miniView,miniAction,degrees,assets,sectors,clubs,professions,achievementStatus,professionalOdds,npcWorth,npcOccupation,sagaProgress,scenarioPrompt,events,eventCategory,trialChance,challengeProgress,createLife,ageUp,resolve,commands,act,pending,worth,legacy,validate,goalProgress};
+  return {countries,careers,domains,destinations,characterView,characterArcView,characterCommands,viewWorld,worldStatus,worldAssets,worldCommands:s=>worldCommands(s,{country}),instruments,portfolioWorth,ribbons,lifeEnding:s=>lifeEnding(s,worth(s)),miniView,miniAction,degrees,assets,sectors,clubs,professions,achievementStatus,professionalOdds,npcWorth,npcOccupation,sagaProgress,scenarioPrompt,events,eventCategory,trialChance,challengeProgress,createLife,ageUp,resolve,commands,act,pending,worth,legacy,validate,goalProgress};
 }
 export const engine = makeEngine();
 export default engine;
