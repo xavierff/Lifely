@@ -577,7 +577,9 @@ test('career playfields remember different mechanics and remain stable through s
  const weak=E.campaignView(sports).playfield.weakLane;
  sports=E.campaignPlay(sports,weak);
  const board=E.campaignView(sports).playfield;
- assert.equal(board.ours+board.theirs>=0,true);
+ assert.notEqual(board.weakLane,weak); // Opponents adapt after the player's attack.
+ assert.equal(board.ours,0); // Preseason drills must not score official match goals.
+ assert.equal(board.theirs,0);
  assert.ok(board.fatigue>8);
  let film=E.createLife({seed:2203});film.age=30;film.cash=60000;film.world.entertainment.path='Film actor';
  film=E.act(film,'campaign:start:film');delete film.careerCampaigns.active.playfield;
