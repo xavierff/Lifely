@@ -382,8 +382,13 @@ test('multiple-year commitments have distinct fulfilled, complicated and neglect
  assert.equal(E.rippleRecap(good).outcomes.fulfilled,1);
 });
 test('ripples cannot be used before their due date or funded without cash',()=>{
- let s=E.createLife({seed:452});s.age=28;s.cash=50;
- const e=E.events.find(e=>e.title==='A new coworker');s.pending=e.id;s=E.resolve(s,0);
+ let s=E.createLife({seed:452});s.age=28;s.cash=10000;
+ const e=E.events.find(e=>E.eventCategory(e)==='money'&&e.choices.some(c=>(c.effects.cash||0)<=-400));
+ assert.ok(e);
+ const choice=e.choices.findIndex(c=>(c.effects.cash||0)<=-400);
+ s.pending=e.id;s=E.resolve(s,choice);
+ assert.equal(s.ripples.active[0].type,'financial');
+ s.cash=50;
  const id=s.ripples.active[0].id;
  assert.throws(()=>E.act(s,'ripple:'+id+':0'));
  s.age=s.ripples.active[0].nextAge;s.actions=3;
