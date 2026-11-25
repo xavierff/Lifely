@@ -176,7 +176,7 @@ function award(s,a,ctx){
   if(s.job){s.job.experience=clamp((s.job.experience||0)+(succeeded?9:3));ctx.change(s,'performance',succeeded?5:-3);}
   message=succeeded?'The fictional care team completed a safe, coordinated follow-up.':'The team identified a safety gap and escalated it for supervised review.';
  }else if(a.type==='business'){
-  const b=s.business;if(b){b.quality=clamp(b.quality+(succeeded?Math.round(7+rating/14):-6));b.demand=clamp(b.demand+(succeeded?Math.round(7+rating/11):-4));b.competition=clamp(b.competition+(succeeded?2:4));
+  const b=s.business;if(b){b.demand??=50;b.competition??=50;b.products??=[];b.quality=clamp(b.quality+(succeeded?Math.round(7+rating/14):-6));b.demand=clamp(b.demand+(succeeded?Math.round(7+rating/11):-4));b.competition=clamp(b.competition+(succeeded?2:4));
    if(succeeded){b.products??=[];if(b.products.length<10)b.products.push('Customer-led launch '+(b.products.length+1));gross=Math.round(Math.max(0,(b.capital||0)*(.08+rating/900)));
     s.cash+=gross;
     ctx.change(s,'reputation',5);ctx.change(s,'knowledge',3);
