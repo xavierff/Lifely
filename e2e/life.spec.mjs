@@ -211,3 +211,51 @@ test('ripple choices fit mobile widths without horizontal overflow',async({page}
    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
  }
 });
+
+test('film project decisions continue after save reload and update career portfolio',async({page})=>{
+ let s=E.createLife({name:'Elliot',seed:194});s.age=30;s.cash=80000;s.stats.creativity=91;s.world.entertainment.path='Film director';
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByRole('tab',{name:'Work'}).click();
+ await page.getByRole('button',{name:/Produce a film/}).click();
+ const panel=page.getByTestId('career-project');await expect(panel).toBeVisible();
+ await expect(panel).toContainText('ROUND 1 OF 4');await expect(page.getByTestId('advance-year')).toBeDisabled();
+ await panel.getByRole('button',{name:/Build a small, original independent story/}).click();
+ await expect(panel).toContainText('ROUND 2 OF 4');
+ await expect(page.getByText(/LOCAL LIFE/)).toBeVisible();
+ await page.reload();await expect(panel).toContainText('ROUND 2 OF 4');
+ await panel.getByRole('button',{name:/Develop your existing ensemble/}).click();
+ await panel.getByRole('button',{name:/Reduce scope and complete essential scenes/}).click();
+ await panel.getByRole('button',{name:/Release slowly to a loyal audience/}).click();
+ await expect(panel).toHaveCount(0);
+ await page.getByRole('tab',{name:'Work'}).click();
+ await expect(page.getByText('CAREER PROJECT PORTFOLIO',{exact:true})).toBeVisible();
+ await expect(page.getByTestId('advance-year')).toBeEnabled();
+});
+test('sport, civic election, medical and business missions have distinct playable entry points',async({page})=>{
+ for(const type of ['sports','election','medical','business']){
+   let s=E.createLife({name:'Alex',seed:300+['sports','election','medical','business'].indexOf(type)});
+   s.age=32;s.cash=90000;s.stats.health=90;s.stats.reputation=92;s.stats.knowledge=95;
+   if(type==='sports')s.world.sports.sport='Football';
+   if(type==='election')s.world.politics.party='Civic Renewal';
+   if(type==='medical')s.job={id:15,level:1,experience:0};
+   if(type==='business')s.business={sector:'shop',capital:15000,quality:65};
+   await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+   await page.getByRole('tab',{name:'Work'}).click();
+   const label={sports:/Play a competitive season/,election:/Run an election campaign/,medical:/Coordinate a clinical case/,business:/Launch a company initiative/}[type];
+   await page.getByRole('button',{name:label}).click();
+   await expect(page.getByTestId('career-project')).toContainText('ROUND 1 OF 4');
+ }
+});
+test('career choices remain readable at compact phone widths',async({page})=>{
+ for(const width of [320,375,430]){
+   await page.setViewportSize({width,height:740});
+   let s=E.createLife({name:'Parker',seed:612+width});s.age=30;s.cash=20000;s.world.sports.sport='Basketball';
+   await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+   await page.getByRole('tab',{name:'Work'}).click();
+   await page.getByRole('button',{name:/Play a competitive season/}).click();
+   const panel=page.getByTestId('career-project');await expect(panel).toBeVisible();
+   const box=await panel.boundingBox();expect(box.width).toBeLessThanOrEqual(width);
+   for(const button of await panel.getByRole('button').all()){const bounds=await button.boundingBox();if(bounds)expect(bounds.height).toBeGreaterThanOrEqual(44);}
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
+ }
+});
