@@ -82,6 +82,7 @@ export function worldCommands(s,ctx){
  const w=viewWorld(s),out=[],a=s.actions>0,c=ctx.country(s),adult=s.age>=18,free=!(s.justice?.case);
  const put=(id,label,detail,enabled=true)=>out.push({id,label,detail,enabled:!!enabled&&a});
  const e=w.entertainment,t=w.sports,p=w.politics,r=w.royalty,v=w.travel,d=w.dynasty;
+ if(s.age>=12&&s.age<18&&free){if(!t.sport&&s.stats.health>=50)for(let i=0;i<sports.length;i++)put('world:sport:youth:'+i,'Join youth '+sports[i]+' club','Practice safely with an organized youth team');if(t.sport)put('world:sport:youthtrain','Train with your youth team','Build form, health and sports experience');}
  if(adult&&free){
    if(!e.path&&s.stats.creativity>=50)for(const path of entertainmentPaths)put('world:ent:start:'+entertainmentPaths.indexOf(path),'Enter '+path+' career','Create a project path · $1,000',affordable(s,1000));
    if(e.path){
@@ -150,7 +151,9 @@ export function worldAct(s,id,ctx){
   else if(verb==='leave'){e.path=null;announce('Stepped away from active entertainment work.');}
   else throw Error('Unknown entertainment activity.');
  }else if(domain==='sport'){
-  if(verb==='start'){cash(s,300);t.sport=sports[Number(arg)];t.form=45;announce('Joined '+t.sport+' competitive sport.');}
+  if(verb==='youth'){t.sport=sports[Number(arg)];t.youth=true;t.form=40;announce('Joined an organized youth '+t.sport+' club.');}
+  else if(verb==='youthtrain'){t.form=cl(t.form+8);t.youthSeasons=(t.youthSeasons||0)+1;change(s,'health',2);change(s,'stress',3);}
+  else if(verb==='start'){cash(s,300);t.sport=sports[Number(arg)];t.form=45;announce('Joined '+t.sport+' competitive sport.');}
   else if(verb==='train'){t.form=cl(t.form+11);change(s,'health',3);change(s,'stress',5);}
   else if(verb==='compete'){t.seasons++;const chance=Math.max(.1,Math.min(.9,.12+t.form*.006+s.stats.health*.002+(s.stats.confidence||0)*.001-(t.injury||0)*.12));const won=rng(s)<chance;
     if(won){t.wins++;t.form=cl(t.form+5);change(s,'reputation',5);s.cash+=Math.round((600+t.rank*450)*c.salary);if(t.wins>=3*(t.rank+1)&&t.rank<4){t.rank++;t.trophies++;announce('Won a '+t.sport+' championship and advanced a competition tier.');}}
