@@ -6,7 +6,7 @@ const OPTIONS={
  business:[{label:'Improve the product',note:'Quality and customer loyalty',icon:'◆'},{label:'Support the team',note:'Delivery and morale',icon:'♧'},{label:'Grow the audience',note:'More leads and higher exposure',icon:'✦'}]
 };
 export function initialCareerPlayfield(type){
- if(type==='sports')return {ours:0,theirs:0,fatigue:8,trainingHits:0,plays:[],last:null};
+ if(type==='sports')return {ours:0,theirs:0,fatigue:8,trainingHits:0,adjustments:0,plays:[],last:null};
  if(type==='film')return {takes:0,usable:0,retakes:0,coverage:[0,0,0],plays:[],last:null};
  if(type==='business')return {customers:20,orders:0,loyalty:50,trend:[20],plays:[],last:null};
  return null;
@@ -18,9 +18,9 @@ export function careerPlayfieldView(s,a){
  const remaining=Math.max(0,2-roundPlays.length);
  const common={type:a.type,stage:a.stage,remaining,played:roundPlays.length,maxPerStage:2,options:OPTIONS[a.type],last:p.last,plays:p.plays.length};
  if(a.type==='sports'){
-  const weakLane=(a.stage+(a.stakeholder||'Rival').length)%3;
+  const weakLane=(a.stage+(a.stakeholder||'Rival').length+(p.adjustments||0))%3;
   return {...common,ours:p.ours,theirs:p.theirs,fatigue:p.fatigue,trainingHits:p.trainingHits||0,matchday:a.stage>=2,weakLane,opponent:a.stakeholder||'League rival',sport:a.theme,
-   hint:(a.stage<2?'Training drill: practice the route your future opponent struggles to defend.':'Scout report: the rival is leaving space on the '+['left wing','central channel','right wing'][weakLane]+'.')+' Choose a lane to attack.'};
+   hint:(a.stage<2?'Training drill: practice the route your future opponent struggles to defend.':'Scout report: the rival is leaving space on the '+['left wing','central channel','right wing'][weakLane]+'.')+' The opponent shifts after every play; adapt your next attack.'};
  }
  if(a.type==='film')return {...common,takes:p.takes,usable:p.usable,retakes:p.retakes,coverage:p.coverage.slice(),scenes:['Wide master','Close-up','Tracking'],hint:'Direct two camera setups per production phase. Every take can improve the final film—or cost momentum.'};
  const baseDemand=clamp(s.business?.demand??50);
@@ -45,6 +45,7 @@ export function careerPlayfieldAct(s,a,index,ctx){
   else{a.risk=clamp(a.risk+3);a.team=clamp(a.team-1);}
   if(counter&&a.stage>=2){p.theirs++;a.risk=clamp(a.risk+4);}
   p.fatigue=clamp(p.fatigue+[14,10,17][index],0,100);
+  p.adjustments=(p.adjustments||0)+1;
   description=success?(a.stage>=2?'GOAL! ':'DRILL COMPLETE! ')+OPTIONS.sports[index].label+' beats the defense.':counter&&a.stage>=2?'The rival counters and scores. Adjust your approach.':a.stage<2?'The practice defense holds. Refine the run before matchday.':'The defense holds. Look for a better attacking channel.';
  }else if(a.type==='film'){
   const skill=(s.stats.creativity+(s.skills?.art??0))/2;
