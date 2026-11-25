@@ -1,5 +1,6 @@
 // Lifely 1.0 — authored profession simulations, deterministic offline state.
 // Four distinct steps per profession; results connect to the existing simulation.
+import {initialCareerPlayfield,careerPlayfieldView,careerPlayfieldAct} from './career-playfields.mjs';
 // All salaries, election processes and clinical events are fictional abstractions.
 
 export const careerCampaignTypes=[
@@ -120,7 +121,7 @@ export function campaignBegin(s,type,jobTitle,ctx){
  const w=s.world||{};
  let rival=type==='sports'?(w.characters?.athletes||[]).find(p=>p.sport===w.sports?.sport):type==='election'?(w.characters?.politicians||[]).reduce((a,b)=>!a||b.approval>a.approval?b:a,null):null;
  const active={id:'career-'+type+'-'+s.age+'-'+(c.completed.length+Object.keys(c.lastStarted).length),type,startedAge:s.age,stage:0,quality:40,team:45,reach:20,risk:8,
-  spend:def.entry,choices:[],stakeholder:rival?.name||null,stakeholderId:rival?.id||null,sector:s.business?.sector||null,
+  spend:def.entry,choices:[],playfield:initialCareerPlayfield(type),stakeholder:rival?.name||null,stakeholderId:rival?.id||null,sector:s.business?.sector||null,
   theme:type==='film'?(w.entertainment?.path||'Film actor'):type==='sports'?(w.sports?.sport||'Athletics'):type==='election'?(w.politics?.party||'Civic campaign'):type==='medical'?(jobTitle||'Medical specialist'):(s.business?.sector||'Company')};
  c.active=active;ctx.add(s,'Started '+def.title.toLowerCase()+'.','career');return active;
 }
@@ -129,7 +130,7 @@ export function campaignView(s){
  const def=careerCampaignTypes.find(t=>t.id===a.type),stage=def?.stages[a.stage];if(!def||!stage)return null;
  return {id:a.id,type:a.type,icon:def.icon,title:def.title,theme:a.theme,subtitle:def.subtitle,round:a.stage+1,total:4,phase:stage.title,prompt:stage.prompt,
   quality:a.quality,team:a.team,reach:a.reach,risk:a.risk,cost:a.spend,stakeholder:a.stakeholder,
-  choices:stage.choices.map((x,i)=>({index:i,label:x.label,detail:x.detail,cost:x.cost,enabled:s.cash>=x.cost})),history:a.choices.slice()};
+  choices:stage.choices.map((x,i)=>({index:i,label:x.label,detail:x.detail,cost:x.cost,enabled:s.cash>=x.cost})),history:a.choices.slice(),playfield:careerPlayfieldView(s,a)};
 }
 function award(s,a,ctx){
  const def=careerCampaignTypes.find(t=>t.id===a.type),w=s.world,pro=s.profession,rival=a.stakeholderId;
@@ -138,7 +139,9 @@ function award(s,a,ctx){
    ((stats(s,'knowledge')+(s.skills?.technical||0))/2);
  const opponent=a.type==='sports'?w.characters?.athletes?.find(p=>p.id===rival)?.form||50:a.type==='election'?w.characters?.politicians?.find(p=>p.id===rival)?.approval||50:50;
  const pressure=a.type==='sports'||a.type==='election'?Math.max(0,opponent-50)*.12:0;
- const rating=clamp(a.quality*.37+a.team*.21+a.reach*.22+skill*.22-a.risk*.19-pressure,0,100);
+ const p=a.playfield;
+  const interactiveImpact=a.type==='sports'&&p?(p.ours-p.theirs)*2:a.type==='film'&&p?(p.usable-p.retakes)*1.5:a.type==='business'&&p?Math.min(8,p.orders/12):0;
+  const rating=clamp(a.quality*.37+a.team*.21+a.reach*.22+skill*.22-a.risk*.19-pressure+interactiveImpact,0,100);
  const chance=Math.max(.08,Math.min(.95,.14+rating*.0083-a.risk*.0007));
  const succeeded=ctx.rng(s)<chance;
  const grade=succeeded?(rating>=72?'breakthrough':rating>=48?'successful':'close finish'):(rating>=66?'close loss':'setback');
@@ -184,7 +187,11 @@ function award(s,a,ctx){
   if(pro?.id==='entrepreneur'){pro.attempts=(pro.attempts||0)+1;if(succeeded)pro.wins=(pro.wins||0)+1;pro.metric=clamp(pro.metric+(succeeded?7:-5));}
   message=succeeded?'Customer research and delivery translated into stronger company demand.':'The initiative stalled; customer complaints and operating constraints remain.';
  }
- return {rating,chance,grade,succeeded,gross,fee,net:gross-fee,message};
+ return {rating,chance,grade,succeeded,gross,fee,net:gross-fee,message,score:a.type==='sports'&&p?{player:p.ours,rival:p.theirs}:undefined,plays:p?.plays?.length||0};
+}
+export function campaignPlay(s,selection,ctx){
+ const a=ensureCareerCampaign(s).active;if(!s.alive||!a)throw Error('No career project is active.');
+ return careerPlayfieldAct(s,a,selection,ctx);
 }
 export function campaignReply(s,selection,ctx){
  const c=ensureCareerCampaign(s),a=c.active,def=careerCampaignTypes.find(t=>t.id===a?.type);if(!s.alive||!a||!def)throw Error('No career project is active.');
