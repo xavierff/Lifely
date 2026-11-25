@@ -36,7 +36,7 @@ export function careerPlayfieldAct(s,a,index,ctx){
  if(p.plays.filter(x=>x.stage===a.stage).length>=2)throw Error('This phase is complete. Choose a story decision to continue.');
  let success=false,description='';
  if(a.type==='sports'){
-  const lane=(a.stage+(a.stakeholder||'Rival').length)%3;
+  const lane=(a.stage+(a.stakeholder||'Rival').length+(p.adjustments||0))%3;
   const form=s.world?.sports?.form??s.profession?.metric??50;
   const chance=clamp(44+(form-50)*.22+(s.stats.health-50)*.15+(index===lane?19:0)-p.fatigue*.23-a.risk*.10,12,88);
   success=ctx.rng(s)*100<chance;
