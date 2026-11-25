@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import E from '../src/engine.mjs';
 import {emptyProfile,mergeLife,validProfile} from '../src/profile.mjs';
 import {miniRound} from '../src/content/minigames.mjs';
+import {rippleTypes,ensureRipples,rippleFromChoice} from '../src/content/ripples.mjs';
 import {ensureNetwork,conversationPeople,relationshipYear} from '../src/content/relationships.mjs';
 test('1000 full lifetimes preserve invariants',()=>{for(let i=1;i<=1000;i++){let s=E.createLife({seed:i,country:i%6});while(s.alive){if(s.pending!==null)s=E.resolve(s,i%2);else{if(s.age>=18&&s.age<60&&!s.job&&!s.profession&&!s.retired&&!s.business){let job=E.commands(s).find(c=>c.id.startsWith('job:')&&c.enabled);if(job)s=E.act(s,job.id);}if(s.actions&&s.stats.stress>40)s=E.act(s,'rest');s=E.ageUp(s);}assert.ok(E.validate(s));}assert.ok(s.age<=110);}});
 test('same seed, immutable state and save roundtrip',()=>{let s=E.createLife({seed:42});assert.deepEqual(E.ageUp(s),E.ageUp(s));assert.equal(s.age,0);assert.ok(E.validate(JSON.parse(JSON.stringify(s))));assert.equal(E.validate({version:2}),false);});
@@ -347,4 +348,76 @@ test('autonomous allies improve the actual wellbeing of the involved NPCs',()=>{
 });
 test('freshly generated family names do not collide with each other',()=>{
  for(let seed=1;seed<=160;seed++){let s=E.createLife({seed});assert.equal(new Set(s.people.map(p=>p.name)).size,s.people.length);}
+});
+
+test('authored ripples are complete, causal, and keep original scenario IDs untouched',()=>{
+ assert.equal(rippleTypes.length,8);
+ let s=E.createLife({seed:450});s.age=28;s.cash=10000;
+ const e=E.events.find(e=>e.title==='A new coworker');assert.ok(e);
+ s.pending=e.id;s=E.resolve(s,0);
+ assert.equal(E.events.length,1109);assert.ok(E.validate(s));
+ assert.equal(s.ripples.active.length,1);
+ assert.equal(s.ripples.active[0].type,'career');
+ assert.equal(s.ripples.active[0].sourceTitle,e.title);
+ assert.equal(s.ripples.active[0].sourceChoice,e.choices[0].text);
+ assert.ok(s.scenario.last.ripple?.id);
+ const view=E.rippleView(s).active[0];assert.equal(view.ready,false);assert.equal(view.choices.length,3);
+});
+test('multiple-year commitments have distinct fulfilled, complicated and neglected endings',()=>{
+ let starter=E.createLife({seed:451});starter.age=28;starter.cash=10000;
+ const e=E.events.find(e=>e.title==='A new coworker');starter.pending=e.id;starter=E.resolve(starter,0);
+ const story=starter.ripples.active[0];
+ function play(path){let s=JSON.parse(JSON.stringify(starter));for(let i=0;i<3;i++){
+   s.age=s.ripples.active[0].nextAge;s.actions=3;
+   const id='ripple:'+story.id+':'+path[i];
+   assert.ok(E.commands(s).some(x=>x.id===id&&x.enabled));
+   s=E.act(s,id);assert.ok(E.validate(s));}
+   assert.equal(s.ripples.active.length,0);assert.equal(s.ripples.completed.length,1);return s;}
+ const good=play([0,0,0]),mixed=play([0,1,2]),bad=play([2,2,2]);
+ assert.equal(good.ripples.completed[0].outcome,'fulfilled');
+ assert.equal(mixed.ripples.completed[0].outcome,'complicated');
+ assert.equal(bad.ripples.completed[0].outcome,'neglected');
+ assert.ok(good.stats.reputation>bad.stats.reputation);
+ assert.equal(E.rippleRecap(good).resolved,1);
+ assert.equal(E.rippleRecap(good).outcomes.fulfilled,1);
+});
+test('ripples cannot be used before their due date or funded without cash',()=>{
+ let s=E.createLife({seed:452});s.age=28;s.cash=50;
+ const e=E.events.find(e=>e.title==='A new coworker');s.pending=e.id;s=E.resolve(s,0);
+ const id=s.ripples.active[0].id;
+ assert.throws(()=>E.act(s,'ripple:'+id+':0'));
+ s.age=s.ripples.active[0].nextAge;s.actions=3;
+ assert.ok(!E.commands(s).find(c=>c.id==='ripple:'+id+':0').enabled);
+ assert.throws(()=>E.act(s,'ripple:'+id+':0'));
+ assert.ok(E.commands(s).find(c=>c.id==='ripple:'+id+':1').enabled);
+ s=E.act(s,'ripple:'+id+':1');
+ assert.ok(s.cash>=0);assert.ok(E.validate(s));
+});
+test('neglected commitments resolve automatically after four overdue years',()=>{
+ let s=E.createLife({seed:453});s.age=28;s.cash=10000;
+ const e=E.events.find(e=>e.title==='A new coworker');s.pending=e.id;s=E.resolve(s,0);
+ const id=s.ripples.active[0].id;s.age=s.ripples.active[0].nextAge+4;
+ s=E.ageUp(s);
+ assert.ok(E.validate(s));assert.ok(!s.ripples.active.some(x=>x.id===id));
+ assert.equal(s.ripples.completed[0].outcome,'neglected');
+ assert.equal(s.ripples.completed[0].finishReason,'deadline');
+});
+test('old version-2 saves are accepted and acquire follow-up story defaults',()=>{
+ let s=E.createLife({seed:454});delete s.ripples;
+ assert.ok(E.validate(s));s=E.ageUp(s);
+ assert.ok(s.ripples?.active);assert.equal(E.rippleView(s).completed.length,0);assert.ok(E.validate(s));
+});
+test('some family promises survive into the next generation with a usable due date',()=>{
+ let s=E.createLife({seed:455});s.age=40;s.cash=70000;
+ s=E.act(s,'date');s=E.act(s,'child');const child=s.people.find(x=>x.role==='child');child.age=18;
+ const e=E.events.find(e=>e.category==='family'&&e.min<=40&&e.max>=40&&e.choices.some(c=>(c.effects.bond||0)!==0));
+ assert.ok(e);s.pending=e.id;s=E.resolve(s,e.choices.findIndex(c=>(c.effects.bond||0)!==0));
+ assert.ok(s.ripples.active.length);assert.equal(s.ripples.active[0].type,'family');
+ const id=s.ripples.active[0].id;s.alive=false;s.pending=null;
+ let heir=E.legacy(s,child.id);assert.ok(E.validate(heir));
+ assert.equal(heir.ripples.active[0].id,id);
+ assert.equal(heir.ripples.active[0].nextAge,heir.age+2);
+ assert.equal(heir.ripples.active[0].transferredFrom,s.name);
+ heir.age+=2;heir.actions=3;
+ assert.ok(E.commands(heir).some(c=>c.id.startsWith('ripple:'+id+':')&&c.enabled));
 });

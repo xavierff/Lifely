@@ -174,3 +174,40 @@ test('small phones keep readable tabs and conversation choices without horizonta
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
  }
 });
+
+test('decision echoes appear as playable future chapters and survive reload',async({page})=>{
+ let s=E.createLife({name:'Emery',seed:456});s.age=28;s.cash=10000;
+ const e=E.events.find(x=>x.title==='A new coworker');s.pending=e.id;s=E.resolve(s,0);
+ const due=s.ripples.active[0].nextAge;s.age=due;s.actions=3;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ const card=page.getByTestId('ongoing-ripple');await expect(card).toBeVisible();
+ await expect(card).toContainText('A new coworker');
+ await expect(card).toContainText('CHAPTER 1 / 3');
+ await card.getByRole('button').first().click();
+ await expect(card).toContainText('CHAPTER 2 / 3');
+ await expect(page.getByText(/LOCAL LIFE/)).toBeVisible();
+ await page.reload();await expect(page.getByTestId('ongoing-ripple')).toContainText('CHAPTER 2 / 3');
+});
+test('life chronicle reports the results of multiple-year choices',async({page})=>{
+ let s=E.createLife({name:'Rowan',seed:457});s.age=28;s.cash=25000;
+ const e=E.events.find(x=>x.title==='A new coworker');s.pending=e.id;s=E.resolve(s,0);
+ const id=s.ripples.active[0].id;
+ for(let i=0;i<3;i++){s.age=s.ripples.active[0].nextAge;s.actions=3;s=E.act(s,'ripple:'+id+':0);}
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByRole('tab',{name:'More'}).click();
+ const card=page.getByTestId('life-chronicle');await expect(card).toBeVisible();
+ await expect(card).toContainText('Promises fulfilled');await expect(card).toContainText('The reputation you build');
+});
+test('ripple choices fit mobile widths without horizontal overflow',async({page})=>{
+ for(const width of [320,375,430]){
+   await page.setViewportSize({width,height:750});
+   let s=E.createLife({name:'Mina',seed:458+width});s.age=28;s.cash=15000;
+   const e=E.events.find(x=>x.title==='A new coworker');s.pending=e.id;s=E.resolve(s,0);
+   s.age=s.ripples.active[0].nextAge;s.actions=3;
+   await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+   const card=page.getByTestId('ongoing-ripple');await expect(card).toBeVisible();
+   let box=await card.boundingBox();expect(box.width).toBeLessThanOrEqual(width);
+   for(const button of await card.getByRole('button').all()){const bounds=await button.boundingBox();if(bounds)expect(bounds.height).toBeGreaterThanOrEqual(44);}
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
+ }
+});
