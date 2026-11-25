@@ -215,3 +215,37 @@ export function characterInheritance(next,previous){
  next.world.characters=newRecord;
  return next;
 }
+
+export function characterParticipant(s,e){
+ if(!e?.cast)return null;
+ const c=characterView(s);
+ if(e.cast==='athlete')return c.athletes.find(a=>a.sport===s.world?.sports?.sport)||null;
+ if(e.cast==='politician')return c.politicians.find(a=>a.lastDebateAge!==undefined)||c.politicians[0]||null;
+ if(e.cast==='agent')return c.agents.find(a=>a.id===c.agency?.agentId)||null;
+ if(e.cast==='family'){const open=c.conflicts.find(x=>x.status==='open');return open?s.people.find(p=>p.id===open.personId&&p.alive)||null:null;}
+ if(e.cast==='legacy')return c.arc?{name:c.arc.sourceName,promise:c.arc.promise}:null;
+ return null;
+}
+export function characterEligible(s,e){
+ if(!e.cast)return true;
+ if((s.justice?.years||0)>0)return false;
+ if(e.cast==='legacy')return characterView(s).arc?.status==='active';
+ if(e.cast==='family')return !!characterParticipant(s,e);
+ if(e.cast==='agent')return !!s.world?.entertainment?.path&&!!characterView(s).agency;
+ if(e.cast==='athlete')return !!s.world?.sports?.sport&&!!characterParticipant(s,e);
+ if(e.cast==='politician')return !!s.world?.politics?.party;
+ return false;
+}
+export function characterEffect(s,e,key,amount,ctx){
+ const keys=['athleteRespect','athleteRivalry','politicianApproval','politicianRivalry','agentTrust','familyTension','legacyContribution'];
+ if(!keys.includes(key))return false;
+ const target=characterParticipant(s,e),cl=ctx.clamp;
+ if(key==='athleteRespect'&&target)target.respect=cl(target.respect+amount);
+ if(key==='athleteRivalry'&&target)target.rivalry=cl(target.rivalry+amount);
+ if(key==='politicianApproval'&&target)target.approval=cl(target.approval+amount);
+ if(key==='politicianRivalry'&&target)target.rivalry=cl(target.rivalry+amount);
+ if(key==='agentTrust'&&target)target.trust=cl(target.trust+amount);
+ if(key==='familyTension'){const conflict=characterView(s).conflicts.find(c=>c.status==='open');if(conflict)conflict.tension=cl(conflict.tension+amount);}
+ if(key==='legacyContribution'&&s.world?.characters?.arc)s.world.characters.arc.contributions+=amount;
+ return true;
+}
