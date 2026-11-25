@@ -109,7 +109,7 @@ function resolveConflict(s,p,c,type,ctx){
  else chronicle(s,'Family conflict with '+p.name+': '+c.tension+' tension remaining.',ctx,'family');
 }
 export function characterAct(s,id,ctx){
- if(!characterCommands(s).some(a=>a.id===id&&a.enabled))throw Error('Unavailable character action.');
+ if(!characterCommands({...s,actions:s.actions+1}).some(a=>a.id===id&&a.enabled))throw Error('Unavailable character action.');
  const [prefix,kind,verb,arg]=id.split(':');if(prefix!=='character')throw Error('Invalid character action.');
  const ch=ensureCharacters(s),rng=ctx.rng,cl=ctx.clamp,change=ctx.change,spend=ctx.spend;
  if(kind==='sport'){
@@ -145,7 +145,7 @@ export function characterAct(s,id,ctx){
      if(rng(s)<odds){const gross=Math.round(2500+agent.network*48+(s.world.entertainment.fame||0)*20),fee=Math.round(gross*agent.commission/100);
        s.cash+=gross-fee;ch.agency.earned+=gross-fee;ch.agency.fees+=fee;ch.agency.deals++;agent.projects++;agent.network=cl(agent.network+3);s.world.entertainment.fame=cl(s.world.entertainment.fame+7);chronicle(s,agent.name+' negotiated a creative project worth $'+gross.toLocaleString('en-US')+' before commission.',ctx,'entertainment');
      }else{agent.trust=cl(agent.trust-3);change(s,'stress',4);chronicle(s,agent.name+' could not secure a project this year.',ctx,'entertainment');}
-   }else if(verb==='renegotiate'){spend(s,250);ch.agency.lastNegotiationAge=s.age;if(rng(s)<Math.min(.9,.3+s.stats.communication*.001+agent.trust*.004)){agent.commission=Math.max(7,agent.commission-1);agent.trust=cl(agent.trust+7);}else agent.trust=cl(agent.trust-5);}
+   }else if(verb==='renegotiate'){spend(s,250);ch.agency.lastNegotiationAge=s.age;if(rng(s)<Math.min(.9,.3+(s.skills?.communication||0)*.001+agent.trust*.004)){agent.commission=Math.max(7,agent.commission-1);agent.trust=cl(agent.trust+7);}else agent.trust=cl(agent.trust-5);}
    else if(verb==='dismiss'){spend(s,750);ch.agency=null;chronicle(s,'Ended representation by '+agent.name+'.',ctx,'entertainment');}
    else throw Error('Unknown representation action.');
  }else if(kind==='family'){
@@ -208,7 +208,7 @@ export function characterInheritance(next,previous){
  for(const c of newRecord.conflicts){if(c.status==='open'){c.status='resolved';c.outcome='inherited-memory';c.closedAge=next.age;}}
  if(newRecord.arc?.status==='active'){
    newRecord.arc.generations=(newRecord.arc.generations||1)+1;
-   newRecord.arc.nextAge=Math.max(newRecord.arc.nextAge,next.age+2);
+   newRecord.arc.nextAge=next.age+2;
    newRecord.arc.sourceName=previous.name;
    newRecord.news.push({age:next.age,text:'Inherited '+newRecord.arc.title+' from '+previous.name+'.',topic:'legacy'});
  }
