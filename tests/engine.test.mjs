@@ -14,7 +14,7 @@ test('skills and medical actions respect eligibility',()=>{let s=E.createLife({s
 
 test('club, pet, sector, creator and relocation mechanics',()=>{let s=E.createLife({seed:11});s.age=12;s=E.act(s,'club:science');s=E.act(s,'club:practice');assert.equal(s.club.level,2);s=E.act(s,'pet:cat');assert.equal(s.pets.length,1);s.age=30;s.cash=100000;s.actions=3;s=E.act(s,'business:studio');assert.equal(s.business.sector,'studio');s=E.act(s,'business:sell');s=E.act(s,'move:1');assert.equal(s.country,1);s.actions=3;s.stats.creativity=80;s=E.act(s,'publish');assert.ok(s.audience>0);assert.ok(E.validate(s));});
 
-test('new scenarios retain old IDs and report actual consequences',()=>{assert.equal(E.events.length,1036);let s=E.createLife({seed:9});s.age=30;const e=E.events.find(e=>e.title==='A tempting shortcut');s.pending=e.id;const oldCash=s.cash;s=E.resolve(s,2);assert.equal(s.cash,oldCash+800);assert.equal(s.legalRisk,35);assert.equal(s.scenario.last.netWorth,800);assert.equal(s.scenario.seen[e.id],1);assert.equal(s.scenario.counts.justice,1);assert.ok(E.validate(s));});
+test('new scenarios retain old IDs and report actual consequences',()=>{assert.equal(E.events.length,1084);let s=E.createLife({seed:9});s.age=30;const e=E.events.find(e=>e.title==='A tempting shortcut');s.pending=e.id;const oldCash=s.cash;s=E.resolve(s,2);assert.equal(s.cash,oldCash+800);assert.equal(s.legalRisk,35);assert.equal(s.scenario.last.netWorth,800);assert.equal(s.scenario.seen[e.id],1);assert.equal(s.scenario.counts.justice,1);assert.ok(E.validate(s));});
 test('challenge completion persists after progress falls',()=>{let s=E.createLife({seed:9});s.age=30;s.cash=1000000;s=E.act(s,'rest');assert.ok(s.completedChallenges.includes('wealth'));s.cash=0;s=E.act(s,'rest');assert.ok(E.challengeProgress(s).find(c=>c.id==='wealth').completed);});
 test('education funding and budget actions',()=>{let s=E.createLife({seed:9});s.age=18;s.cash=0;s.stats.knowledge=85;s=E.act(s,'study:grant');assert.ok(s.study&&s.debt>0);s=E.act(s,'budget:frugal');assert.equal(s.budget,'frugal');assert.ok(E.validate(s));});
 
@@ -36,7 +36,7 @@ test('legacy carries an adult heir’s earned assets and education',()=>{let s=E
 
 test('each profession exposes a signature action with annual cooldown',()=>{for(const p of E.professions){let s=E.createLife({seed:8});s.age=p.age;s.cash=500000;s.education=3;s.stats[p.stat]=90;if(p.id==='entrepreneur')s=E.act(s,'business:studio');if(p.id==='investor')s=E.act(s,'invest:10000');s=E.act(s,'profession:'+p.id);s.profession.wins=3;s.profession.attempts=3;s.audience=3000;s.actions=3;assert.ok(E.commands(s).some(c=>c.id==='pro:special'&&c.enabled));s=E.act(s,'pro:special');assert.equal(s.profession.specials,1);assert.ok(!E.commands(s).some(c=>c.id==='pro:special'&&c.enabled));assert.ok(E.validate(s));}});
 
-test('catalog targets, distinct prompts and valid IDs',()=>{let s=E.createLife({seed:2});assert.equal(E.events.length,1036);assert.equal(new Set(E.events.map(e=>e.prompt)).size,1036);assert.equal(E.careers.length,150);assert.equal(new Set(E.careers.map(j=>j.title)).size,150);assert.equal(E.achievementStatus(s).length,100);assert.equal(new Set(E.achievementStatus(s).map(a=>a.name)).size,100);assert.equal(E.challengeProgress(s).length,50);assert.equal(new Set(E.challengeProgress(s).map(c=>c.id)).size,50);for(let i=0;i<E.events.length;i++)assert.equal(E.events[i].id,i);});
+test('catalog targets, distinct prompts and valid IDs',()=>{let s=E.createLife({seed:2});assert.equal(E.events.length,1084);assert.equal(new Set(E.events.map(e=>e.prompt)).size,1084);assert.equal(E.careers.length,150);assert.equal(new Set(E.careers.map(j=>j.title)).size,150);assert.equal(E.achievementStatus(s).length,124);assert.equal(new Set(E.achievementStatus(s).map(a=>a.name)).size,100);assert.equal(E.challengeProgress(s).length,62);assert.equal(new Set(E.challengeProgress(s).map(c=>c.id)).size,50);for(let i=0;i<E.events.length;i++)assert.equal(E.events[i].id,i);});
 test('bank savings conserve net worth and earn simulated interest',()=>{let s=E.createLife({seed:5});s.age=30;s.cash=100000;const before=E.worth(s);s=E.act(s,'save:10000');assert.equal(E.worth(s),before);assert.equal(s.bankSavings,10000);s=E.act(s,'unsave:1000');assert.equal(E.worth(s),before);assert.equal(s.bankSavings,9000);s=E.ageUp(s);assert.equal(s.bankSavings,9225);assert.equal(s.annual.savingsInterest,225);assert.ok(E.validate(s));});
 test('company hiring, products, marketing and cash flow',()=>{let s=E.createLife({seed:4});s.age=30;s.cash=500000;s=E.act(s,'business:studio');s=E.act(s,'company:hire');s=E.act(s,'company:product');assert.equal(s.business.employees,1);assert.equal(s.business.products.length,1);assert.equal(s.progression.productsLaunched,1);s.actions=3;let worth=E.worth(s);s=E.act(s,'company:capital');assert.equal(E.worth(s),worth);s=E.act(s,'company:marketing');assert.ok(s.business.demand>=70);s=E.ageUp(s);assert.equal(s.business.lastProfit,s.business.revenue-s.business.payroll-s.business.operating);assert.equal(s.annual.business,s.business.lastProfit);assert.ok(E.validate(s));});
 test('every regular job is reachable and supports industry-specific training',()=>{for(const j of E.careers){let s=E.createLife({seed:20});s.age=25;s.education=3;s.stats.knowledge=100;s=E.act(s,'job:'+j.id);s=E.act(s,'careertrain');assert.equal(s.job.id,j.id);assert.equal(s.job.experience,12);assert.equal(s.skills[j.skill],6);assert.ok(E.validate(s));}});
@@ -48,3 +48,60 @@ test('rental property supports tenant search and maintenance',()=>{let s=E.creat
 test('court outcomes include custody, rehabilitation and release',()=>{let convicted=false;for(let seed=1;seed<100;seed++){let s=E.createLife({seed});s.age=30;s.cash=100000;s.legalRisk=100;s=E.ageUp(s);assert.ok(s.justice.case);if(s.pending!==null)s=E.resolve(s,0);s=E.act(s,'justice:hearing');if(!s.justice.years)continue;convicted=true;assert.ok(!E.commands(s).some(c=>c.id.startsWith('job:')));s=E.act(s,'justice:rehab');assert.equal(s.justice.rehab,1);while(s.justice.years>0&&s.alive)s=E.ageUp(s);assert.equal(s.justice.years,0);assert.ok(s.justice.probation>0);assert.ok(E.validate(s));break;}assert.ok(convicted);});
 test('three career games score actual answers and persist round state',()=>{for(let type of ['logic','memory','judgment']){let s=E.createLife({seed:12});s.age=30;s=E.act(s,'job:0');s=E.act(s,'mini:'+type);assert.throws(()=>E.ageUp(s));for(let i=0;i<5;i++){let q=miniRound(type,s.mini.seed,i);s=JSON.parse(JSON.stringify(s));if(type==='memory'){assert.ok(E.miniView(s).preview);s=E.miniAction(s,'ready');assert.equal(E.miniView(s).preview,undefined);}s=E.miniAction(s,q.correct);assert.ok(E.validate(s));}assert.equal(s.miniHistory[type].score,5);assert.equal(s.mini,null);assert.ok(!E.commands(s).some(x=>x.id==='mini:'+type&&x.enabled));}});
 test('player profile deduplicates completed lives and retains collections',()=>{let s=E.createLife({seed:12});s.age=100;s.alive=false;s.achievements=['centenarian'];s.completedChallenges=['wealth'];let p=mergeLife(emptyProfile(),s,E.worth(s));let p2=mergeLife(p,s,E.worth(s));assert.equal(Object.keys(p2.completed).length,1);assert.ok(p2.ribbons.includes(E.lifeEnding(s).id));assert.ok(p2.achievements.includes('centenarian'));assert.ok(p2.challenges.includes('wealth'));assert.ok(validProfile(p2));let t=E.createLife({seed:13});t.age=80;t.alive=false;p2=mergeLife(p2,t,E.worth(t));assert.equal(Object.keys(p2.completed).length,2);});
+
+test('six world domains, stable content IDs and new collection are present',()=>{
+ let s=E.createLife({seed:7});assert.equal(E.domains.length,6);assert.equal(E.destinations.length,18);assert.equal(E.events.length,1084);assert.equal(new Set(E.events.map(e=>e.prompt)).size,1084);
+ assert.equal(E.events.filter(e=>e.origin==='world-drama').length,48);assert.ok(E.events.slice(1036).every((e,i)=>e.id===1036+i));
+ assert.equal(E.achievementStatus(s).length,124);assert.equal(E.challengeProgress(s).length,62);assert.equal(E.ribbons.length,32);
+ for(const d of E.domains)assert.equal(E.events.filter(e=>e.domain===d.id).length,8);
+});
+test('entertainment release and sport competition carry financial and annual consequences',()=>{
+ let s=E.createLife({seed:91});s.age=30;s.cash=180000;s.stats.creativity=90;s.stats.health=90;
+ s=E.act(s,'world:ent:start:1');s=E.act(s,'world:ent:rehearse');s=E.act(s,'world:ent:release');
+ assert.equal(s.world.entertainment.path,'Recording musician');assert.ok(s.world.entertainment.fame>0);
+ s.actions=3;s=E.act(s,'world:sport:start:0');s=E.act(s,'world:sport:train');s=E.act(s,'world:sport:compete');
+ assert.ok(s.world.sports.seasons>=1);assert.ok(E.validate(s));s=E.ageUp(s);
+ assert.ok(Number.isFinite(s.annual.worldIncome));assert.ok(s.world.entertainment.fame>=0);assert.ok(E.validate(s));
+});
+test('civic elections consume fundraising and office terms persist',()=>{
+ let s=E.createLife({seed:14});s.age=33;s.cash=150000;s.stats.reputation=90;s.stats.social=90;
+ s=E.act(s,'world:pol:join');s=E.act(s,'world:pol:fundraise');s=E.act(s,'world:pol:fundraise');s.actions=3;
+ let raised=s.world.politics.campaignFunds;assert.ok(raised>=1500);s=E.act(s,'world:pol:election');
+ assert.equal(s.world.politics.campaignFunds,raised-1500);assert.equal(s.world.politics.elections,1);assert.ok(s.world.politics.lastElectionAge===33);
+ s=E.ageUp(s);assert.ok(E.validate(s));assert.ok(s.world.politics.term>=0);
+});
+test('royal upbringing is selectable and succession is earned by public duty',()=>{
+ let s=E.createLife({seed:9,background:'royal'});assert.equal(s.world.royalty.title,'Royal heir');assert.equal(s.background,'royal');
+ s.age=35;s.cash=30000;for(let i=0;i<5;i++){s.actions=3;s=E.act(s,'world:royal:duty');}
+ assert.ok(E.commands(s).some(c=>c.id==='world:royal:succession'&&c.enabled));s=E.act(s,'world:royal:succession');
+ assert.equal(s.world.royalty.title,'Monarch');s=E.ageUp(s);assert.ok(s.annual.worldIncome>0);assert.ok(E.validate(s));
+});
+test('youth sports academy grows into adult competition with retained form',()=>{
+ let s=E.createLife({seed:4});s.age=13;s.stats.health=80;assert.ok(E.commands(s).some(c=>c.id==='world:sport:youth:0'&&c.enabled));
+ s=E.act(s,'world:sport:youth:0');s=E.act(s,'world:sport:youthtrain');assert.equal(s.world.sports.sport,'Football');assert.equal(s.world.sports.youthSeasons,1);
+ s.age=18;s.actions=3;assert.ok(E.commands(s).some(c=>c.id==='world:sport:compete'&&c.enabled));assert.ok(E.validate(s));
+});
+test('travel records exact cities and respects one journey per year',()=>{
+ let s=E.createLife({seed:11});s.age=30;s.cash=100000;
+ s=E.act(s,'world:travel:visit:kyoto');assert.equal(s.world.travel.stamps[0],'kyoto');assert.equal(s.world.travel.trips[0].age,30);
+ assert.ok(!E.commands(s).some(c=>c.id==='world:travel:visit:bali'&&c.enabled));s=E.ageUp(s);
+ if(s.pending!==null)s=E.resolve(s,0);assert.ok(E.commands(s).some(c=>c.id==='world:travel:visit:bali'&&c.enabled));assert.ok(E.validate(s));
+});
+test('family trust conserves assets and generation inheritance does not double-count',()=>{
+ let s=E.createLife({seed:8});s.age=35;s.cash=50000;s=E.act(s,'date');s=E.act(s,'child');const child=s.people.find(x=>x.role==='child');child.age=12;
+ s.actions=3;let worth=E.worth(s);s=E.act(s,'world:dynasty:fund');assert.equal(E.worth(s),worth);assert.equal(s.world.dynasty.trustFund,2000);
+ s=E.act(s,'world:dynasty:mentor:'+child.id);assert.ok(s.world.dynasty.mentored.includes(child.id));
+ let prior=E.worth(s);s=E.act(s,'world:dynasty:grant:'+child.id);assert.equal(E.worth(s),prior-2000);assert.equal(s.people.find(x=>x.id===child.id).world.cash>=2000,true);
+ s.alive=false;s.pending=null;let heir=E.legacy(s,child.id);assert.equal(heir.world.dynasty.trustFund,0);assert.equal(heir.world.dynasty.ancestors[0].name,s.name);
+ assert.equal(heir.cash,Math.max(0,E.worth(s))+child.world.cash);assert.ok(E.validate(heir));
+});
+test('world drama choices apply domain-specific consequences',()=>{
+ let s=E.createLife({seed:61,background:'royal'});s.age=30;
+ const event=E.events.find(e=>e.title==='A public promise');assert.ok(event&&event.domain==='royalty');s.pending=event.id;const before=s.world.royalty.support;
+ let a=E.resolve(s,0);assert.equal(a.world.royalty.support,Math.min(100,before+8));
+ assert.equal(a.scenario.counts.royalty,1);assert.ok(E.validate(a));
+});
+test('old version-2 saves gain world defaults without losing family and money',()=>{
+ let s=E.createLife({seed:6});s.age=29;s.cash=75100;delete s.world;assert.ok(E.validate(s));
+ let a=E.ageUp(s);assert.equal(a.cash+ a.debt>=0,true);assert.ok(a.world?.dynasty);assert.equal(a.world.travel.visitedCountries[0],s.country);assert.ok(E.validate(a));
+});
