@@ -25,3 +25,8 @@
 - New generations receive age-appropriate newly generated competitors and agents, while distinguished earlier sports and political competitors are retained in a family rivalry archive.
 - Scenario prompts substitute the actual persistent character's name and their decisions change the same character records shown in the World dashboard.
 - Targeted suite extended with chapter variety and archived-rival inheritance tests. CI is still required for native/web bundle and real browser checks.
+
+## Final integration quality improvements
+- NPC display names use a deterministic collision-free permutation: ten unique names in each generated life, without advancing RNG or changing existing saved NPC identities.
+- Specialized representation now increases the success chance of normal film/music releases and applies the actual agent commission to their payout. Fees and deal counts update in the same persistent contract.
+- Rival approval changes the player's probability in fictional elections. Tests compare identical simulated candidates against strong versus weak opposition.

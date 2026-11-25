@@ -229,3 +229,29 @@ test('new generation has fresh age-appropriate competitors but retains rivalry a
  assert.ok(heir.world.characters.legacyRivals.some(r=>r.name===name&&r.wins===11));assert.equal(heir.world.characters.agency,null);
  assert.ok(heir.world.characters.athletes.every(r=>r.age<=heir.age+5));assert.ok(E.validate(heir));
 });
+
+test('recurring cast uses ten distinct names for each life',()=>{
+ for(let seed=1;seed<=90;seed++){const s=E.createLife({seed});const actors=[...s.world.characters.athletes,...s.world.characters.politicians,...s.world.characters.agents];assert.equal(new Set(actors.map(a=>a.name)).size,10);}
+});
+test('entertainment agents affect ordinary film releases and earn real commissions',()=>{
+ let found=false;for(let seed=1;seed<=80;seed++){let base=E.createLife({seed});base.age=30;base.cash=100000;base.stats.creativity=95;base.stats.social=95;base.skills.art=80;base=E.act(base,'world:ent:start:0');
+ let hired=E.act(base,'character:agent:sign:agent-0');let after=E.act(hired,'world:ent:release');
+ if(after.world.entertainment.releases!==1)continue;
+ found=true;const commission=after.world.characters.agency;assert.equal(commission.deals,1);
+ const gross=Math.round(2800*(1+after.world.entertainment.releases*.2));
+ const fee=Math.round(gross*.14);
+ assert.equal(commission.fees,fee);assert.equal(commission.earned,gross-fee);assert.ok(E.validate(after));break;}
+ assert.ok(found);
+});
+test('stronger civic opposition makes player elections harder',()=>{
+ let weakWins=0,strongWins=0;
+ for(let seed=1;seed<=100;seed++){
+   let s=E.createLife({seed});s.age=32;s.cash=100000;s.stats.reputation=85;s.stats.social=90;s.world.politics.party='Civic Renewal';s.world.politics.approval=70;s.world.politics.campaignFunds=2500;
+   let weak=JSON.parse(JSON.stringify(s)),strong=JSON.parse(JSON.stringify(s));
+   weak.world.characters.politicians.forEach(p=>{p.approval=50;});
+   strong.world.characters.politicians.forEach(p=>{p.approval=100;});
+   weak=E.act(weak,'world:pol:election');strong=E.act(strong,'world:pol:election');
+   weakWins+=weak.world.politics.wins;strongWins+=strong.world.politics.wins;
+ }
+ assert.ok(weakWins>strongWins);
+});
