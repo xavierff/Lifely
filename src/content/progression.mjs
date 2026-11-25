@@ -1078,12 +1078,11 @@ export const challengeRows=[
     ]
   ]
 ];
-export function metric(s,k){
+export function metricSnapshot(s){
  const h=s.progression||{},b=s.business||{},f=s.profession||{},people=s.people||[],completed=s.sagas?.completed||[];
- if(Object.prototype.hasOwnProperty.call(s.stats||{},k))return s.stats[k];
- if(Object.prototype.hasOwnProperty.call(s.skills||{},k))return s.skills[k];
  const m={education:s.education,yearsWorked:s.yearsWorked,jobLevel:s.job?.level||0,jobsHeld:(h.jobs||[]).length,workActions:h.actions?.work||0,jobExperience:s.job?.experience||0,careerAttempts:h.careerAttempts||0,careerWins:h.careerWins||0,professionsHeld:(h.professions||[]).length,signatureActions:h.signatureActions||0,professionYears:h.professionYears||0,professionMetric:f.metric||0,productsLaunched:h.productsLaunched||0,employees:b.employees||0,businessCapital:b.capital||0,businessDemand:b.demand||0,businessQuality:b.quality||0,bankSavings:s.bankSavings||0,investments:s.investments,financialSkill:s.financialSkill||0,debtRepaid:h.debtRepaid||0,rental:(s.properties||[]).some(x=>x.id==='rental')?1:0,assets:(s.properties||[]).length,friends:people.filter(p=>p.alive&&p.role==='friend').length,partnerBond:people.find(p=>p.alive&&p.role==='partner')?.bond||0,married:people.some(p=>p.alive&&p.role==='partner'&&p.married)?1:0,children:people.filter(p=>p.alive&&p.role==='child').length,adultChildren:people.filter(p=>p.alive&&p.role==='child'&&p.age>=18).length,supportGiven:h.supportGiven||0,reconciliations:h.actions?.reconcile||0,trusted:people.filter(p=>p.alive&&(p.world?.trust||0)>=85).length,petsAdopted:h.actions?.pet||0,sagasStarted:(s.sagas?.active||[]).length+completed.length,sagasEnded:completed.filter(x=>x.outcome!=='interrupted').length,sagasGood:completed.filter(x=>x.outcome==='good').length,trialsWon:s.scenario?.wins||0,distinct:Object.keys(s.scenario?.seen||{}).length,decisions:s.scenario?.choices||0,experience:s.experience||0,projects:s.projects||0,audience:s.audience||0,relocations:s.relocations||0,retired:s.retired?1:0,generation:s.generation,age:s.age,cash:s.cash,petBond:Math.max(0,...(s.pets||[]).filter(x=>x.alive).map(x=>x.bond)),calm:100-(s.stats?.stress||0),volunteers:h.actions?.volunteer||0};
- return Number.isFinite(m[k])?Math.max(0,m[k]):0;
+ return {...s.stats,...s.skills,...m};
 }
-export function extraAchievements(s){return achievementRows.map(([name,key,target])=>[name,metric(s,key)>=target]);}
-export function challengeDefinitions(){return challengeRows.map(([id,name,requirements])=>({id,name,description:requirements.map(([k,n])=>metricLabels[k]+' ≥ '+n.toLocaleString('en-US')).join(' · '),progress:s=>Math.floor(requirements.reduce((sum,[k,n])=>sum+Math.min(1,metric(s,k)/n),0)/requirements.length*100+1e-9)}));}
+export function metric(s,k,snapshot=metricSnapshot(s)){return Number.isFinite(snapshot[k])?Math.max(0,snapshot[k]):0;}
+export function extraAchievements(s){const snapshot=metricSnapshot(s);return achievementRows.map(([name,key,target])=>[name,metric(s,key,snapshot)>=target]);}
+export function challengeDefinitions(){return challengeRows.map(([id,name,requirements])=>({id,name,description:requirements.map(([k,n])=>metricLabels[k]+' ≥ '+n.toLocaleString('en-US')).join(' · '),progress:(s,snapshot)=>Math.floor(requirements.reduce((sum,[k,n])=>sum+Math.min(1,metric(s,k,snapshot)/n),0)/requirements.length*100+1e-9)}));}

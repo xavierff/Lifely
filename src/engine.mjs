@@ -1,7 +1,7 @@
 /* Lifely original deterministic simulation. */
 import {extraCareers} from './content/careers.mjs';
 import {buildScenarioVariants} from './content/scenarios.mjs';
-import {extraAchievements,challengeDefinitions,achievementRows} from './content/progression.mjs';
+import {extraAchievements,challengeDefinitions,metricSnapshot} from './content/progression.mjs';
 function makeEngine(){
   const clamp=(v)=>Math.max(0,Math.min(100,Math.round(v)));
   const copy=x=>JSON.parse(JSON.stringify(x));
@@ -476,7 +476,7 @@ function makeEngine(){
  {id:"wellness",name:"Golden years",description:"Reach age 75 with health and happiness of at least 75.",progress:s=>Math.min(100,Math.floor((Math.min(s.age,75)/75+Math.min(s.stats.health,75)/75+Math.min(s.stats.happiness,75)/75)*100/3))},
  {id:"world",name:"World citizen",description:"Complete two international relocations during your life.",progress:s=>Math.min(100,(s.relocations||0)*50)}
  ,...challengeDefinitions()];
- function challengeProgress(s){return challenges.map(({progress,...c})=>({...c,progress:progress(s),completed:(s.completedChallenges||[]).includes(c.id)}));}
+ function challengeProgress(s){const snapshot=metricSnapshot(s);return challenges.map(({progress,...c})=>({...c,progress:progress(s,snapshot),completed:(s.completedChallenges||[]).includes(c.id)}));}
  const goalProgress=s=>s.goal==="wealth"?Math.min(100,Math.max(0,Math.floor(worth(s)/10000))):s.goal==="family"?Math.min(100,s.people.filter(p=>p.alive&&p.bond>=80).length*25):Math.round((s.stats.health+s.stats.happiness+100-s.stats.stress)/3);
   return {countries,careers,degrees,assets,sectors,clubs,professions,achievementStatus,professionalOdds,npcWorth,npcOccupation,sagaProgress,scenarioPrompt,events,eventCategory,trialChance,challengeProgress,createLife,ageUp,resolve,commands,act,pending,worth,legacy,validate,goalProgress};
 }
