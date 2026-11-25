@@ -1,5 +1,6 @@
 /* Lifely original deterministic simulation. */
 import {dramaticCards} from './content/drama.mjs';
+import {worldEventCards} from './content/world-scenes.mjs';
 import {lifeEnding,ribbons} from './profile.mjs';
 import {gameTypes,miniRound} from './content/minigames.mjs';
 import {instruments,portfolioWorth,portfolioTick,rentalDefaults} from './content/finance.mjs';
@@ -155,7 +156,7 @@ function makeEngine(){
     for(let j=0;j<stages.length;j++){const stage=stages[j],[title,prompt,a,b]=d[stage],id=events.length;sagaCards[d.id][stage]=id;events.push({id,title,prompt,min:stage==="start"?d.min:0,max:stage==="start"?d.max:110,choices:[{text:a,effects:d.effects[j*2]},{text:b,effects:d.effects[j*2+1]}],category:"saga",saga:{id:d.id,stage},requires:stage==="start"?d.role:undefined});}
   }
   // Existing save IDs remain stable: every new card is appended.
-  events.push(...buildScenarioVariants(events.length));events.push(...dramaticCards(events.length));
+  events.push(...buildScenarioVariants(events.length));events.push(...dramaticCards(events.length));events.push(...worldEventCards(events.length));
   const statNames=["health","happiness","knowledge","confidence","stress","kindness","social","creativity","reputation","performance"];
   const assets=[{id:'duplex',name:'Rental duplex',cost:200000,upkeep:4000,rate:.03,rent:15000},{id:'commercial',name:'Commercial rental',cost:350000,upkeep:8000,rate:.02,rent:30000},{id:"car",name:"Used car",cost:9000,upkeep:900,rate:-.10},{id:"apartment",name:"Apartment",cost:80000,upkeep:1600,rate:.025},{id:"house",name:"Family house",cost:180000,upkeep:3000,rate:.03},{id:"rental",name:"Rental property",cost:120000,upkeep:2400,rate:.025,rent:7200}];
   const rng=s=>{let x=s.rng>>>0;x^=x<<13;x^=x>>>17;x^=x<<5;s.rng=(x>>>0)||12345;return s.rng/4294967296;};
