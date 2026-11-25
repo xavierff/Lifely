@@ -137,59 +137,59 @@ export function worldCommands(s,ctx){
 export function worldAct(s,id,ctx){
  const [prefix,domain,verb,arg]=id.split(':');if(prefix!=='world')throw Error('Unknown world action.');
  const w=ensureWorld(s),c=ctx.country(s),cash=ctx.spend,cl=ctx.clamp,change=ctx.change,rng=ctx.rng;
- const e=w.entertainment,t=w.sports,p=w.politics,r=w.royalty,v=w.travel,d=w.dynasty;
+ const e=w.entertainment,t=w.sports,p=w.politics,r=w.royalty,v=w.travel,d=w.dynasty;const announce=message=>news(s,message,ctx);
  if(domain==='ent'){
-  if(verb==='start'){cash(s,1000);e.path=entertainmentPaths[Number(arg)];e.fame=15;change(s,'confidence',5);news(s,'You entered '+e.path+' entertainment.');}
+  if(verb==='start'){cash(s,1000);e.path=entertainmentPaths[Number(arg)];e.fame=15;change(s,'confidence',5);announce('You entered '+e.path+' entertainment.');}
   else if(verb==='rehearse'){change(s,'creativity',6);change(s,'confidence',4);change(s,'stress',4);e.fame=cl(e.fame+3);}
   else if(verb==='release'){cash(s,1200);const chance=Math.min(.9,.18+s.stats.creativity*.004+(s.skills.art||0)*.002+e.fame*.002);const won=rng(s)<chance;
    if(won){e.releases++;e.catalog++;e.fame=cl(e.fame+13);e.awards+=rng(s)<.22?1:0;s.audience=(s.audience||0)+Math.round(450*(1+e.fame/30));change(s,'reputation',6);s.cash+=Math.round(1600*c.salary*(1+e.releases*.2));}
    else{e.fame=cl(e.fame-4);change(s,'stress',7);}
-   e.lastResult=won?'Critical acclaim':'A disappointing opening';news(s,e.path+' project: '+e.lastResult+'.');}
-  else if(verb==='deal'){e.contracts++;e.deals++;e.lastDealAge=s.age;s.cash+=Math.round(4000*c.salary*(1+e.fame/80));change(s,'reputation',4);news(s,'Signed an entertainment contract.');}
+   e.lastResult=won?'Critical acclaim':'A disappointing opening';announce(e.path+' project: '+e.lastResult+'.');}
+  else if(verb==='deal'){e.contracts++;e.deals++;e.lastDealAge=s.age;s.cash+=Math.round(4000*c.salary*(1+e.fame/80));change(s,'reputation',4);announce('Signed an entertainment contract.');}
   else if(verb==='promote'){cash(s,500);e.fame=cl(e.fame+8);change(s,'stress',3);if(rng(s)<.15)change(s,'reputation',-5);}
-  else if(verb==='leave'){e.path=null;news(s,'Stepped away from active entertainment work.');}
+  else if(verb==='leave'){e.path=null;announce('Stepped away from active entertainment work.');}
   else throw Error('Unknown entertainment activity.');
  }else if(domain==='sport'){
-  if(verb==='start'){cash(s,300);t.sport=sports[Number(arg)];t.form=45;news(s,'Joined '+t.sport+' competitive sport.');}
+  if(verb==='start'){cash(s,300);t.sport=sports[Number(arg)];t.form=45;announce('Joined '+t.sport+' competitive sport.');}
   else if(verb==='train'){t.form=cl(t.form+11);change(s,'health',3);change(s,'stress',5);}
   else if(verb==='compete'){t.seasons++;const chance=Math.max(.1,Math.min(.9,.12+t.form*.006+s.stats.health*.002+(s.stats.confidence||0)*.001-(t.injury||0)*.12));const won=rng(s)<chance;
-    if(won){t.wins++;t.form=cl(t.form+5);change(s,'reputation',5);s.cash+=Math.round((600+t.rank*450)*c.salary);if(t.wins>=3*(t.rank+1)&&t.rank<4){t.rank++;t.trophies++;news(s,'Won a '+t.sport+' championship and advanced a competition tier.');}}
+    if(won){t.wins++;t.form=cl(t.form+5);change(s,'reputation',5);s.cash+=Math.round((600+t.rank*450)*c.salary);if(t.wins>=3*(t.rank+1)&&t.rank<4){t.rank++;t.trophies++;announce('Won a '+t.sport+' championship and advanced a competition tier.');}}
     else{t.losses++;t.form=cl(t.form-7);change(s,'stress',4);}
-    if(rng(s)<.08+(t.form>80?.04:0)){t.injury=2;change(s,'health',-6);news(s,'Sustained a minor sporting injury.');}
+    if(rng(s)<.08+(t.form>80?.04:0)){t.injury=2;change(s,'health',-6);announce('Sustained a minor sporting injury.');}
     if(w.entertainment.path&&won)w.entertainment.fame=cl(w.entertainment.fame+3);}
-  else if(verb==='contract'){t.contractYears=3;change(s,'confidence',8);news(s,'Agreed a three-year '+t.sport+' contract.');}
+  else if(verb==='contract'){t.contractYears=3;change(s,'confidence',8);announce('Agreed a three-year '+t.sport+' contract.');}
   else if(verb==='recover'){t.injury=Math.max(0,t.injury-1);t.form=cl(t.form+3);change(s,'stress',-9);change(s,'health',4);}
-  else if(verb==='retire'){t.sport=null;t.contractYears=0;news(s,'Retired from active competitive sport.');}
+  else if(verb==='retire'){t.sport=null;t.contractYears=0;announce('Retired from active competitive sport.');}
   else throw Error('Unknown sports activity.');
  }else if(domain==='pol'){
-  if(verb==='join'){p.party='Civic Renewal';p.approval=cl(Math.max(p.approval,s.stats.reputation-10));news(s,'Joined a fictional civic political party.');}
+  if(verb==='join'){p.party='Civic Renewal';p.approval=cl(Math.max(p.approval,s.stats.reputation-10));announce('Joined a fictional civic political party.');}
   else if(verb==='townhall'){p.approval=cl(p.approval+7);change(s,'social',4);change(s,'reputation',3);if(w.travel.culture>=40)p.approval=cl(p.approval+2);}
   else if(verb==='fundraise'){cash(s,500);p.campaignFunds+=1000+Math.round(rng(s)*950);change(s,'stress',4);}
-  else if(verb==='election'){p.elections++;p.lastElectionAge=s.age;p.campaignFunds-=1500;const chance=Math.max(.12,Math.min(.88,.08+p.approval*.005+s.stats.reputation*.002+s.stats.social*.001+(w.entertainment.fame||0)*.0005-(s.record||0)*.06));if(rng(s)<chance){p.wins++;p.office=p.wins>=3?'Regional executive':p.wins===2?'Representative':'Councillor';p.term=4;p.approval=cl(p.approval+8);news(s,'Won a fictional election: '+p.office+'.');}else{p.approval=cl(p.approval-7);news(s,'Lost a fictional election.');}}
-  else if(verb==='policy'){const item=policies[p.policies.length%policies.length];p.campaignFunds-=500;p.policies.push({id:item.id,age:s.age});p.approval=cl(p.approval+5);change(s,item.stat,6);change(s,'reputation',3);news(s,'Announced civic policy: '+item.name+'.');}
+  else if(verb==='election'){p.elections++;p.lastElectionAge=s.age;p.campaignFunds-=1500;const chance=Math.max(.12,Math.min(.88,.08+p.approval*.005+s.stats.reputation*.002+s.stats.social*.001+(w.entertainment.fame||0)*.0005-(s.record||0)*.06));if(rng(s)<chance){p.wins++;p.office=p.wins>=3?'Regional executive':p.wins===2?'Representative':'Councillor';p.term=4;p.approval=cl(p.approval+8);announce('Won a fictional election: '+p.office+'.');}else{p.approval=cl(p.approval-7);announce('Lost a fictional election.');}}
+  else if(verb==='policy'){const item=policies[p.policies.length%policies.length];p.campaignFunds-=500;p.policies.push({id:item.id,age:s.age});p.approval=cl(p.approval+5);change(s,item.stat,6);change(s,'reputation',3);announce('Announced civic policy: '+item.name+'.');}
   else if(verb==='report'){p.approval=cl(p.approval+6);change(s,'reputation',4);}
-  else if(verb==='exit'){p.party=null;p.office=null;p.term=0;news(s,'Left active political work.');}
+  else if(verb==='exit'){p.party=null;p.office=null;p.term=0;announce('Left active political work.');}
   else throw Error('Unknown political activity.');
  }else if(domain==='royal'){
-  if(verb==='court'){cash(s,1800);r.courtVisits++;if(rng(s)<Math.min(.75,.16+s.stats.social*.005)){const partner=ctx.person(s,'partner',Math.max(18,s.age+Math.floor(rng(s)*5)-2));partner.world.royal=true;partner.bond=78;s.people.push(partner);news(s,'Met '+partner.name+', a member of a fictional royal house.');}else news(s,'Attended the court, but made no royal connection.');}
-  else if(verb==='marry'){const partner=s.people.find(x=>x.alive&&x.role==='partner'&&x.world?.royal);partner.married=true;ctx.bond(s,partner,8,'Royal marriage');r.house='House of Alder';r.title='Royal consort';r.support=cl(r.support+14);news(s,'Married into a fictional royal house.');}
+  if(verb==='court'){cash(s,1800);r.courtVisits++;if(rng(s)<Math.min(.75,.16+s.stats.social*.005)){const partner=ctx.person(s,'partner',Math.max(18,s.age+Math.floor(rng(s)*5)-2));partner.world.royal=true;partner.bond=78;s.people.push(partner);announce('Met '+partner.name+', a member of a fictional royal house.');}else announce('Attended the court, but made no royal connection.');}
+  else if(verb==='marry'){const partner=s.people.find(x=>x.alive&&x.role==='partner'&&x.world?.royal);partner.married=true;ctx.bond(s,partner,8,'Royal marriage');r.house='House of Alder';r.title='Royal consort';r.support=cl(r.support+14);announce('Married into a fictional royal house.');}
   else if(verb==='duty'){r.duties++;r.support=cl(r.support+8);d.reputation=cl(d.reputation+4);change(s,'reputation',4);change(s,'stress',3);}
   else if(verb==='charity'){cash(s,1000);r.support=cl(r.support+12);change(s,'kindness',8);d.reputation=cl(d.reputation+5);}
-  else if(verb==='succession'){r.title='Monarch';r.successions++;r.support=cl(r.support+6);news(s,'Accepted the fictional royal succession.');}
-  else if(verb==='renounce'){r.title=null;news(s,'Renounced royal status and official duties.');}
+  else if(verb==='succession'){r.title='Monarch';r.successions++;r.support=cl(r.support+6);announce('Accepted the fictional royal succession.');}
+  else if(verb==='renounce'){r.title=null;announce('Renounced royal status and official duties.');}
   else throw Error('Unknown royal activity.');
  }else if(domain==='travel'){
   if(verb==='visit'){const dest=destinations.find(x=>x.id===arg);if(!dest)throw Error('Invalid destination.');
     const cost=Math.round((dest.country===s.country?550:1550)*dest.cost*c.cost);cash(s,cost);v.lastTripAge=s.age;v.trips.push({age:s.age,id:dest.id,country:dest.country,theme:dest.theme});if(v.trips.length>90)v.trips.shift();if(!v.stamps.includes(dest.id))v.stamps.push(dest.id);if(!v.visitedCountries.includes(dest.country))v.visitedCountries.push(dest.country);
     v.culture=cl(v.culture+7);change(s,'knowledge',3);change(s,'happiness',5);change(s,'stress',-4);if(w.entertainment.path){w.entertainment.fame=cl(w.entertainment.fame+2);change(s,'creativity',3);}
-    news(s,'Visited '+dest.name+' for '+dest.theme.toLowerCase()+'.');}
-  else if(verb==='passport'){v.passport++;v.lastJournalAge=s.age;v.culture=cl(v.culture+7);change(s,'knowledge',4);news(s,'Completed a personal travel journal.');}
+    announce('Visited '+dest.name+' for '+dest.theme.toLowerCase()+'.');}
+  else if(verb==='passport'){v.passport++;v.lastJournalAge=s.age;v.culture=cl(v.culture+7);change(s,'knowledge',4);announce('Completed a personal travel journal.');}
   else throw Error('Unknown travel activity.');
  }else if(domain==='dynasty'){
   if(verb==='archive'){d.archives++;d.reputation=cl(d.reputation+4);change(s,'knowledge',3);if(d.familyNews.length<25)d.familyNews.push({age:s.age,text:'Recorded a family memory'});}
   else if(verb==='fund'){cash(s,2000);d.trustFund+=2000;d.reputation=cl(d.reputation+2);}
   else if(verb==='mentor'){const child=s.people.find(x=>x.id===Number(arg)&&x.alive&&x.role==='child');if(!child)throw Error('Child unavailable.');child.world.talent=cl(child.world.talent+6);child.world.trust=cl(child.world.trust+6);ctx.bond(s,child,8,'Family mentoring');d.reputation=cl(d.reputation+2);if(!d.mentored.includes(child.id))d.mentored.push(child.id);}
-  else if(verb==='heir'){d.heirId=Number(arg);d.reputation=cl(d.reputation+3);news(s,'Recorded a preferred heir in the family archive.');}
+  else if(verb==='heir'){d.heirId=Number(arg);d.reputation=cl(d.reputation+3);announce('Recorded a preferred heir in the family archive.');}
   else if(verb==='grant'){const child=s.people.find(x=>x.id===Number(arg)&&x.alive&&x.role==='child');if(!child)throw Error('Child unavailable.');d.trustFund-=2000;child.world.cash+=2000;ctx.bond(s,child,7,'Education grant');d.reputation=cl(d.reputation+3);}
   else throw Error('Unknown dynasty action.');
  }else throw Error('Unknown world domain.');
