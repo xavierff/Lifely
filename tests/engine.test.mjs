@@ -105,3 +105,35 @@ test('old version-2 saves gain world defaults without losing family and money',(
  let s=E.createLife({seed:6});s.age=29;s.cash=75100;delete s.world;assert.ok(E.validate(s));
  let a=E.ageUp(s);assert.equal(a.cash+ a.debt>=0,true);assert.ok(a.world?.dynasty);assert.equal(a.world.travel.visitedCountries[0],s.country);assert.ok(E.validate(a));
 });
+
+test('entertainment specializations have distinct preparation and live work',()=>{
+ for(let i=0;i<3;i++){let s=E.createLife({seed:54+i});s.age=30;s.cash=500000;s.stats.creativity=95;s.stats.social=90;s.stats.knowledge=95;
+ s=E.act(s,'world:ent:start:'+i);s=E.act(s,'world:ent:rehearse');s=E.act(s,'world:ent:release');s.actions=3;
+ if(i===0){assert.ok(E.commands(s).some(c=>c.id==='world:ent:screen'&&c.enabled));s=E.act(s,'world:ent:screen');assert.equal(s.world.entertainment.screenCraft,12);}
+ if(i===1){s.world.entertainment.releases=Math.max(1,s.world.entertainment.releases);assert.ok(E.commands(s).some(c=>c.id==='world:ent:tour'&&c.enabled));s=E.act(s,'world:ent:tour');assert.equal(s.world.entertainment.lastTourAge,30);}
+ if(i===2){assert.ok(E.commands(s).some(c=>c.id==='world:ent:cast'&&c.enabled));s=E.act(s,'world:ent:cast');assert.equal(s.world.entertainment.productionQuality,15);}
+ assert.ok(E.validate(s));}
+});
+test('preferred family heir inherits crown and full estate while others retain a share',()=>{
+ let s=E.createLife({seed:9,background:'royal'});s.age=40;s.cash=100000;s=E.act(s,'date');s=E.act(s,'child');s.actions=3;s=E.act(s,'child');
+ let children=s.people.filter(p=>p.role==='child');s.world.dynasty.heirId=children[0].id;s.alive=false;s.pending=null;
+ let chosen=E.legacy(s,children[0].id),other=E.legacy(s,children[1].id);
+ assert.equal(chosen.cash,100000);assert.equal(other.cash,40000);
+ assert.equal(other.people.find(p=>p.id===children[0].id).world.cash,60000);
+ assert.equal(chosen.world.royalty.title,'Royal heir');assert.equal(other.world.royalty.title,null);
+ assert.ok(E.validate(chosen)&&E.validate(other));
+});
+test('winning elected office replaces full-time employment',()=>{
+ let winner=null;for(let seed=1;seed<=80;seed++){let s=E.createLife({seed});s.age=32;s.cash=100000;s.stats.reputation=95;s.stats.social=95;s=E.act(s,'job:0');
+ s.world.politics.party='Civic Renewal';s.world.politics.approval=95;s.world.politics.campaignFunds=5000;s.actions=3;
+ s=E.act(s,'world:pol:election');if(s.world.politics.wins){winner=s;break;}}
+ assert.ok(winner);assert.equal(winner.job,null);winner=E.ageUp(winner);assert.equal(winner.annual.salary,0);
+ assert.ok(winner.annual.worldIncome>0);assert.ok(E.validate(winner));
+});
+test('travel destinations provide distinct cultural and wellbeing effects',()=>{
+ let s=E.createLife({seed:19});s.age=30;s.cash=50000;let oldCreativity=s.stats.creativity;
+ s=E.act(s,'world:travel:visit:tokyo');assert.equal(s.stats.creativity,oldCreativity+4);
+ let t=E.createLife({seed:19});t.age=30;t.cash=50000;let oldHealth=t.stats.health;
+ t=E.act(t,'world:travel:visit:bali');assert.equal(t.stats.health,oldHealth+3);
+ assert.ok(E.validate(s)&&E.validate(t));
+});

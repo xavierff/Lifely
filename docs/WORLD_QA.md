@@ -15,3 +15,9 @@
 ## Open work
 - Expand countries beyond six; diversify sports with live mini-games and opponent careers; extend parliamentary/court dynamics, royal family succession events, travel visa system and dynastic conflicts.
 - Test visual touch targets and color contrast on actual phones and tablets; signed builds not made in this task.
+
+## Post-integration refinement
+- Actors: audition coaching and role contracts; musicians: albums, record catalog income and concert tours; directors: casting quality and film premieres. Added eligibility and outcome tests.
+- Competitive sport now uses different aptitude factors by discipline and has differentiated prize payouts.
+- Travel adds city-theme stat outcomes. Civic election success replaces regular employment, avoiding simultaneous full-time salaries.
+- A preferred heir receives title succession and the standard estate if selected. Continuing as a different child yields 40% of the deceased parent's estate; the remaining 60% goes to the designated living sibling's finances. With no valid preference, existing inheritance behavior remains unchanged.
