@@ -100,6 +100,15 @@ export function careerAftermathYear(s,ctx){
   if(t.type==='business'&&s.business){s.business.demand=clamp((s.business.demand??50)+delta);s.business.quality=clamp(s.business.quality+(strong?1:0));}
   if(t.type==='election'&&s.world?.politics){s.world.politics.approval=clamp(s.world.politics.approval+delta);ctx.change(s,'reputation',strong?1:-1);}
   if(t.type==='medical'){ctx.change(s,'knowledge',strong?2:1);ctx.change(s,'reputation',strong?1:0);}
+  // Named characters develop over time and keep their shared history.
+  const cast=s.world?.characters||{};
+  const np=[...(cast.athletes||[]),...(cast.politicians||[]),...(cast.agents||[])].find(x=>x.id===t.contact.id)||c.contacts?.[t.type];
+  if(np){
+   if(typeof np.respect==='number')np.respect=clamp(np.respect+(strong?2:1));
+   if(typeof np.rivalry==='number')np.rivalry=clamp(np.rivalry+(strong?1:2));
+   if(typeof np.trust==='number')np.trust=clamp(np.trust+(strong?2:-2));
+   np.history??=[];np.history.push({age:s.age,kind:'career-aftermath',type:t.type,phase:phase+1,positive:strong});np.history=np.history.slice(-18);
+  }
   const message=def[0]+': '+def[1]+' '+(strong?'Past preparation gives you a stronger foundation.':'Earlier tradeoffs still shape what happens next.');
   const chapter={age:s.age,phase:phase+1,title:def[0],message,delta};
   t.chapterLog.push(chapter);t.step++;t.nextAge=t.step===1?t.startedAge+3:t.step===2?t.startedAge+5:null;
