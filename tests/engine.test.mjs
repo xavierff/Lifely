@@ -738,3 +738,116 @@ test('unanswered followups never block aging and new conversations replace old p
  assert.equal(E.campaignHistory(s).aftermath[0].pending.response,1);
  assert.ok(E.validate(s));
 });
+
+test('relationship day is an interactive three-stage character story with persistent memories',()=>{
+ let s=E.createLife({seed:4101});s.age=25;s.cash=3000;s.actions=3;
+ const parent=s.people[0],oldBond=parent.bond;
+ const cmd='scene:start:bond:'+parent.id;
+ assert.ok(E.commands(s).some(x=>x.id===cmd&&x.enabled));
+ s=E.act(s,cmd);
+ assert.equal(E.everydayView(s).type,'bond');assert.ok(E.validate(s));
+ assert.equal(E.everydayView(s).round,1);
+ assert.throws(()=>E.ageUp(s),/everyday scene/);
+ assert.throws(()=>E.sceneChoice(s,4),/three/);
+ for(let stage=0;stage<3;stage++){
+  const before=s;
+  const next=E.sceneChoice(s,stage%3);
+  assert.equal(before.everydayScenes.active.stage,stage);
+  s=next;assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+  if(stage<2)assert.equal(E.everydayView(s).round,stage+2);
+ }
+ assert.equal(E.everydayView(s),null);
+ const item=E.everydayHistory(s).completed[0];
+ assert.equal(item.choices.length,3);
+ assert.equal(item.type,'bond');
+ assert.ok(item.outcome);
+ assert.equal(E.everydayHistory(s).callbacks.length,1);
+ assert.ok(s.people[0].memories.some(x=>/day|relationship|tension|turning/.test(x.text)));
+ assert.notEqual(s.people[0].bond,oldBond);
+ assert.ok(!E.commands(s).some(x=>x.id===cmd&&x.enabled));
+});
+test('school challenge builds a recurring student profile and affects the actual school experience',()=>{
+ let s=E.createLife({seed:4102});s.age=12;s.actions=3;
+ assert.ok(E.commands(s).some(x=>x.id==='scene:start:school'&&x.enabled));
+ s=E.act(s,'scene:start:school');
+ let view=E.everydayView(s);const track=view.track;
+ assert.ok(view.prompt.length>30);assert.equal(view.options.length,3);
+ const peer=view.personName;
+ for(const i of [0,1,2]){s=E.sceneChoice(s,i);assert.ok(E.validate(s));}
+ assert.equal(E.everydayView(s),null);
+ const history=E.everydayHistory(s);
+ assert.equal(history.schoolResults[0].track,track);
+ assert.equal(history.classmate.name,peer);
+ assert.ok(s.stats.knowledge>=0&&s.stats.knowledge<=100);
+ assert.ok(history.callbacks.some(x=>x.dueAge===13));
+ assert.equal(E.commands(s).find(x=>x.id==='scene:start:school').enabled,false);
+});
+test('fictional courtroom choices resolve through the existing justice system',()=>{
+ let s=E.createLife({seed:4103});s.age=35;s.cash=9000;s.actions=3;
+ s.justice.case={severity:52,counsel:false,opened:35};
+ const cmd='scene:start:court';assert.ok(E.commands(s).some(x=>x.id===cmd&&x.enabled));
+ s=E.act(s,cmd);const snapshot=JSON.parse(JSON.stringify(s));
+ assert.equal(E.everydayView(s).type,'court');
+ assert.ok(E.everydayView(s).disclaimer.includes('Fictional'));
+ for(let i=0;i<3;i++){
+  s=E.sceneChoice(s,i);assert.ok(E.validate(s));
+ }
+ assert.equal(E.everydayView(s),null);assert.equal(s.justice.case,null);
+ assert.equal(s.justice.history.length,1);
+ assert.equal(E.everydayHistory(s).completed[0].verdict,s.justice.history[0].verdict);
+ assert.ok(E.everydayHistory(s).completed[0].courtPreparation>=0);
+ assert.ok(snapshot.justice.case);
+ assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+});
+test('leaving a courtroom preserves the pending case and legacy hearing path',()=>{
+ let s=E.createLife({seed:4104});s.age=32;s.cash=10000;s.justice.case={severity:25,counsel:false,opened:32};
+ s=E.act(s,'scene:start:court');
+ s=E.sceneChoice(s,'leave');
+ assert.equal(E.everydayView(s),null);assert.ok(s.justice.case);
+ assert.ok(E.commands(s).some(x=>x.id==='justice:hearing'&&x.enabled));
+ s=E.act(s,'justice:hearing');
+ assert.equal(s.justice.case,null);
+ assert.ok(E.validate(s));
+});
+test('surprises and character preferences vary while deterministic replays remain identical',()=>{
+ const combinations=new Set();
+ for(let seed=4200;seed<4230;seed++){
+  const original=E.createLife({seed});original.age=22;
+  let a=E.act(original,'scene:start:bond:'+original.people[0].id);
+  combinations.add(a.everydayScenes.active.twist+':'+a.everydayScenes.active.preference);
+  assert.deepEqual(E.sceneChoice(a,1),E.sceneChoice(a,1));
+  assert.equal(a.everydayScenes.active.choices.length,0);
+ }
+ assert.ok(combinations.size>=8);
+});
+test('an unresolved school or relationship memory returns years later and accepts one optional response',()=>{
+ for(const type of ['school','bond']){
+  let s=E.createLife({seed:type==='school'?4301:4302});s.age=type==='school'?12:32;
+  const cmd=type==='school'?'scene:start:school':'scene:start:bond:'+s.people[0].id;
+  s=E.act(s,cmd);for(const i of [0,1,2])s=E.sceneChoice(s,i);
+  const due=E.everydayHistory(s).callbacks[0].dueAge;
+  while(s.age<due){s.pending=null;s=E.ageUp(s);assert.ok(E.validate(s));}
+  s.pending=null;
+  const options=E.commands(s).filter(x=>x.id.startsWith('scene:callback:'));
+  assert.equal(options.length,2);
+  const oldActions=s.actions;
+  s=E.act(s,options[0].id);
+  assert.equal(s.actions,oldActions-1);
+  assert.equal(E.everydayHistory(s).callbacks[0].status,'resolved');
+  assert.equal(E.commands(s).filter(x=>x.id.startsWith('scene:callback:')).length,0);
+  assert.ok(E.validate(s));
+ }
+});
+test('old saves and heirs do not inherit active everyday obligations',()=>{
+ let old=E.createLife({seed:4401});delete old.everydayScenes;assert.ok(E.validate(old));
+ old.age=30;old=E.act(old,'scene:start:bond:'+old.people[0].id);
+ for(const i of [0,1,2])old=E.sceneChoice(old,i);
+ old.actions=3;old=E.act(old,'date');old=E.act(old,'child');
+ const child=old.people.find(x=>x.role==='child');child.age=20;
+ old.alive=false;old.pending=null;
+ const heir=E.legacy(old,child.id);
+ assert.ok(E.validate(heir));
+ assert.equal(E.everydayHistory(heir).callbacks.length,0);
+ assert.equal(E.everydayView(heir),null);
+ assert.equal(E.everydayHistory(heir).completed.length,1);
+});
