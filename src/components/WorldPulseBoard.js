@@ -105,7 +105,7 @@ export default function WorldPulseBoard({summary,commands,onAction,blocked}){
   </View>
   {!blocked&&opts.length?<View style={S.actions} testID="world-pulse-actions">
    <Text style={S.overline}>{summary.active?'YOUR REGIONAL COMMITMENT':'JOIN A REGIONAL INITIATIVE'}</Text>
-   {summary.active?others.map(x=><Action key={x.id} item={x} onAction={onAction}/>:
+   {summary.active?others.map(x=><Action key={x.id} item={x} onAction={onAction}/>):
     <>
      {(showProjects?projects:projects.slice(0,2)).map(x=><Action key={x.id} item={x} onAction={onAction}/>)}
      {projects.length>2?<Pressable testID="pulse-show-projects" accessibilityRole="button" onPress={()=>setShowProjects(!showProjects)} style={S.showMore}>
