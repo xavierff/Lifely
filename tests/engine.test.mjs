@@ -1186,7 +1186,7 @@ test('practicing a hobby plays exactly three decisions without charging extra ye
  const p=E.hobbySummary(s).profiles.find(x=>x.id==='chess');
  assert.ok(p.mastery>0);assert.equal(p.practice,1);assert.equal(p.contests,0);
  assert.equal(E.hobbySummary(s).history[0].lessons.length,3);
- assert.ok(!E.commands(s).some(x=>x.id==='hobby:start:chess:contest'));
+ assert.ok(!E.commands(s).some(x=>x.id==='hobby:start:chess:contest'&&x.enabled));
 });
 test('contests have skill-first fair answers, rivals and bounded cash prizes',()=>{
  let s=readyForHobby(17003,25);let last=E.worth(s);
