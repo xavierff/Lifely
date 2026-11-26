@@ -256,7 +256,7 @@ export function storyDirectorReply(s,index,ctx){
   if(s.profession&&Number.isFinite(s.profession.metric))s.profession.metric=clamp(s.profession.metric+(positive?3:-1));
  }else if(e.theme==='money'){
   if(s.business)s.business.demand=clamp((s.business.demand??50)+(positive?5:-4));
-  clampStat(s,'financialSkill',0,ctx); // real finance skill is managed separately
+  // Financial agreements change business demand; the separate financial-skill system is untouched.
  }else if(e.theme==='family'||e.theme==='loyalty')clampStat(s,'happiness',positive?5:-3,ctx);
  else clampStat(s,'reputation',positive?4:-3,ctx);
  returnMemory(e,outcome,s,ctx);
