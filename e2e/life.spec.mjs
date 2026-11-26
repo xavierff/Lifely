@@ -358,3 +358,15 @@ test('multi-year career consequences appear in Work and Life after a completed p
  await expect(panel).toContainText('Next chapter at age 36');
  await expect(page.getByTestId('career-reactions')).toBeVisible();
 });
+
+test('a returning career story offers a visible playable response years later',async({page})=>{
+ let s=E.createLife({seed:3601});s.age=35;s.cash=85000;s.world.sports.sport='Football';
+ s=E.act(s,'campaign:start:sports');for(let i=0;i<4;i++)s=E.campaignDecision(s,1);
+ s=E.ageUp(s);s.pending=null;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByRole('tab',{name:'Work'}).click();
+ await expect(page.getByText('Career follow-up decisions')).toBeVisible();
+ await page.getByRole('button',{name:/Prepare for the rematch/}).click();
+ await expect(page.getByText('Career follow-up decisions')).toHaveCount(0);
+ await expect(page.getByTestId('career-reactions')).toContainText('Career follow-up');
+});
