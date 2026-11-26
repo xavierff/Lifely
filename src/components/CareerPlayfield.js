@@ -1,5 +1,7 @@
-import React from 'react';
-import {View,Text,Pressable,StyleSheet} from 'react-native';
+import React,{useEffect,useRef,useState} from 'react';
+import {View,Text,Pressable,StyleSheet,Animated,AccessibilityInfo} from 'react-native';
+import {useAudioPlayer,setAudioModeAsync} from 'expo-audio';
+import {ElectionBoard,MedicalBoard} from './CivicClinicBoards';
 
 const C={ink:'#F6F8EE',muted:'#C0D6CD',lime:'#D0FB93',gold:'#FFE0A2',border:'#4C7065',panel:'#102926'};
 const cash=n=>'$'+Math.round(n||0).toLocaleString('en-US');
@@ -60,12 +62,35 @@ function BusinessDesk({v,onPlay}){
   {v.options.map((o,i)=><Choice key={i} item={o} i={i} disabled={v.remaining===0} onPlay={onPlay} testPrefix="business"/>)}
  </View>;
 }
-export default function CareerPlayfield({view,onPlay}){
+export default function CareerPlayfield({view,onPlay,soundEnabled=true}){
+ const tap=useAudioPlayer(require('../../assets/sfx/tap.wav'));
+ const win=useAudioPlayer(require('../../assets/sfx/success.wav'));
+ const miss=useAudioPlayer(require('../../assets/sfx/setback.wav'));
+ const pulse=useRef(new Animated.Value(1)).current;
+ const lastKey=view?.last?view.type+':'+view.stage+':'+view.plays:null;
+ const previous=useRef(lastKey);
+ const [reducedMotion,setReducedMotion]=useState(false);
+ useEffect(()=>{setAudioModeAsync({playsInSilentMode:true,shouldPlayInBackground:false}).catch(()=>{});
+  AccessibilityInfo.isReduceMotionEnabled().then(setReducedMotion).catch(()=>{});
+  const sub=AccessibilityInfo.addEventListener?.('reduceMotionChanged',setReducedMotion);
+  return()=>sub?.remove?.();
+ },[]);
+ useEffect(()=>{
+  if(lastKey&&lastKey!==previous.current){
+   if(!reducedMotion){pulse.setValue(.92);Animated.spring(pulse,{toValue:1,friction:5,tension:110,useNativeDriver:true}).start();}
+   if(soundEnabled){const player=view.last?.success?win:miss;player.seekTo(0).then(()=>player.play()).catch(()=>{});}
+  }
+  previous.current=lastKey;
+ },[lastKey,soundEnabled,reducedMotion]);
+ function interact(index){
+  if(soundEnabled){tap.seekTo(0).then(()=>tap.play()).catch(()=>{});}
+  onPlay(index);
+ }
  if(!view)return null;
  return <View style={S.container}>
-  {view.type==='sports'?<Pitch v={view} onPlay={onPlay}/>:view.type==='film'?<FilmSet v={view} onPlay={onPlay}/>:view.type==='business'?<BusinessDesk v={view} onPlay={onPlay}/>:null}
+  {view.type==='sports'?<Pitch v={view} onPlay={interact}/>:view.type==='film'?<FilmSet v={view} onPlay={interact}/>:view.type==='business'?<BusinessDesk v={view} onPlay={interact}/>:view.type==='election'?<ElectionBoard v={view} onPlay={interact}/>:view.type==='medical'?<MedicalBoard v={view} onPlay={interact}/>:null}
   <View style={S.status}><Text style={S.statusText}>{view.played} / {view.maxPerStage} interactions this phase</Text><Text style={S.statusText}>{view.remaining===0?'PHASE READY':'PLAY TO IMPROVE YOUR RESULT'}</Text></View>
-  {view.last?<View testID="playfield-feedback" accessibilityLiveRegion="polite" style={S.feedback}><Text style={S.feedbackTitle}>{view.last.success?'✓ SUCCESSFUL ACTION':'↻ TACTICAL SETBACK'}</Text><Text style={S.feedbackBody}>{view.last.description}</Text></View>:null}
+  {view.last?<Animated.View testID="playfield-feedback" accessibilityLiveRegion="polite" style={[S.feedback,{transform:[{scale:pulse}]}]}><Text style={S.feedbackTitle}>{view.last.success?'✓ SUCCESSFUL ACTION':'↻ ANOTHER APPROACH NEEDED'}</Text><Text style={S.feedbackBody}>{view.last.description}</Text>{view.last.reaction?<Text style={S.reactionText}>{view.last.reaction.person}: {view.last.reaction.text.replace(view.last.reaction.person+' ','')}</Text>:null}</Animated.View>:null}
   {view.remaining===0?<Text style={S.done}>Now make the story decision below to move to the next phase.</Text>:null}
  </View>;
 }
@@ -119,6 +144,6 @@ const S=StyleSheet.create({
  status:{flexDirection:'row',justifyContent:'space-between',flexWrap:'wrap',gap:5},
  statusText:{fontSize:10,color:C.muted,fontWeight:'700'},
  feedback:{backgroundColor:'#2A4639',padding:11,borderRadius:11,borderColor:'#80AD85',borderWidth:1,gap:4},
- feedbackTitle:{color:C.lime,fontSize:11,fontWeight:'900'},feedbackBody:{color:C.ink,fontSize:13,lineHeight:19},
+ feedbackTitle:{color:C.lime,fontSize:11,fontWeight:'900'},feedbackBody:{color:C.ink,fontSize:13,lineHeight:19},reactionText:{fontSize:12,color:C.gold,lineHeight:18,borderTopWidth:1,borderColor:'#537965',paddingTop:7},
  done:{color:C.gold,fontSize:12,fontWeight:'800',textAlign:'center'}
 });
