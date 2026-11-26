@@ -36,12 +36,12 @@ test('character fate offer starts a real scene, saves choices and does not allow
  await expect(scene.getByTestId('fate-choice-0')).toBeVisible();
  await scene.getByTestId('fate-choice-0').click();
  await expect(scene).toHaveCount(0);
- await expect(page.getByTestId('fate-current-chapter')).toContainText('Years are passing');
+ await expect(page.getByTestId('fate-current-chapter')).toContainText('YEARS ARE PASSING');
  await expect(page.getByTestId('fate-impact-recap')).toContainText('Trust');
  await expect(page.getByTestId('advance-year')).toBeEnabled();
  await page.reload();
  await page.getByRole('tab',{name:'People'}).click();
- await expect(page.getByTestId('fate-current-chapter')).toContainText('Years are passing');
+ await expect(page.getByTestId('fate-current-chapter')).toContainText('YEARS ARE PASSING');
  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('lifely.save.v2')));
  expect(saved.fate.active.stage).toBe(1);
  expect(E.validate(saved)).toBe(true);

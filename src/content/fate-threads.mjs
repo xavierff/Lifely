@@ -328,7 +328,8 @@ export function validateFate(f){
   Number.isInteger(f.lastStartedAge)&&f.lastStartedAge>=-100&&f.lastStartedAge<=110&&
   (f.active===null||(arc(f.active)&&f.active.stage<=2&&f.active.status!=='completed'))&&
   Array.isArray(f.completed)&&f.completed.length<=MAX_COMPLETE&&
-  f.completed.every(x=>arc(x)&&x.stage===3&&x.status==='completed'&&x.ending!==null&&x.endedAge!==null)&&
+  f.completed.every(x=>arc(x)&&x.status==='completed'&&x.ending!==null&&x.endedAge!==null&&
+   (x.stage===3||(['interrupted','unanswered'].includes(x.ending)&&x.stage<=2)))&&
   Array.isArray(f.news)&&f.news.length<=MAX_NEWS&&f.news.every(x=>inAge(x.age)&&str(x.text,230))&&
   Array.isArray(f.ancestry)&&f.ancestry.length<=MAX_ANCESTRY&&
   f.ancestry.every(x=>str(x.name,32)&&Number.isInteger(x.generation)&&x.generation>0&&str(x.note,220));
