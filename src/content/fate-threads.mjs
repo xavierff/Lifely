@@ -290,7 +290,7 @@ export function fateSummary(s){
    dueAge:a.dueAge,startedAge:a.startedAge,yearsToGo:Math.max(0,a.dueAge-s.age),
    last:a.last}:null,
   recent:f.completed.slice(-8).reverse().map(x=>({id:x.id,person:x.personName,
-   title:x.title,ending:x.ending,endedAge:x.endedAge,startedAge:x.startedAge,
+   title:x.title,ending:x.ending,endingTitle:x.last?.endingTitle||x.ending,endedAge:x.endedAge,startedAge:x.startedAge,
    finalLine:x.finalLine,decisions:x.decisions.length})),
   news:f.news.slice(-5).reverse(),ancestry:f.ancestry.slice(-6).reverse(),
   total:f.completed.length};

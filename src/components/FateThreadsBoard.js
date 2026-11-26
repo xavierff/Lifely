@@ -139,7 +139,7 @@ export default function FateThreadsBoard({view,commands=[],onAction,blocked=fals
     <Text style={S.age}>{x.person} · AGE {x.startedAge}–{x.endedAge}</Text>
     <Text style={S.storyTitle}>{x.title}</Text>
     <Text style={S.choiceDetail}>{x.finalLine}</Text>
-    <Text style={S.age}>{x.decisions} decisions · {x.ending}</Text>
+    <Text style={S.age}>{x.endingTitle} · {x.decisions} decisions</Text>
    </View>)}
   </View>:null}
   {!active&&!offers.length&&!recent.length?<Text style={S.subtext}>Your relationships are still forming. Spend time with people and new multi-year stories will become available.</Text>:null}
