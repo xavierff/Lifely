@@ -211,6 +211,9 @@ export function storyDirectorView(s){
  return {id:e.id,title:e.title,theme:e.theme,phase:e.phase,round:e.phase+1,total:3,
   lead:e.firstName,other:e.secondName,headline:theme.beats[e.phase],prompt:withActors(theme.scenes[e.phase],e),
   backstory:(e.previous?'An earlier story with these characters involved '+e.previous+'. ':theme.context+' ')+
+   ((s.fate?.completed||[]).filter(x=>x.personId===e.firstId||x.personId===e.secondId).at(-1)?
+    (()=>{const f=(s.fate?.completed||[]).filter(x=>x.personId===e.firstId||x.personId===e.secondId).at(-1);
+     return f.personName+' remembers how your story, '+f.title+', ended '+f.ending+'. ';})():'')+
   ((s.emotional?.threads||[]).filter(x=>x.personId===e.firstId||x.personId===e.secondId).at(-1)?
    (()=>{const m=(s.emotional?.threads||[]).filter(x=>x.personId===e.firstId||x.personId===e.secondId).at(-1);
     return m.personName+' remembers your conversation at age '+m.sourceAge+', when they felt '+m.originalOutcome+'.';})():''),
