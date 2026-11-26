@@ -3,18 +3,18 @@
     "name": "Lifely",
     "slug": "lifely",
     "scheme": "lifely",
-    "version": "1.11.0",
+    "version": "1.12.0",
     "orientation": "default",
     "userInterfaceStyle": "dark",
     "plugins": [["expo-audio", {"recordAudioAndroid": false, "enableBackgroundPlayback": false}]],
     "ios": {
       "bundleIdentifier": "com.xavierff.lifely",
       "supportsTablet": true,
-      "buildNumber": "21"
+      "buildNumber": "22"
     },
     "android": {
       "package": "com.xavierff.lifely",
-      "versionCode": 21,
+      "versionCode": 22,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#101C1B"

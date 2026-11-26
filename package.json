@@ -1,6 +1,6 @@
 {
   "name": "lifely",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "private": true,
   "main": "index.js",
   "scripts": {
@@ -13,7 +13,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "expo": "~58.0.23",
+    "expo": "~58.1.0",
     "expo-audio": "~58.0.12",
     "react": "19.3.0",
     "react-native": "0.88.1",

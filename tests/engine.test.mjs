@@ -2055,3 +2055,184 @@ test('old saves remain valid while corrupt transition plans and impossible youth
  assert.equal(E.validate(youth),false);
  delete s.familyTransitions;assert.ok(E.validate(s));
 });
+
+function worldReady(seed=77001){
+ let s=E.createLife({seed});s.age=26;s.cash=65000;s.education=3;s.stats.knowledge=90;s.stats.confidence=85;
+ s.pending=null;s.actions=3;
+ return s;
+}
+function worldTwoYears(s){
+ for(let i=0;i<2;i++){
+  if(s.pending!==null)s=E.resolve(s,0);
+  s=E.ageUp(s);
+  if(s.pending!==null)s=E.resolve(s,0);
+ }
+ return s;
+}
+test('living world has five industry sectors, six countries, three rival houses, and optional save state',()=>{
+ assert.equal(E.pulseSectors.length,5);
+ assert.equal(E.pulseCountries.length,6);
+ assert.equal(E.pulseHouses.length,3);
+ const s=E.createLife({seed:77002});
+ assert.equal(s.worldPulse,undefined);
+ assert.ok(E.validate(s));
+ assert.equal(E.worldPulseEconomyMultiplier(s,'Technology & data'),1);
+ assert.equal(E.worldPulseReputationMultiplier(s),1);
+ const status=E.worldPulseSummary(s);
+ assert.equal(status.countries.length,6);
+ assert.equal(status.rivals.length,3);
+ assert.equal(status.sectors.length,5);
+ assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+});
+test('all 150 careers map to a real world-sector economy without special-case missing data',()=>{
+ assert.equal(E.careers.length,150);
+ for(const j of E.careers){
+  assert.ok(E.pulseSectors.some(x=>x.industries.includes(j.industry)),j.title+' missing sector');
+  let s=worldReady(77200+j.id);s.job={id:j.id,level:0,experience:0};
+  const w=E.worldPulseSummary(s);
+  assert.ok(w.career);
+  assert.ok(E.pulseSectors.some(x=>x.id===w.career.sector));
+ }
+});
+test('regional indices change deterministically across six countries and have source-based news',()=>{
+ let a=worldReady(77003),b=JSON.parse(JSON.stringify(a));
+ const first=E.worldPulseSummary(a).countries.map(r=>r.average);
+ a=worldTwoYears(a);b=worldTwoYears(b);
+ assert.deepEqual(a.worldPulse.regions,b.worldPulse.regions);
+ assert.deepEqual(a.worldPulse.reputation,b.worldPulse.reputation);
+ const now=E.worldPulseSummary(a).countries.map(r=>r.average);
+ assert.ok(now.some((x,i)=>x!==first[i]));
+ assert.equal(a.worldPulse.lastYear,a.age);
+ assert.ok(E.validate(a)&&E.validate(b));
+});
+test('regional economic strength changes real salary while leaving the same job and player actions',()=>{
+ let s=worldReady(77004);
+ const job=E.careers.find(j=>j.industry==='Technology & data');
+ s.job={id:job.id,level:0,experience:0};s.worldPulse=JSON.parse(JSON.stringify(E.worldPulseState(s)));
+ const strong=JSON.parse(JSON.stringify(s)),weak=JSON.parse(JSON.stringify(s));
+ strong.worldPulse.regions[s.country].sectors.technology=92;
+ weak.worldPulse.regions[s.country].sectors.technology=15;
+ assert.ok(E.worldPulseEconomyMultiplier(strong,job.industry)>E.worldPulseEconomyMultiplier(weak,job.industry));
+ const hi=worldTwoYears(strong),lo=worldTwoYears(weak);
+ assert.ok(hi.annual.salary>lo.annual.salary);
+ assert.ok(E.validate(hi)&&E.validate(lo));
+});
+test('ordinary career work and volunteering accumulate genuine reputation in local world history',()=>{
+ let s=worldReady(77005);
+ s=E.act(s,'volunteer');
+ assert.ok(s.worldPulse.reputation.community>50);
+ assert.ok(s.worldPulse.reputation.integrity>50);
+ assert.ok(s.worldPulse.journal.some(x=>x.kind==='reputation'&&x.source==='volunteer'));
+ const j=E.careers.find(x=>x.industry==='Technology & data');
+ s.job={id:j.id,level:0,experience:0};s.actions=3;
+ const old=s.worldPulse.reputation.influence;
+ s=E.act(s,'work');
+ assert.ok(s.worldPulse.reputation.influence>old);
+ assert.equal(E.worldPulseSummary(s).career.sector,'technology');
+ assert.ok(E.validate(s));
+});
+test('regional project opens original scene, protects age-up, and gives three causally distinct choices',()=>{
+ let s=worldReady(77006);s=E.act(s,'pulse:begin:technology');
+ const scene=E.worldPulseView(s);
+ assert.equal(scene.chapter,1);assert.equal(scene.choices.length,3);
+ assert.ok(scene.body.length>70);
+ assert.throws(()=>E.ageUp(s),/regional project decision/);
+ assert.throws(()=>E.worldPulseDecision(s,5),/Invalid regional decision/);
+ const before=JSON.stringify(s);E.worldPulseView(s);E.worldPulseSummary(s);
+ assert.equal(JSON.stringify(s),before);
+ const considerate=E.worldPulseDecision(s,0),reckless=E.worldPulseDecision(s,2);
+ assert.ok(considerate.worldPulse.regions[s.country].sectors.technology>reckless.worldPulse.regions[s.country].sectors.technology);
+ assert.ok(considerate.worldPulse.reputation.integrity>reckless.worldPulse.reputation.integrity);
+ assert.ok(considerate.worldPulse.active.impact>reckless.worldPulse.active.impact);
+ assert.equal(considerate.worldPulse.active.nextAge,28);
+ assert.equal(E.worldPulseView(considerate),null);
+ assert.ok(E.validate(considerate)&&E.validate(reckless));
+});
+test('three regional chapters over five years produce real durable growth and professional experience',()=>{
+ let s=worldReady(77007);
+ const job=E.careers.find(j=>j.industry==='Care' || j.industry==='Healthcare & care');
+ assert.ok(job);s.job={id:job.id,level:0,experience:0};
+ s=E.act(s,'pulse:begin:care');
+ const original=s.worldPulse.regions[s.country].sectors.care;
+ s=E.worldPulseDecision(s,0);
+ assert.equal(s.worldPulse.active.status,'waiting');
+ s=worldTwoYears(s);assert.equal(s.age,28);
+ assert.ok(E.commands(s).some(c=>c.id==='pulse:continue'&&c.enabled));
+ s=E.act(s,'pulse:continue');assert.equal(E.worldPulseView(s).chapter,2);
+ s=E.worldPulseDecision(s,1);
+ s=worldTwoYears(s);assert.equal(s.age,30);
+ s=E.act(s,'pulse:continue');assert.equal(E.worldPulseView(s).chapter,3);
+ s=E.worldPulseDecision(s,0);
+ assert.equal(s.worldPulse.active,null);assert.equal(s.worldPulse.finished.length,1);
+ assert.equal(s.worldPulse.finished[0].choices.length,3);
+ assert.equal(s.worldPulse.finished[0].result,'transformative');
+ assert.ok(s.worldPulse.regions[s.country].sectors.care>=15);
+ assert.ok(s.job.experience>0);
+ assert.equal(E.worldPulseView(s),null);
+ assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+});
+test('a neglected regional project expires instead of trapping the player',()=>{
+ let s=worldReady(77008);
+ s=E.act(s,'pulse:begin:trade');
+ s=E.worldPulseDecision(s,0);
+ for(let i=0;i<5;i++){
+  if(s.pending!==null)s=E.resolve(s,0);
+  s=E.ageUp(s);
+  if(s.pending!==null)s=E.resolve(s,0);
+ }
+ assert.equal(s.worldPulse.active,null);
+ assert.equal(s.worldPulse.unfulfilled[0].result,'neglected');
+ assert.ok(E.commands(s).some(c=>c.id.startsWith('pulse:begin:')));
+ assert.ok(E.validate(s));
+});
+test('competing houses change independently and collaboration is not the same as aggressive challenge',()=>{
+ let s=worldReady(77009);s.worldPulse=JSON.parse(JSON.stringify(E.worldPulseState(s)));
+ const ally=E.act(s,'pulse:collaborate:aster');
+ const competitor=E.act(s,'pulse:challenge:aster');
+ assert.ok(ally.worldPulse.rivals[0].trust>competitor.worldPulse.rivals[0].trust);
+ assert.ok(ally.worldPulse.rivals[0].rivalry<competitor.worldPulse.rivals[0].rivalry);
+ assert.equal(ally.cash,s.cash-350);
+ assert.equal(competitor.cash,s.cash-250);
+ assert.ok(ally.worldPulse.regions[s.country].sectors.technology>s.worldPulse.regions[s.country].sectors.technology);
+ const evolved=worldTwoYears(ally);
+ assert.ok(evolved.worldPulse.rivals.some((r,i)=>r.standing!==ally.worldPulse.rivals[i].standing));
+ assert.ok(E.validate(evolved));
+});
+test('country changes preserve independent regional conditions and different career multipliers',()=>{
+ let s=worldReady(77010);s.worldPulse=JSON.parse(JSON.stringify(E.worldPulseState(s)));
+ s.worldPulse.regions[0].sectors.commerce=90;
+ s.worldPulse.regions[1].sectors.commerce=20;
+ const before=E.worldPulseEconomyMultiplier(s,'Finance & enterprise');
+ s.country=1;
+ assert.ok(E.worldPulseEconomyMultiplier(s,'Finance & enterprise')<before);
+ assert.equal(E.worldPulseSummary(s).region,'Indonesia');
+ assert.equal(E.worldPulseSummary(s).countries.length,6);
+ assert.ok(E.validate(s));
+});
+test('the next generation inherits rival memories and a changing world, not unfinished projects',()=>{
+ let s=worldReady(77011);
+ s=E.act(s,'pulse:collaborate:cedar');
+ s.actions=3;s=E.act(s,'pulse:begin:trade');
+ s=E.worldPulseDecision(s,0);
+ s.actions=3;s=E.act(s,'date');s=E.act(s,'child');
+ const c=s.people.find(p=>p.role==='child');c.age=23;s.alive=false;s.pending=null;
+ const heir=E.legacy(s,c.id);
+ assert.ok(E.validate(heir));
+ assert.equal(heir.worldPulse.active,null);
+ assert.equal(heir.worldPulse.rivals.length,3);
+ assert.ok(heir.worldPulse.rivals[2].history.some(x=>x.action==='collaboration'));
+ assert.ok(E.worldPulseSummary(heir).ancestry.some(x=>x.kind==='rival'&&x.sourceLife===s.name));
+ assert.equal(heir.worldPulse.regions[s.country].sectors.trade,s.worldPulse.regions[s.country].sectors.trade);
+ assert.ok(heir.worldPulse.reputation.integrity>=40);
+});
+test('world pulse save validation rejects forged markets, rivals, and impossible active stages',()=>{
+ let s=worldReady(77012);s=E.act(s,'pulse:begin:culture');
+ assert.ok(E.validate(s));
+ const bad=JSON.parse(JSON.stringify(s));bad.worldPulse.regions[0].sectors.technology=500;
+ assert.equal(E.validate(bad),false);
+ const wrong=JSON.parse(JSON.stringify(s));wrong.worldPulse.rivals[0].wins=-1;
+ assert.equal(E.validate(wrong),false);
+ const stage=JSON.parse(JSON.stringify(s));stage.worldPulse.active.stage=9;
+ assert.equal(E.validate(stage),false);
+ delete s.worldPulse;assert.ok(E.validate(s));
+});

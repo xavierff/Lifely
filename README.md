@@ -64,6 +64,19 @@ This is a **development candidate**. Success requires real-world playtesting, si
 - **Persistent design:** Old version-2 save games still work. You can leave a session without locking the game. Descendants keep family trophy history but develop their own skills and friendships.
 - **World-quality benchmarks:** See `docs/COMPETITIVE_QUALITY_SCORECARD.md` for an honest measurement plan. Feature count does not certify that Lifely is more enjoyable than BitLife. Full QA: `docs/1.6.0_HOBBY_LEAGUES.md`.
 
+## Lifely 1.12.0 — Living Regional World (build 22)
+
+**A living offline world now remembers the player's decisions, changes regional economic conditions, and carries social rivalries through family generations.**
+
+- **Six simulated countries, five economic sectors and twenty original regional headlines.** Local outlooks evolve independently every year, with recurring authored market disruptions and recoveries. Regional conditions cause modest, bounded changes to salaries, business revenue, property prices and rental returns.
+- **Fifteen original regional project chapters**, arranged as five distinct three-chapter sagas over five in-game years. Each chapter offers collaboration, careful implementation or reckless publicity. Choices alter regional indexes, public reputation and named rivals, while finished projects can improve real job experience and career prospects. Ignored opportunities expire and remain in the chronicle.
+- **Three persistent competing family houses**—Aster House, Marrow Circle and Cedar Union—develop their own standing and achievements. Players can collaborate, compete or reconcile, with cash costs and trust/rivalry consequences. Their histories and standing survive when you continue as a child.
+- **Reputation with causal inputs.** Integrity, community trust and influence respond to ordinary gameplay such as work, volunteering, training, creative work and supporting other characters. Career income and promotion readiness now respond moderately to this reputation, while rivalries can hamper influence.
+- **World dashboard.** The Life tab shows trends, regional headlines, active projects, competing houses and decisions. Work explains current career exposure, while More preserves an intergenerational world chronicle and completed accomplishments.
+- **Offline and save compatible.** Existing version-2 saves remain valid, histories stay size bounded and no network or background service is introduced. Unit and browser tests check all 150 careers, six-country trends, multi-year consequences, rival actions, save restoration, inheritance and narrow-screen layouts.
+
+**Release boundary:** These markets, headlines and houses are original fiction, not forecasts or actual economic data. Build 22 is a development candidate pending physical-device QA, extended player studies, economy balance audits, and any signed native TestFlight / Google Play submission. No automation was changed. See docs/1.12.0_LIVING_WORLD.md.
+
 ## Lifely 1.11.0 — Family Transitions (build 21)
 
 **Families and their finances evolve after separation, during caregiving and as children become adults.** This expands the original 1.9 family stories and 1.10 household budget with real cross-character consequences.
