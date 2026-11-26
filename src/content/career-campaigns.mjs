@@ -169,14 +169,14 @@ function award(s,a,ctx){
   const scoreline=p?.plays?.some(x=>x.stage>=2)?' Tournament score '+p.ours+'–'+p.theirs+(p.ours===p.theirs?' (resolved by a rating tiebreak).':'.'):'';
    message=(succeeded?'The season ended with a competition victory.':'Your rival prevailed this season, leaving a clear rematch to work toward.')+scoreline;
  }else if(a.type==='election'){
-  const p=w.politics;p.party??='Civic Renewal';p.elections++;p.lastElectionAge=s.age;p.campaignFunds=Math.max(0,(p.campaignFunds||0)-Math.min(1500,p.campaignFunds||0));
-  p.approval=clamp(p.approval+(succeeded?Math.round(7+rating/15):-7));
-  if(succeeded){p.wins++;p.office=p.wins>=3?'Regional executive':p.wins===2?'Representative':'Councillor';p.term=4;
+  const pol=w.politics;pol.party??='Civic Renewal';pol.elections++;pol.lastElectionAge=s.age;pol.campaignFunds=Math.max(0,(pol.campaignFunds||0)-Math.min(1500,pol.campaignFunds||0));
+  pol.approval=clamp(pol.approval+(succeeded?Math.round(7+rating/15):-7));
+  if(succeeded){pol.wins++;pol.office=pol.wins>=3?'Regional executive':pol.wins===2?'Representative':'Councillor';pol.term=4;
    if(s.job)s.job=null;ctx.change(s,'reputation',8);
   }else ctx.change(s,'stress',6);
   if(pro?.id==='politics'){pro.attempts=(pro.attempts||0)+1;if(succeeded)pro.wins=(pro.wins||0)+1;pro.metric=clamp(pro.metric+(succeeded?7:-6));}
-  const opponent=w.characters?.politicians?.find(p=>p.id===rival);if(opponent){if(succeeded)opponent.losses++;else opponent.wins++;opponent.approval=clamp(opponent.approval+(succeeded?-5:5));}
-  message=(succeeded?'The fictional election returned a mandate for your campaign.':'Your fictional campaign lost; volunteers and residents now expect accountability.')+(p?.credibility!==undefined?' Public trust '+p.credibility+'/100, community confidence '+p.community+'/100.':'');
+  const opponent=w.characters?.politicians?.find(p=>pol.id===rival);if(opponent){if(succeeded)opponent.losses++;else opponent.wins++;opponent.approval=clamp(opponent.approval+(succeeded?-5:5));}
+  message=(succeeded?'The fictional election returned a mandate for your campaign.':'Your fictional campaign lost; volunteers and residents now expect accountability.')+(p?.credibility!==undefined?' Public trust '+pol.credibility+'/100, community confidence '+pol.community+'/100.':'');
  }else if(a.type==='medical'){
   if(succeeded){ctx.change(s,'reputation',6);ctx.change(s,'knowledge',4);ctx.change(s,'kindness',3);if(pro?.id==='doctor'){pro.clients=(pro.clients||0)+1;pro.wins=(pro.wins||0)+1;pro.metric=clamp(pro.metric+7);}
   }else{ctx.change(s,'stress',7);ctx.change(s,'reputation',-4);if(pro?.id==='doctor')pro.metric=clamp(pro.metric-4);}
@@ -214,6 +214,7 @@ export function campaignReply(s,selection,ctx){
  careerReaction(s,a,{success:selection!==2,index:selection,source:'story'});
  if(choice.risk>15)ctx.change(s,'stress',4);else if(choice.team>10)ctx.change(s,'social',2);
  a.stage++;
+ if(a.playfield)a.playfield.last=null; // Do not replay stale feedback in the next scene.
  if(a.type==='sports'&&a.stage===2&&a.playfield)a.playfield.fatigue=18; // Recovery before elimination match.
  if(a.stage===4){
   const result=award(s,a,ctx),rec={...a,status:'completed',endedAge:s.age,outcome:result.grade,result};
