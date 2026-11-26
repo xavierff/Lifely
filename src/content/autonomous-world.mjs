@@ -145,11 +145,18 @@ function beginArc(s,ctx){
  if(!candidates.length)return;
  const person=candidates[Math.floor(ctx.rng(s)*candidates.length)];
  const weights=person.background==='classmate'?['reunion','competition','enterprise','creative','mentorship','community']:['community','reunion','mentorship','creative','enterprise'];
- const kind=weights[Math.floor(ctx.rng(s)*weights.length)];
+ const source=personFor(s,person.id);
+ const tailored={
+  Designer:'creative',Teacher:'mentorship',Founder:'enterprise',Athlete:'competition',
+  'Community organizer':'community',Researcher:'mentorship'
+ }[source?.profession];
+ const kind=tailored&&ctx.rng(s)<.62?tailored:weights[Math.floor(ctx.rng(s)*weights.length)];
+ const past=(s.everydayScenes?.schoolResults||[]).filter(x=>x.classmate===person.name).at(-1);
+ const originDetail=past?'You worked together on the '+past.track.toLowerCase()+' at age '+past.age+'.':person.background==='classmate'?'You shared classrooms years ago.':'Your relationship began earlier in life.';
  const def=storyKinds[kind],startedAge=s.age;
  const arc={id:'autonomy-'+s.generation+'-'+s.age+'-'+(a.arcs.length+a.completed.length+1),
-  title:def.title,kind,npcId:person.id,npcName:person.name,origin:person.background,startedAge,dueAge:startedAge+1,
-  stage:0,status:'active',quality:50,relationships:50,history:[],last:null};
+  title:def.title,kind,npcId:person.id,npcName:person.name,origin:person.background,originDetail,startedAge,dueAge:startedAge+1,
+  stage:0,status:'active',quality:clamp(40+Math.round((rating(source)-50)*.3)+(past?.grade==='breakthrough'?9:0)),relationships:clamp(rating(source)),history:[],last:null};
  a.arcs.push(arc);a.lastStartedAge=s.age;
  news(s,ctx,person.name+' has started a new chapter: '+def.title.toLowerCase()+'. The consequences may reach you in later years.','opportunity');
 }
@@ -157,7 +164,8 @@ function advanceArc(s,arc,decision,ctx){
  const npc=personFor(s,arc.npcId),stage=arc.stage,accepted=decision===0||decision===1;
  const relevant=arc.kind==='creative'?s.stats.creativity:arc.kind==='enterprise'?s.stats.knowledge:
  arc.kind==='competition'?s.stats.confidence:arc.kind==='mentorship'?s.stats.kindness:s.stats.social;
- const odds=clamp(30+relevant*.40+(rating(npc)-50)*.14+(arc.quality-50)*.15+(decision===1?7:0)-(arc.kind==='competition'?9:0),15,92);
+ const social=a=>a.links?.some(link=>(link.a===arc.npcId||link.b===arc.npcId)&&link.status==='partners')?5:0;
+ const odds=clamp(30+relevant*.40+(rating(npc)-50)*.14+(arc.quality-50)*.15+(decision===1?7:0)+social(autonomyState(s))-(arc.kind==='competition'?9:0),15,92);
  const success=decision===2?false:decision===-1?false:ctx.rng(s)*100<odds;
  const delta=accepted?(success?7:-4):decision===2?-2:-3;
  arc.quality=clamp(arc.quality+delta);
@@ -266,7 +274,12 @@ export function autonomyView(s){
    nameB:a.alumni.find(p=>p.id===e.b)?.name||'Someone',history:(e.history||[]).slice(-3)})),
   opportunities:(a.arcs||[]).filter(x=>x.status==='active').map(arc=>{
    const def=storyKinds[arc.kind]?.chapters?.[arc.stage]||['A new chapter','An old choice changes what comes next.'];
-   return {...arc,chapterTitle:def[0],chapterText:arc.npcName+': '+def[1],ready:arc.dueAge===s.age,history:arc.history.slice()};
+   const context=arc.stage===0?(arc.originDetail||'An old connection remains relevant.') :
+    arc.last?.outcome==='progress'?'Your previous help made the next step possible.':
+    arc.last?.outcome==='complicated'?'An earlier setback is still influencing the group.':
+    arc.last?.outcome==='declined'?'They moved forward without your direct involvement.':
+    'The people involved have continued with their own plans.';
+   return {...arc,chapterTitle:def[0],chapterText:arc.npcName+': '+def[1]+' '+context,ready:arc.dueAge===s.age,history:arc.history.slice()};
   }).sort((x,y)=>x.dueAge-y.dueAge),
   completed:(a.completed||[]).slice(-10).reverse(),
   news:(a.news||[]).slice(-12).reverse(),archive:(a.archive||[]).slice(-10).reverse()};
