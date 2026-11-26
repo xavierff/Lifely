@@ -856,3 +856,61 @@ test('household planner and financial dashboard remain legible on 320, 375 and 4
   await expect(page.getByTestId('household-family-recap')).toBeVisible();
  }
 });
+
+test('separation creates adjustable co-parenting and preserves the original ex after reload',async({page})=>{
+ let s=E.createLife({name:'Mila',seed:72001});s.age=38;s.cash=60000;
+ s=E.act(s,'date');const ex=s.people.find(p=>p.role==='partner');
+ s=E.act(s,'child');s=E.act(s,'breakup');
+ s.people.find(p=>p.role==='child').age=9;s.actions=3;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByText('People',{exact:true}).click();
+ const board=page.getByTestId('family-transitions-board');await expect(board).toBeVisible();
+ await expect(page.getByTestId('transition-coparenting')).toContainText(ex.name);
+ await page.getByTestId('transition-transition-coparent-resident').click();
+ await expect(page.getByTestId('transition-coparenting')).toContainText('resident arrangement');
+ await page.reload();await page.getByText('People',{exact:true}).click();
+ await expect(page.getByTestId('transition-coparenting')).toContainText('resident arrangement');
+});
+test('a family property can be disputed, sold, and its proceeds transferred to an actual NPC',async({page})=>{
+ let s=E.createLife({name:'Rowan',seed:72002});s.age=41;s.cash=50000;
+ s=E.act(s,'date');const ex=s.people.find(p=>p.role==='partner');
+ s=E.act(s,'breakup');s.properties.push({id:'house',value:100000});s.actions=3;
+ const oldMoney=s.people.find(p=>p.id===ex.id).world.cash;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByText('People',{exact:true}).click();
+ await page.getByTestId('transition-transition-property-open-house').click();
+ await expect(page.getByTestId('transition-property-case')).toContainText('$100,000');
+ await page.getByTestId('transition-transition-property-split').click();
+ await expect(page.getByTestId('transition-property-case')).toHaveCount(0);
+ const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('lifely.save.v2')));
+ expect(saved.properties.some(x=>x.id==='house')).toBe(false);
+ expect(saved.people.find(p=>p.id===ex.id).world.cash-oldMoney).toBe(47500);
+ expect(E.validate(saved)).toBe(true);
+});
+test('guiding a teenager raises autonomy without choosing their later job for them',async({page})=>{
+ let s=E.createLife({name:'Ella',seed:72003});s.age=37;s.cash=10000;
+ s=E.act(s,'date');s=E.act(s,'child');
+ const child=s.people.find(p=>p.role==='child');child.age=16;s.actions=3;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByText('People',{exact:true}).click();
+ await page.getByTestId('transition-transition-guide-'+child.id+'-listen').click();
+ await expect(page.getByTestId('transition-independent-youth')).toContainText(child.name);
+ const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('lifely.save.v2')));
+ expect(stored.familyTransitions.youth[child.id].path).toBe(null);
+ expect(stored.familyTransitions.youth[child.id].agency).toBeGreaterThan(50);
+});
+test('co-parenting, property and elder care views fit narrow phone screens',async({page})=>{
+ for(const width of [320,375,430]){
+  await page.setViewportSize({width,height:740});
+  let s=E.createLife({name:'Rin',seed:72100+width});s.age=39;s.cash=80000;
+  s=E.act(s,'date');s=E.act(s,'child');s=E.act(s,'breakup');
+  s.people.find(p=>p.role==='child').age=13;s.people.find(p=>p.role==='parent').age=65;s.actions=3;
+  await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+  await page.getByText('People',{exact:true}).click();
+  const board=page.getByTestId('family-transitions-board');await expect(board).toBeVisible();
+  const box=await board.boundingBox();expect(box.width).toBeLessThanOrEqual(width+1);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
+  await page.getByText('Money',{exact:true}).click();
+  await expect(page.getByTestId('transition-money-recap')).toBeVisible();
+ }
+});

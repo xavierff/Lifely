@@ -64,6 +64,19 @@ This is a **development candidate**. Success requires real-world playtesting, si
 - **Persistent design:** Old version-2 save games still work. You can leave a session without locking the game. Descendants keep family trophy history but develop their own skills and friendships.
 - **World-quality benchmarks:** See `docs/COMPETITIVE_QUALITY_SCORECARD.md` for an honest measurement plan. Feature count does not certify that Lifely is more enjoyable than BitLife. Full QA: `docs/1.6.0_HOBBY_LEAGUES.md`.
 
+## Lifely 1.11.0 — Family Transitions (build 21)
+
+**Families and their finances evolve after separation, during caregiving and as children become adults.** This expands the original 1.9 family stories and 1.10 household budget with real cross-character consequences.
+
+- Ending a relationship retains the former partner's identity and whether the relationship was a marriage, and automatically stops the old shared-finance agreement. If the family has minor children, the player can choose between shared co-parenting, a primary residence or sending support to the other parent's household. Annual support comes from actual NPC or player resources, not invented salary.
+- Owned homes can become the subject of a property discussion. While a discussion is open, the property cannot also be sold through the regular market. The player can sell and split proceeds 50/50, negotiate a 70/30 split with a real mediation fee, buy out the ex-partner with existing cash, or end negotiations unresolved. Death or loss of the other party releases the property.
+- Parents and grandparents aged 60+ can have independent, coordinated or direct care arrangements. These change real annual expenses, stress, and the relative's wellbeing and bond. One personal check-in each year reinforces a relationship.
+- Teenagers can receive advice without being assigned a career. At 18, young adult NPCs choose an independent direction based on their own personality and finances; at 21 they take a follow-up step. Their education, cash, debt and capabilities affect their future and the next playable generation.
+- The People tab now has an actionable Family Transitions section. The Money tab documents co-parenting payments and elder care costs. The life journal and descendant memories record major family decisions.
+- State remains deterministic, offline and compatible with existing version-2 saves. Added engine/browser regressions cover money conservation, property outcomes, child agency, care costs, succession, corruption and narrow phones.
+
+**Status:** development candidate. This is not a signed iOS/Android build, not a public store release and not proof of superiority over BitLife. Independent comparative playtests and real-device QA remain required. Read docs/1.11.0_FAMILY_TRANSITIONS.md.
+
 ## Lifely 1.10.0 — Household Economy & Care (build 20)
 
 **Household money is no longer just a single annual expense.** Families can earmark existing cash for emergencies and individual children's education, choose long-term spending priorities, negotiate an optional financial agreement with a partner, choose how care responsibilities are shared and repair sibling rivalries. All transfers are real in-game accounting: an action cannot create money by moving it between accounts.
