@@ -1887,3 +1887,171 @@ test('independent partners, minors, job activity and household actions retain no
  assert.throws(()=>E.act(s,'household:reserve:deposit:500'),/not available/i);
  assert.ok(E.validate(s));
 });
+
+function familyTransitionLife(seed=71001){
+ let s=E.createLife({seed});s.age=42;s.cash=160000;
+ s=E.act(s,'date');const p=s.people.find(x=>x.role==='partner');
+ s=E.act(s,'gift:'+p.id);s=E.act(s,'marry');s.actions=3;
+ s=E.act(s,'child');s=E.act(s,'child');
+ const kids=s.people.filter(x=>x.role==='child');kids[0].age=9;kids[1].age=16;
+ s.people.find(x=>x.id===p.id).world.cash=42000;
+ s.actions=3;s=E.act(s,'breakup');s.actions=3;
+ return s;
+}
+function ageTransition(s,n=1){
+ for(let i=0;i<n;i++){if(s.pending!==null)s=E.resolve(s,0);
+  s=E.ageUp(s);if(s.pending!==null)s=E.resolve(s,0);}
+ return s;
+}
+test('separation remembers original marriage, maintains ex savings and ends shared finances',()=>{
+ let s=E.createLife({seed:71002});s.age=40;s.cash=50000;
+ s=E.act(s,'date');const p=s.people.find(x=>x.role==='partner');
+ s=E.act(s,'gift:'+p.id);s=E.act(s,'marry');s.actions=3;
+ s=E.act(s,'household:agreement:shared');const before=s.people.find(x=>x.id===p.id).world.cash;
+ const old=s;s=E.act(s,'breakup');
+ assert.equal(old.people.find(x=>x.id===p.id).role,'partner');
+ assert.equal(s.people.find(x=>x.id===p.id).role,'ex');
+ assert.equal(s.people.find(x=>x.id===p.id).world.cash,before);
+ assert.equal(s.household.agreement,'independent');
+ assert.equal(E.transitionSummary(s).separation.wasMarried,true);
+ assert.equal(E.transitionSummary(s).separation.exId,p.id);
+ assert.ok(E.validate(s));
+});
+test('co-parenting choices create different recorded plans and trust outcomes',()=>{
+ const initial=familyTransitionLife(71003);
+ const ids=E.commands(initial).filter(x=>x.id.startsWith('transition:coparent:')).map(x=>x.id);
+ assert.ok(ids.includes('transition:coparent:resident'));
+ assert.ok(ids.includes('transition:coparent:other'));
+ assert.equal(E.transitionSummary(initial).separation.minorChildren.length,2);
+ const resident=E.act(initial,'transition:coparent:resident');
+ const other=E.act(initial,'transition:coparent:other');
+ assert.ok(resident.familyTransitions.separation.cooperation>other.familyTransitions.separation.cooperation);
+ assert.ok(E.validate(resident)&&E.validate(other));
+});
+test('real co-parent support comes from former partner savings and never counts as new wages',()=>{
+ const s=familyTransitionLife(71004),shared=ageTransition(s);
+ assert.ok(shared.annual.coParentSupportReceived>0);assert.equal(shared.annual.coParentSupportPaid,0);
+ const exId=shared.familyTransitions.separation.exId;
+ const baseline=JSON.parse(JSON.stringify(s));baseline.familyTransitions.separation.plan='none';
+ const independent=ageTransition(baseline);
+ assert.equal(independent.people.find(p=>p.id===exId).world.cash-
+   shared.people.find(p=>p.id===exId).world.cash,shared.annual.coParentSupportReceived);
+ assert.equal(shared.annual.balance-independent.annual.balance,shared.annual.coParentSupportReceived);
+ const other=ageTransition(E.act(s,'transition:coparent:other'));
+ assert.equal(other.annual.coParentSupportReceived,0);
+ assert.ok(other.annual.coParentSupportPaid>0);
+ assert.ok(other.people.find(p=>p.id===exId).world.cash>independent.people.find(p=>p.id===exId).world.cash);
+ assert.ok(E.validate(shared)&&E.validate(other));
+});
+test('disputed family property cannot be sold separately and 50/50 settlement conserves proceeds',()=>{
+ let s=familyTransitionLife(71005);const ex=s.people.find(p=>p.role==='ex');
+ s.properties.push({id:'house',value:100000});const start=E.worth(s),exCash=ex.world.cash;
+ s=E.act(s,'transition:property:open:house');
+ assert.equal(E.transitionSummary(s).propertyCase.propertyId,'house');
+ assert.equal(E.commands(s).find(x=>x.id==='sell:house').enabled,false);
+ s=E.act(s,'transition:property:split');
+ assert.equal(s.properties.length,0);
+ assert.equal(s.people.find(p=>p.id===ex.id).world.cash-exCash,47500);
+ assert.equal(E.worth(s),start-100000+47500);
+ assert.equal(E.transitionSummary(s).propertyCase,null);assert.ok(E.validate(s));
+});
+test('cash-funded buyout and negotiated property sale do not create wealth',()=>{
+ let s=familyTransitionLife(71006);const ex=s.people.find(p=>p.role==='ex');
+ s.properties.push({id:'apartment',value:100000});s=E.act(s,'transition:property:open:apartment');
+ const bought=E.act(s,'transition:property:buyout');
+ assert.equal(bought.properties[0].value,100000);assert.equal(s.cash-bought.cash,40000);
+ assert.equal(bought.people.find(p=>p.id===ex.id).world.cash-s.people.find(p=>p.id===ex.id).world.cash,40000);
+ const compromise=E.act(s,'transition:property:compromise');
+ assert.equal(compromise.properties.length,0);
+ assert.equal(compromise.cash-s.cash,66290);
+ assert.equal(compromise.people.find(p=>p.id===ex.id).world.cash-s.people.find(p=>p.id===ex.id).world.cash,28410);
+ assert.equal(66290+28410+300,95000);
+ assert.ok(E.validate(bought)&&E.validate(compromise));
+});
+test('an unresolved property dispute can be dropped without asset loss',()=>{
+ let s=familyTransitionLife(71007);s.properties.push({id:'house',value:50000});
+ s=E.act(s,'transition:property:open:house');const original=E.worth(s);
+ s=E.act(s,'transition:property:withdraw');
+ assert.equal(E.transitionSummary(s).propertyCase,null);assert.equal(E.worth(s),original);
+ assert.ok(E.commands(s).some(c=>c.id==='sell:house'&&c.enabled));assert.ok(E.validate(s));
+});
+test('caring for aging relatives changes annual costs, bonds and stress',()=>{
+ let s=E.createLife({seed:71008});s.age=39;s.cash=100000;
+ const p=s.people.find(p=>p.role==='parent');p.age=62;
+ const independent=ageTransition(s);
+ const home=ageTransition(E.act(s,'transition:care:'+p.id+':home'));
+ const shared=ageTransition(E.act(s,'transition:care:'+p.id+':shared'));
+ assert.ok(home.annual.elderCareCosts>shared.annual.elderCareCosts);
+ assert.ok(shared.annual.elderCareCosts>independent.annual.elderCareCosts);
+ assert.ok(home.annual.expenses>shared.annual.expenses);
+ assert.ok(home.people.find(x=>x.id===p.id).bond>independent.people.find(x=>x.id===p.id).bond);
+ assert.ok(E.validate(home)&&E.validate(shared));
+});
+test('older relative visits can improve a relationship at most once per year',()=>{
+ let s=E.createLife({seed:71009});s.age=35;
+ const p=s.people.find(x=>x.role==='parent');p.age=66;
+ const id='transition:checkin:'+p.id,old=p.bond;
+ s=E.act(s,id);assert.ok(s.people.find(x=>x.id===p.id).bond>old);
+ assert.ok(!E.commands(s).some(x=>x.id===id&&x.enabled));assert.ok(E.validate(s));
+});
+test('teen guidance shapes agency while preserving adult autonomy',()=>{
+ let s=familyTransitionLife(71010);
+ const child=s.people.find(p=>p.role==='child'&&p.age===16),old=child.bond;
+ const id='transition:guide:'+child.id+':listen';
+ s=E.act(s,id);assert.ok(s.people.find(p=>p.id===child.id).bond>old);
+ assert.ok(s.familyTransitions.youth[child.id].agency>50);
+ assert.equal(s.familyTransitions.youth[child.id].path,null);
+ assert.ok(!E.commands(s).some(x=>x.id===id&&x.enabled));assert.ok(E.validate(s));
+});
+test('adult children autonomously choose at eighteen and continue at twenty-one',()=>{
+ let s=E.createLife({seed:71011});s.age=38;s.cash=50000;
+ s=E.act(s,'date');s=E.act(s,'child');s.actions=3;
+ const child=s.people.find(p=>p.role==='child');child.age=17;child.world.personality='Creative';
+ const old=s;s=ageTransition(s);
+ assert.equal(E.transitionSummary(s).youth.find(p=>p.personId===child.id).path,'creative');
+ assert.equal(s.familyTransitions.youth[child.id].decisions.length,1);
+ assert.equal(old.familyTransitions,undefined);
+ s=ageTransition(s,3);
+ assert.equal(s.people.find(p=>p.id===child.id).age,21);
+ assert.equal(s.familyTransitions.youth[child.id].decisions.length,2);
+ assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+});
+test('an independent student pays tuition from personal savings and debt, not the parents resources',()=>{
+ let s=E.createLife({seed:71012});s.age=42;s.cash=50000;
+ s=E.act(s,'date');s=E.act(s,'child');s.actions=3;
+ const child=s.people.find(p=>p.role==='child');child.age=17;
+ child.world.personality='Cautious';child.world.cash=100;child.world.debt=0;
+ s=ageTransition(s);
+ assert.equal(s.familyTransitions.youth[child.id].path,'study');
+ assert.ok(s.people.find(p=>p.id===child.id).world.education>=2);
+ assert.ok(s.people.find(p=>p.id===child.id).world.debt>=0);
+ assert.equal(s.annual.coParentSupportPaid,0);assert.ok(E.validate(s));
+});
+test('a deceased ex releases a disputed property for ordinary sale in the next year',()=>{
+ let s=familyTransitionLife(71013);s.properties.push({id:'house',value:50000});
+ s=E.act(s,'transition:property:open:house');s.people.find(p=>p.role==='ex').alive=false;
+ s=ageTransition(s);
+ assert.equal(E.transitionSummary(s).propertyCase,null);
+ assert.ok(E.commands(s).some(c=>c.id==='sell:house'&&c.enabled));assert.ok(E.validate(s));
+});
+test('succession remembers family transitions without duplicating property or carrying obligations',()=>{
+ let s=familyTransitionLife(71014);s.properties.push({id:'house',value:60000});
+ s=E.act(s,'transition:property:open:house');
+ s=E.act(s,'transition:property:withdraw');
+ const child=s.people.find(p=>p.role==='child');child.age=24;s.alive=false;s.pending=null;
+ const heir=E.legacy(s,child.id);
+ assert.ok(E.validate(heir));assert.equal(E.transitionSummary(heir).separation,null);
+ assert.equal(E.transitionSummary(heir).propertyCase,null);
+ assert.ok(E.transitionSummary(heir).ancestry.some(x=>x.sourceLife===s.name&&x.kind==='property'));
+ assert.equal(heir.properties.length,0);
+});
+test('old saves remain valid while corrupt transition plans and impossible youth paths are rejected',()=>{
+ let s=familyTransitionLife(71015);assert.ok(E.validate(s));
+ const wrong=JSON.parse(JSON.stringify(s));wrong.familyTransitions.separation.plan='magical';
+ assert.equal(E.validate(wrong),false);
+ const big=JSON.parse(JSON.stringify(s));big.familyTransitions.records=Array.from({length:100},()=>({age:40}));
+ assert.equal(E.validate(big),false);
+ const youth=JSON.parse(JSON.stringify(s));youth.familyTransitions.youth['4']={personId:4,path:'forged',agency:40,support:40,decisions:[]};
+ assert.equal(E.validate(youth),false);
+ delete s.familyTransitions;assert.ok(E.validate(s));
+});
