@@ -758,3 +758,53 @@ test('regular-job stories fit 320, 375 and 430 px screens without horizontal ove
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
  }
 });
+
+test('family choices are playable, change relationships and persist after reload',async({page})=>{
+ let s=E.createLife({name:'Cleo',seed:62101});s.age=35;s.cash=10000;s=E.act(s,'date');
+ const partner=s.people.find(p=>p.role==='partner');
+ s=E.act(s,'gift:'+partner.id);s=E.act(s,'marry');s.actions=3;
+ await page.goto('/');
+ await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);
+ await page.reload();await page.getByText('People',{exact:true}).click();
+ await expect(page.getByTestId('family-living-board')).toBeVisible();
+ await page.getByTestId('family-action-family-begin-shared-futures-'+partner.id).click();
+ await expect(page.getByTestId('family-active-chapter')).toContainText('The promotion abroad');
+ await expect(page.getByTestId('advance-year')).toBeDisabled();
+ await page.getByTestId('family-decision-0').click();
+ await expect(page.getByTestId('family-active-chapter')).toHaveCount(0);
+ await expect(page.getByTestId('family-story-progress')).toContainText('Chapter 2/3');
+ await page.reload();await page.getByText('People',{exact:true}).click();
+ await expect(page.getByTestId('family-story-progress')).toContainText('Chapter 2/3');
+ await expect(page.getByTestId('advance-year')).toBeEnabled();
+});
+test('next family chapter returns after two years and remembers the real participant',async({page})=>{
+ let s=E.createLife({name:'Theo',seed:62102});s.age=33;s.cash=10000;
+ s=E.act(s,'date');const partner=s.people.find(p=>p.role==='partner');
+ s=E.act(s,'family:begin:independent-partners:'+partner.id);
+ s=E.familyDecision(s,1);
+ for(let i=0;i<2;i++){s.pending=null;s=E.ageUp(s);if(s.pending!==null)s=E.resolve(s,0);}
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByText('People',{exact:true}).click();
+ await expect(page.getByTestId('family-story-progress')).toContainText(partner.name);
+ await page.getByTestId('family-action-family-continue').click();
+ await expect(page.getByTestId('family-active-chapter')).toContainText('A different circle');
+ await page.getByTestId('family-decision-1').click();
+ await expect(page.getByTestId('family-story-progress')).toContainText('Chapter 3/3');
+});
+test('parenting and sibling interaction boards fit narrow phones without overflow',async({page})=>{
+ for(const width of [320,375,430]){
+  await page.setViewportSize({width,height:730});
+  let s=E.createLife({name:'Ari',seed:62200+width});s.age=39;s.cash=50000;
+  s=E.act(s,'date');s=E.act(s,'child');s=E.act(s,'child');
+  for(const p of s.people.filter(x=>x.role==='child'))p.age=10;
+  s.actions=3;
+  await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+  await page.getByText('People',{exact:true}).click();
+  const b=page.getByTestId('family-living-board');await expect(b).toBeVisible();
+  const bounds=await b.boundingBox();expect(bounds.width).toBeLessThanOrEqual(width+1);
+  await page.getByTestId('family-show-stories').click();
+  await page.getByTestId('family-action-family-begin-siblings-and-space-4-5').click();
+  await expect(page.getByTestId('family-active-chapter')).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
+ }
+});

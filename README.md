@@ -64,6 +64,21 @@ This is a **development candidate**. Success requires real-world playtesting, si
 - **Persistent design:** Old version-2 save games still work. You can leave a session without locking the game. Descendants keep family trophy history but develop their own skills and friendships.
 - **World-quality benchmarks:** See `docs/COMPETITIVE_QUALITY_SCORECARD.md` for an honest measurement plan. Feature count does not certify that Lifely is more enjoyable than BitLife. Full QA: `docs/1.6.0_HOBBY_LEAGUES.md`.
 
+## Lifely 1.9.0 — Family Dynasty Stories (build 19)
+
+**Original family storylines with real, intergenerational consequences.** Twelve authored themes and 36 chapters make marriage, parenting, sibling bonds, elder care, reconciliation and family identity develop over years instead of resetting each age.
+
+- Family chapters are driven by real named family members, distinct personality values and live bonds. Listening, collaborative planning and controlling responses cause different outcomes, trust, confidence, stress and sibling cooperation.
+- Every story has three chapters across five simulated years. Player choices are optional; missed commitments, bereavements and relationship changes preserve a truthful interrupted or neglected record.
+- The People screen displays family members’ personalities, child independence, trust, sibling rivalry and cooperation; the active three-choice story is surfaced prominently with accessible decision controls.
+- Children’s autonomy, care and trust development become actual differences when continuing a subsequent lifetime as a child. Completed family memories, but never unfinished obligations, survive as records of earlier generations.
+- The 12 distinct story types include two marital topics, independent partners, early parenting, school pressure, teenage independence, two sibling narratives, elder care, family business, rebuilding strained bonds and traditions.
+- All state remains local and version-2-save compatible; no additional online services, ads or purchasing. Unit/browser checks cover story choices, age-gating, persistence, interruption, autonomy, legacy and 320px layouts.
+
+**Release boundary:** This is a development candidate only. Human comparative playtesting, signed native builds, real-device QA and independent review are still required before any better-than-BitLife claim or public release.
+
+See `docs/1.9.0_FAMILY_DYNASTIES.md` for acceptance tests and the next review targets.
+
 ## Lifely 1.8.0 — Workplace Sagas (build 18)
 
 Fifteen decades of professional choices deserve a supporting cast. All 150 regular careers now share **12 individually authored industry storylines**, each with **3 chapters, 3 contrasting decisions per chapter, and 2 persistent colleagues**. The new Work tab shows evolving relationships, independently improving rivals, commitments, progress and outcomes.

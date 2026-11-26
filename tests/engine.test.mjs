@@ -1539,3 +1539,193 @@ test('the learning ambition now tracks technical skill and can be completed',()=
  assert.equal(E.ambitionSummary(s).active,null);
  assert.equal(E.ambitionSummary(s).completed[0].id,'scholar');assert.ok(E.validate(s));
 });
+
+function preparedFamily(seed=61001){
+ let s=E.createLife({seed});s.age=40;s.cash=200000;
+ s=E.act(s,'date');const partner=s.people.find(p=>p.role==='partner');
+ s=E.act(s,'gift:'+partner.id);s=E.act(s,'marry');s.actions=3;
+ s=E.act(s,'child');s=E.act(s,'child');s=E.act(s,'child');s.actions=3;
+ const children=s.people.filter(p=>p.role==='child');
+ children[0].age=7;children[1].age=20;children[2].age=21;
+ s.people.find(p=>p.role==='parent').age=70;
+ return s;
+}
+function familyYear2(s,years=2){
+ for(let i=0;i<years;i++){
+  if(s.pending!==null)s=E.resolve(s,0);
+  s=E.ageUp(s);
+  if(s.pending!==null)s=E.resolve(s,0);
+ }
+ return s;
+}
+test('family dynasty adds twelve distinct authored themes and no new saves are required',()=>{
+ assert.equal(E.familyStoryTypes.length,12);
+ assert.equal(new Set(E.familyStoryTypes.map(t=>t.id)).size,12);
+ const s=E.createLife({seed:61002});
+ assert.ok(E.validate(s));assert.equal(s.familyStories,undefined);
+ assert.deepEqual(E.familySummary(s).completed,[]);
+ const older=JSON.parse(JSON.stringify(s));delete older.familyStories;
+ assert.ok(E.validate(older));
+});
+test('family stories are offered based on live household roles, age and relationship requirements',()=>{
+ let s=preparedFamily(61003);
+ const ids=E.commands(s).filter(c=>c.id.startsWith('family:begin:')).map(c=>c.id);
+ for(const theme of ['shared-futures','trust-and-truth','independent-partners','first-steps',
+  'school-pressure','teenage-independence','siblings-and-space','inheritance-fairness',
+  'elder-care','family-traditions'])assert.ok(ids.some(id=>id.startsWith('family:begin:'+theme+':')),theme);
+ assert.ok(!ids.some(id=>id.startsWith('family:begin:family-enterprise:')));
+ s.business={capital:15000,quality:60,sector:'studio'};
+ assert.ok(E.commands(s).some(c=>c.id.startsWith('family:begin:family-enterprise:')));
+ const parent=s.people.find(p=>p.role==='parent');
+ parent.bond=34;
+ assert.ok(E.commands(s).some(c=>c.id.startsWith('family:begin:hard-conversations:')));
+ assert.ok(E.validate(s));
+});
+test('a family conversation blocks age-ups until a real player choice and can then continue freely',()=>{
+ let s=preparedFamily(61004);
+ const id=E.commands(s).find(c=>c.id.startsWith('family:begin:shared-futures:')).id;
+ const original=s,acts=s.actions;
+ s=E.act(s,id);
+ assert.equal(original.familyStories,undefined);
+ assert.equal(s.actions,acts-1);
+ const scene=E.familyView(s);
+ assert.equal(scene.round,1);assert.equal(scene.options.length,3);
+ assert.equal(scene.people.length,1);
+ const before=JSON.stringify(s);E.familyView(s);E.familySummary(s);
+ assert.equal(JSON.stringify(s),before,'view helpers must not mutate React state');
+ assert.throws(()=>E.ageUp(s),/family chapter/i);
+ assert.equal(E.commands(s).length,0);
+ assert.throws(()=>E.familyDecision(s,99),/Invalid family choice/);
+ const next=E.familyDecision(s,0);
+ assert.equal(s.familyStories.active.stage,0);
+ assert.equal(next.familyStories.active.stage,1);
+ assert.equal(next.familyStories.active.status,'waiting');
+ assert.equal(next.familyStories.active.nextAge,42);
+ assert.equal(E.familyView(next),null);
+ assert.ok(E.validate(JSON.parse(JSON.stringify(next))));
+});
+test('three multiyear decisions carry different NPC trust and relationship consequences',()=>{
+ let s=preparedFamily(61005);
+ const id=E.commands(s).find(c=>c.id.startsWith('family:begin:trust-and-truth:')).id;
+ s=E.act(s,id);
+ const p=s.people.find(p=>p.role==='partner');
+ const supportive=E.familyDecision(s,0),controlling=E.familyDecision(s,2),plan=E.familyDecision(s,1);
+ const A=supportive.people.find(x=>x.id===p.id),B=controlling.people.find(x=>x.id===p.id);
+ assert.ok(A.bond>B.bond);
+ assert.ok(A.world.trust>B.world.trust);
+ assert.ok(supportive.familyStories.members[p.id].trust>controlling.familyStories.members[p.id].trust);
+ assert.ok(controlling.stats.stress>supportive.stats.stress);
+ assert.ok(plan.familyStories.active.impact>controlling.familyStories.active.impact);
+ assert.ok(E.validate(supportive));assert.ok(E.validate(controlling));assert.ok(E.validate(plan));
+});
+test('a marriage saga has scheduled callbacks, a saved ending, and bounded historical memories',()=>{
+ let s=preparedFamily(61006);
+ let id=E.commands(s).find(c=>c.id.startsWith('family:begin:shared-futures:')).id;
+ s=E.act(s,id);s=E.familyDecision(s,0);
+ assert.equal(s.familyStories.active.nextAge,42);
+ assert.ok(!E.commands(s).some(c=>c.id==='family:continue'));
+ s=familyYear2(s);
+ assert.equal(s.age,42);
+ assert.ok(E.commands(s).some(c=>c.id==='family:continue'&&c.enabled));
+ s=E.act(s,'family:continue');
+ assert.equal(E.familyView(s).round,2);
+ s=E.familyDecision(s,0);
+ s=familyYear2(s);
+ assert.equal(s.age,44);
+ s=E.act(s,'family:continue');
+ assert.equal(E.familyView(s).round,3);
+ s=E.familyDecision(s,0);
+ assert.equal(s.familyStories.active,null);
+ assert.equal(E.familySummary(s).completed[0].outcome,'reconciled');
+ assert.equal(E.familySummary(s).completed[0].choices.length,3);
+ assert.equal(E.familySummary(s).completed[0].endedAge,44);
+ assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+});
+test('sibling chapters produce actual rivalry and cooperation instead of isolated cosmetic text',()=>{
+ let s=preparedFamily(61007);
+ const children=s.people.filter(p=>p.role==='child');
+ const id=E.commands(s).find(c=>c.id.startsWith('family:begin:siblings-and-space:')).id;
+ s=E.act(s,id);
+ const pair=children.slice(0,2).map(p=>p.id).join('-');
+ const before=E.familySummary(s).siblings.find(l=>l.ids.join('-')===pair);
+ assert.ok(before);
+ const good=E.familyDecision(s,0),bad=E.familyDecision(s,2);
+ const a=E.familySummary(good).siblings.find(l=>l.ids.join('-')===pair);
+ const b=E.familySummary(bad).siblings.find(l=>l.ids.join('-')===pair);
+ assert.ok(a.cooperation>b.cooperation);
+ assert.ok(a.rivalry<b.rivalry);
+ assert.ok(good.people.find(p=>p.id===children[0].id).bond>bad.people.find(p=>p.id===children[0].id).bond);
+ assert.ok(E.validate(good)&&E.validate(bad));
+});
+test('siblings evolve independently and recorded sibling tension persists across save roundtrips',()=>{
+ let s=preparedFamily(61008);
+ const id=E.commands(s).find(c=>c.id.startsWith('family:begin:siblings-and-space:')).id;
+ s=E.act(s,id);s=E.familyDecision(s,1);
+ const old=E.familySummary(s).siblings[0].rivalry;
+ s=familyYear2(s,1);
+ assert.notEqual(E.familySummary(s).siblings[0].rivalry,old);
+ s=JSON.parse(JSON.stringify(s));
+ assert.ok(E.validate(s));
+ assert.equal(E.familySummary(s).siblings.length,1);
+});
+test('interrupted or ignored family relationships retain the actual unfinished record',()=>{
+ let s=preparedFamily(61009);
+ let id=E.commands(s).find(c=>c.id.startsWith('family:begin:first-steps:')).id;
+ s=E.act(s,id);s=E.familyDecision(s,0);
+ let child=s.familyStories.active.personIds[0];
+ s.people.find(p=>p.id===child).alive=false;
+ s=familyYear2(s,1);
+ assert.equal(E.familySummary(s).active,null);
+ assert.equal(E.familySummary(s).unfulfilled[0].status,'interrupted');
+ assert.ok(E.validate(s));
+ let second=preparedFamily(61010);
+ const other=E.commands(second).find(c=>c.id.startsWith('family:begin:trust-and-truth:')).id;
+ second=E.act(second,other);second=E.familyDecision(second,1);
+ second=familyYear2(second,5);
+ assert.equal(second.familyStories.active,null);
+ assert.equal(E.familySummary(second).unfulfilled[0].status,'neglected');
+ assert.ok(E.validate(second));
+});
+test('family conversations can be abandoned without duplicating completions or requiring paid actions',()=>{
+ let s=preparedFamily(61011);
+ const id=E.commands(s).find(c=>c.id.startsWith('family:begin:family-traditions:')).id;
+ s=E.act(s,id);s=E.familyDecision(s,1);
+ const n=s.actions;
+ s=E.act(s,'family:leave');
+ assert.equal(s.actions,n-1);
+ assert.equal(s.familyStories.active,null);
+ assert.equal(s.familyStories.completed.length,0);
+ assert.equal(s.familyStories.unfulfilled[0].status,'abandoned');
+ assert.equal(s.familyStories.unfulfilled[0].choices.length,1);
+ assert.ok(E.validate(s));
+});
+test('adult heir inherits remembered family care and sibling dynamics, never unfinished parental obligations',()=>{
+ let s=preparedFamily(61012);
+ const child=s.people.filter(p=>p.role==='child')[1];
+ const id=E.commands(s).find(c=>c.id==='family:begin:teenage-independence:'+child.id).id;
+ s=E.act(s,id);s=E.familyDecision(s,0);
+ s=familyYear2(s);
+ s=E.act(s,'family:continue');s=E.familyDecision(s,0);
+ s=familyYear2(s);
+ s=E.act(s,'family:continue');s=E.familyDecision(s,0);
+ assert.equal(s.familyStories.completed.length,1);
+ s.alive=false;s.pending=null;
+ const withFamily=E.legacy(s,child.id);
+ const control=JSON.parse(JSON.stringify(s));delete control.familyStories;
+ const noFamily=E.legacy(control,child.id);
+ assert.ok(E.validate(withFamily));
+ assert.equal(withFamily.familyStories.active,null);
+ assert.equal(E.familySummary(withFamily).ancestry[0].title,'The road to independence');
+ assert.equal(E.familySummary(withFamily).ancestry[0].sourceLife,s.name);
+ assert.ok(withFamily.stats.confidence>noFamily.stats.confidence,'development changes the actual heir');
+ assert.equal(withFamily.stats.knowledge,noFamily.stats.knowledge);
+});
+test('reject corrupt family state but continue validating old saves',()=>{
+ let s=preparedFamily(61013);
+ s=E.act(s,E.commands(s).find(c=>c.id.startsWith('family:begin:shared-futures:')).id);
+ const invalid=JSON.parse(JSON.stringify(s));invalid.familyStories.active.stage=9;
+ assert.equal(E.validate(invalid),false);
+ const wrong=JSON.parse(JSON.stringify(s));wrong.familyStories.members[Object.keys(wrong.familyStories.members)[0]].trust=150;
+ assert.equal(E.validate(wrong),false);
+ assert.ok(E.validate(s));
+});
