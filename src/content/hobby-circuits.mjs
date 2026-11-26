@@ -88,7 +88,7 @@ export function hobbyCommands(s){
   const p=h.disciplines?.[t.id],once=p?.lastAge===s.age,ready=s.actions>0&&count<2&&!once;
   return [
    {id:'hobby:start:'+t.id+':practice',label:'Practice '+t.name,detail:'3 playable decisions · build technique and master new tactics',enabled:ready},
-   {id:'hobby:start:'+t.id+':contest',label:'Enter '+t.name+' contest',detail:'3 rounds vs evolving rivals · '+leagues[league(p?.mastery||0)]+' division',enabled:ready&&s.age>=t.minAge+1}
+   ...(s.age>=t.minAge+1?[{id:'hobby:start:'+t.id+':contest',label:'Enter '+t.name+' contest',detail:'3 rounds vs evolving rivals · '+leagues[league(p?.mastery||0)]+' division',enabled:ready}]:[])
   ];
  });
 }
