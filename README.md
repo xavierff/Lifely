@@ -64,6 +64,20 @@ This is a **development candidate**. Success requires real-world playtesting, si
 - **Persistent design:** Old version-2 save games still work. You can leave a session without locking the game. Descendants keep family trophy history but develop their own skills and friendships.
 - **World-quality benchmarks:** See `docs/COMPETITIVE_QUALITY_SCORECARD.md` for an honest measurement plan. Feature count does not certify that Lifely is more enjoyable than BitLife. Full QA: `docs/1.6.0_HOBBY_LEAGUES.md`.
 
+## Lifely 1.13.0 — Life Flow & Story Pacing (build 23)
+
+**Less menu fatigue, more meaningful stories.** The director responds to a character's goals, profession, family ties, financial position, stress and prior decisions when selecting each random event.
+
+- **Six story focuses:** Surprise me, People & family, Ambition & work, Money & stability, Adventure & discovery, and Health & balance. Switching is free and changes future event probabilities without locking the player onto scripted outcomes.
+- **Smarter pacing:** Lower weights for repeated categories and recently seen events, stage-relevant opportunities and less unavoidable punishment when the character is already in severe hardship. Original decisions, trial odds and scheduled story callbacks remain unchanged.
+- **Contextualized event prompts** mention named relatives, the real job, in-game cash and previous comparable decisions when relevant without altering authored events.
+- **Guided Life home:** A compact "What matters next" panel suggests at most three real available actions, shows the last story choice and an expandable narrative chronology, and lets players choose their next story focus.
+- **Visible recovery options:** Stress, debt and negative cashflow trigger priority suggestions for existing recovery, frugal-budget or employment actions. No money or activity is given for free.
+- **Offline and intergenerational:** Bounded records preserve up to 14 recent decisions, 20 life threads and 30 ancestor memories. Version-2 saves remain compatible. Each heir has their own story focus.
+- **Automated regressions:** event weighting, hardship, save immutability, preferences, 20-year pacing, inheritance, real action buttons and narrow phone layouts.
+
+Status: development candidate, not signed or submitted for release. Manual player studies, mobile-device QA and comparative testing are outstanding. No automation was changed. See docs/1.13.0_LIFE_FLOW.md.
+
 ## Lifely 1.12.0 — Living Regional World (build 22)
 
 **A living offline world now remembers the player's decisions, changes regional economic conditions, and carries social rivalries through family generations.**

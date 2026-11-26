@@ -2236,3 +2236,152 @@ test('world pulse save validation rejects forged markets, rivals, and impossible
  assert.equal(E.validate(stage),false);
  delete s.worldPulse;assert.ok(E.validate(s));
 });
+
+function focusLife(seed=84001){
+ let s=E.createLife({seed});s.age=32;s.cash=35000;s.actions=3;
+ s.stats.stress=36;s.pending=null;
+ return s;
+}
+function settledFocusYear(s){
+ s.pending=null;
+ s=E.ageUp(s);
+ if(s.pending!==null)s=E.resolve(s,0);
+ return s;
+}
+test('life pacing keeps older local saves valid and six focus options available without extra tasks',()=>{
+ const s=E.createLife({seed:84002});
+ assert.equal(s.flow,undefined);
+ assert.equal(E.flowThemes.length,6);
+ assert.equal(new Set(E.flowThemes.map(x=>x.id)).size,6);
+ assert.ok(E.validate(s));
+ const view=E.flowSummary(s,E.commands(s));
+ assert.equal(view.focus,'balanced');
+ assert.equal(view.stage,'Early childhood');
+ assert.equal(view.summary.choices,0);
+ assert.equal(s.flow,undefined,'reading the dashboard must be pure');
+});
+test('choosing a preferred story direction saves without consuming activities or mutating an old life',()=>{
+ const s=focusLife(84003),actions=s.actions;
+ const changed=E.flowSetFocus(s,'relationships');
+ assert.equal(changed.flow.focus,'relationships');
+ assert.equal(changed.actions,actions);
+ assert.equal(s.flow,undefined);
+ assert.equal(E.flowSummary(changed).focusLabel,'People & family');
+ assert.ok(E.validate(JSON.parse(JSON.stringify(changed))));
+ assert.throws(()=>E.flowSetFocus(changed,'fake-story-focus'),/Unknown story focus/);
+});
+test('event weights favor preferred subjects while preserving variety across repeated categories',()=>{
+ let s=E.flowSetFocus(focusLife(84004),'career');
+ const career={id:999001,title:'An apprenticeship',category:'career',
+  choices:[{effects:{knowledge:2}},{effects:{confidence:2}}]};
+ const social={...career,id:999002,title:'An old friend',category:'relationship'};
+ assert.ok(E.flowEventWeight(s,career,'career')>E.flowEventWeight(s,social,'relationship'));
+ s.flow.recent=[{id:47,title:'A previous job',choice:'Practice',category:'career',theme:'career',age:s.age-1}];
+ const repeat=E.flowEventWeight(s,career,'career');
+ const novel=E.flowEventWeight({...s,flow:{...s.flow,recent:[]}},career,'career');
+ assert.ok(repeat<novel);
+ s.flow.recent.push({id:career.id,title:career.title,choice:'Try',category:'career',theme:'career',age:s.age-2});
+ assert.ok(E.flowEventWeight(s,career,'career')<repeat);
+ assert.ok(E.validate(s));
+});
+test('hardship balancing reduces unavoidable harmful scenes but does not alter actual player outcomes',()=>{
+ let s=focusLife(84005);
+ const harsh={id:999003,title:'A rough year',category:'money',
+  choices:[{text:'Try',effects:{stress:9,cash:-1200}},{text:'Wait',effects:{stress:8,debt:1500}}]};
+ const gentle={...harsh,id:999004,title:'A normal budget question',
+  choices:[{text:'Plan',effects:{knowledge:2}},{text:'Review',effects:{cash:20}}]};
+ const calm=E.flowEventWeight(s,harsh,'money');
+ s.stats.stress=84;s.debt=20000;
+ assert.ok(E.flowEventWeight(s,harsh,'money')<calm);
+ assert.ok(E.flowEventWeight(s,harsh,'money')<E.flowEventWeight(s,gentle,'money'));
+ assert.equal(harsh.choices[0].effects.cash,-1200);
+ assert.equal(harsh.choices[0].effects.stress,9);
+ assert.ok(E.validate(s));
+});
+test('event prompt personalizes family, career and money contexts but does not mutate the save',()=>{
+ let s=focusLife(84006);s=E.act(s,'date');
+ const p=s.people.find(x=>x.role==='partner');
+ const event={id:999005,prompt:'A complicated decision appears.',min:20,max:60,
+  choices:[{text:'Try',effects:{}},{text:'Wait',effects:{}}]};
+ const original=JSON.stringify(s);
+ const family=E.flowPrompt(s,event,'family',event.prompt);
+ assert.ok(family.includes(p.name));
+ const security=E.flowPrompt(s,event,'money',event.prompt);
+ assert.ok(security.includes('spendable cash'));
+ const work=E.flowPrompt(s,event,'career',event.prompt,'Software developer');
+ assert.ok(s.flow===undefined||work.includes('professional')||work.includes('Software developer'));
+ assert.equal(JSON.stringify(s),original);
+});
+test('resolved random events create a real bounded story memory and follow-up dashboard',()=>{
+ let s=focusLife(84007);
+ s=E.ageUp(s);
+ assert.ok(E.pending(s));
+ const event=E.pending(s);
+ const chosen=event.choices[0].text;
+ const next=E.resolve(s,0);
+ assert.equal(next.flow.choices,1);
+ assert.equal(next.flow.recent[0].title,event.title);
+ assert.equal(next.flow.recent[0].choice,chosen);
+ assert.equal(next.flow.lastDecisionAge,next.age);
+ assert.ok(E.flowSummary(next).latest);
+ assert.ok(E.validate(JSON.parse(JSON.stringify(next))));
+});
+test('personalized guidance prioritizes recovery, safer finances and meaningful available actions',()=>{
+ let s=focusLife(84008);s.stats.stress=82;s.debt=26000;s.annual={balance:-6000,salary:20000};
+ const suggestions=E.flowSummary(s,E.commands(s)).suggested;
+ assert.ok(suggestions.some(x=>x.id==='rest'),'a stressful life should surface recovery');
+ assert.ok(suggestions.some(x=>x.id==='budget:frugal'||x.id.startsWith('repay:')),'money problems should surface solvable next steps');
+ assert.ok(suggestions.every(x=>E.commands(s).some(c=>c.id===x.id&&c.enabled)));
+ assert.ok(suggestions.length<=3);
+ assert.ok(E.validate(s));
+});
+test('read-only story guidance never consumes activities, creates funds, or starts an episode',()=>{
+ let s=focusLife(84009);
+ const old=JSON.stringify(s);
+ for(let i=0;i<8;i++)E.flowSummary(s,E.commands(s));
+ assert.equal(JSON.stringify(s),old);
+ assert.equal(s.cash,35000);
+});
+test('story director restores focus from JSON and keeps memory bounded over a long life',()=>{
+ let s=E.flowSetFocus(focusLife(84010),'discovery');
+ for(let i=0;i<20;i++){
+  s=settledFocusYear(s);
+  if(!s.alive)break;
+ }
+ assert.equal(s.flow.focus,'discovery');
+ assert.ok(s.flow.recent.length<=14);
+ assert.ok(s.flow.chapters.length<=20);
+ assert.ok(s.flow.yearsSeen<=20);
+ assert.ok(s.flow.choices<=20);
+ assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+});
+test('story themes carry into the family archive but the heir chooses a new personal direction',()=>{
+ let s=focusLife(84011);
+ s=E.flowSetFocus(s,'relationships');
+ s=E.act(s,'date');
+ s=E.act(s,'child');
+ s.actions=3;
+ s=E.ageUp(s);if(s.pending!==null)s=E.resolve(s,0);
+ const child=s.people.find(p=>p.role==='child');child.age=22;
+ assert.ok(s.flow.choices>=1);
+ const count=s.flow.chapters.length;
+ s.alive=false;s.pending=null;
+ const heir=E.legacy(s,child.id);
+ assert.equal(heir.flow.focus,'balanced');
+ assert.equal(heir.flow.choices,0);
+ assert.equal(heir.flow.recent.length,0);
+ assert.ok(heir.flow.archive.length>=count);
+ assert.equal(heir.flow.archive.at(-1).sourceLife,s.name);
+ assert.ok(E.validate(heir));
+});
+test('invalid focus, oversized story records and negative lifetime counters fail save validation',()=>{
+ let s=E.flowSetFocus(focusLife(84012),'wellbeing');
+ const focus=JSON.parse(JSON.stringify(s));focus.flow.focus='everything-at-once';
+ assert.equal(E.validate(focus),false);
+ const huge=JSON.parse(JSON.stringify(s));huge.flow.recent=Array.from({length:40},(_,i)=>({id:i,title:'T',choice:'C',category:'health',age:40}));
+ assert.equal(E.validate(huge),false);
+ const count=JSON.parse(JSON.stringify(s));count.flow.choices=-1;
+ assert.equal(E.validate(count),false);
+ delete s.flow;
+ assert.ok(E.validate(s));
+});
