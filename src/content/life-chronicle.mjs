@@ -97,7 +97,12 @@ export function chronicleView(s){
     m.personName+' remembered your conversation from age '+m.sourceAge,
    category:'relationship',turning:true,source:'memory',choice:'',netWorth:0,changes:[],bonds:[],future:[]
   }));
- const all=[...journal,...echoes,...entries.map(e=>({...e,source:'choice'}))]
+ const fates=(s.fate?.completed||[]).map(x=>({
+  id:'fate-'+x.id,age:x.endedAge,title:x.title+': '+x.ending,
+  category:'relationship',turning:true,source:'memory',choice:'',netWorth:0,
+  changes:[],bonds:[],future:[]
+ }));
+ const all=[...journal,...echoes,...fates,...entries.map(e=>({...e,source:'choice'}))]
   .sort((a,b)=>a.age-b.age||(a.source==='history'?-1:1));
  const timeline=all.slice(-90);
  // Include the birth marker even in long lives, without affecting chronology.
