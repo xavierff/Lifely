@@ -1,6 +1,6 @@
 # Lifely
 
-An original, offline, choice-driven life simulator. The repository contains a **1.2.0 interactive-career development candidate (build 11)**. This is not an App Store-ready or externally verified BitLife-parity release.
+An original, offline, choice-driven life simulator. The repository contains a **1.3.0 interactive-life development candidate (build 12)**. This is not an App Store-ready or externally verified BitLife-parity release.
 
 ## 1.1.0 interactive career playfields (build 10 candidate)
 
@@ -18,6 +18,17 @@ The new screens need human usability/playability testing and physical iOS/Androi
 - **Compatibility:** version-2 life saves remain loadable, including saves created before career campaigns and playfields existed; heir transitions preserve completed accomplishments but do not inherit an ancestor's active professional obligations.
 
 All values and scenarios are fictionalized. No live election data, medical diagnoses or real-world clinical decisions are represented. New tests run through GitHub Actions, but signed device builds, accessibility audits, and independent human entertainment comparisons remain pending. See `docs/1.2.0_INTERACTIVE_CAREERS.md`.
+
+## 1.3.0 — playable relationships, school life and courtrooms (build 12)
+
+- **Relationship days:** Choose a parent, sibling, partner or friend and play three decisions with expressive avatar boards, trust/tension meters and a character-specific unexpected complication. Hidden priorities, player traits and seeded uncertainty can lead to different outcomes; meaningful choices alter actual bonds and NPC trust/rivalry.
+- **School life:** Ages 6–18 may enter an original classroom experience once per year. Science fair, debate finals, arts showcase, sports day or community work are selected from the player's seeded life; the same named classmate returns with a memory of previous teamwork and conflict. School choices affect knowledge, confidence, personal skills, and sometimes the existing club experience.
+- **Fictional courtroom:** A pending legal case can be played as a three-stage hearing with a case-file review, witness questions and a closing statement. Choice-based fictional preparation adjusts the existing court outcome simulation. Traditional consult-counsel and one-action hearing routes still work, and leaving the interactive hearing keeps the case pending. No real-world legal guidance is provided.
+- **Unexpected follow-ups:** Relationship moments and school challenges can be remembered one or two years later; responding to a returned message changes the existing relationship, consumes one annual activity and never prevents aging. Character preferences and surprise events are varied deterministically per life.
+- **Save integrity:** Old version-2 saves are unchanged; new optional fields are validated, serializable and inherited only as a family chronicle. A new generation does not inherit unfinished ancestor stories. Existing careers, medical/civic boards, and original all-local sound settings remain in place.
+- **Offline UI polish:** 44+ point tap targets, three distinct graphical playfields, responsive panels, narrated *text* feedback, screen-reader descriptions, and original bundled UI sound effects with the existing sound toggle and reduced-motion support.
+
+This is an **original playable development candidate**, not a verified BitLife competitor winner or signed App Store/Play Store build. See `docs/1.3.0_EVERYDAY_SCENES.md` for test and release gates.
 
 ## Play and build
 Use Node 22.13+ and npm. Install dependencies, align the Expo versions and run the tests:

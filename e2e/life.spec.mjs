@@ -370,3 +370,84 @@ test('a returning career story offers a visible playable response years later',a
  await expect(page.getByText('Career follow-up decisions')).toHaveCount(0);
  await expect(page.getByTestId('career-reactions')).toContainText('Career follow-up');
 });
+
+test('relationship scene reacts to choices and survives a save reload',async({page})=>{
+ let s=E.createLife({seed:4501});s.age=23;s.actions=3;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByRole('tab',{name:'People'}).click();
+ await page.getByRole('button',{name:/Share an interactive day with/}).first().click();
+ const panel=page.getByTestId('everyday-project');
+ await expect(page.getByTestId('relationship-moment')).toContainText('RELATIONSHIP STORY');
+ await expect(page.getByTestId('advance-year')).toBeDisabled();
+ await page.getByTestId('scene-choice-0').click();
+ await expect(page.getByTestId('everyday-feedback')).toBeVisible();
+ await page.reload();
+ await expect(panel).toContainText('ROUND 2 OF 3');
+ await page.getByTestId('scene-choice-1').click();
+ await page.getByTestId('scene-choice-2').click();
+ await expect(panel).toHaveCount(0);
+ await page.getByRole('tab',{name:'People'}).click();
+ await expect(page.getByText('Interactive relationships')).toBeVisible();
+ await expect(page.getByTestId('advance-year')).toBeEnabled();
+});
+test('school life offers a touch-friendly project, recurring peer and scoreboard',async({page})=>{
+ let s=E.createLife({seed:4502});s.age=12;s.actions=3;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByRole('tab',{name:'Work'}).click();
+ await expect(page.getByTestId('school-progress')).toContainText('STUDENT CHAPTERS');
+ await page.getByRole('button',{name:/Play a school-life challenge/}).click();
+ const board=page.getByTestId('interactive-school-life');
+ await expect(board).toContainText('SCHOOL LIFE');
+ await expect(board).toContainText('Project momentum');
+ await page.getByTestId('scene-choice-0').click();
+ await expect(page.getByTestId('everyday-feedback')).toBeVisible();
+ await page.getByTestId('scene-choice-1').click();
+ await page.getByTestId('scene-choice-2').click();
+ await expect(board).toHaveCount(0);
+ await page.getByRole('tab',{name:'Work'}).click();
+ await expect(page.getByTestId('school-progress')).toContainText('Projects completed');
+});
+test('courtroom choices give a verdict through the existing justice case',async({page})=>{
+ let s=E.createLife({seed:4503});s.age=34;s.actions=3;s.cash=9000;s.justice.case={opened:34,severity:48,counsel:false};
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByRole('tab',{name:'More'}).click();
+ await page.getByRole('button',{name:/Enter the fictional courtroom/}).click();
+ const board=page.getByTestId('interactive-courtroom');
+ await expect(board).toContainText('FICTIONAL COURTROOM');
+ await expect(board).toContainText('Documented facts');
+ await page.getByTestId('scene-choice-0').click();
+ await page.reload();await expect(page.getByTestId('everyday-project')).toContainText('ROUND 2 OF 3');
+ await page.getByTestId('scene-choice-1').click();
+ await page.getByTestId('scene-choice-2').click();
+ await expect(board).toHaveCount(0);
+ await expect(page.getByTestId('advance-year')).toBeEnabled();
+ await page.getByRole('tab',{name:'More'}).click();
+ await expect(page.getByText(/Age 34 · (Dismissed|Fine and probation|Custodial sentence)/)).toBeVisible();
+});
+test('returning everyday relationships provide two consequences to choose from',async({page})=>{
+ let s=E.createLife({seed:4504});s.age=30;s=E.act(s,'scene:start:bond:'+s.people[0].id);
+ for(const i of [0,1,2])s=E.sceneChoice(s,i);
+ s.pending=null;s=E.ageUp(s);s.pending=null;s=E.ageUp(s);s.pending=null;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ const card=page.getByTestId('returning-everyday-story');
+ await expect(card).toContainText('SOMEONE REMEMBERS');
+ await expect(card.getByRole('button')).toHaveCount(2);
+ await card.getByRole('button').first().click();
+ await expect(page.getByTestId('returning-everyday-story')).toHaveCount(0);
+});
+test('everyday boards remain legible and tappable on small phones',async({page})=>{
+ for(const width of [320,375,430]){
+  await page.setViewportSize({width,height:750});
+  for(const type of ['bond','school','court']){
+   let s=E.createLife({seed:4600+width+['bond','school','court'].indexOf(type)});s.age=type==='school'?12:31;s.cash=10000;
+   if(type==='court')s.justice.case={opened:31,severity:30,counsel:false};
+   await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+   await page.getByRole('tab',{name:type==='bond'?'People':type==='school'?'Work':'More'}).click();
+   await page.getByRole('button',{name:type==='bond'?/Share an interactive day with/:type==='school'?/Play a school-life challenge/:/Enter the fictional courtroom/}).first().click();
+   const card=page.getByTestId('everyday-project');await expect(card).toBeVisible();
+   const box=await card.boundingBox();expect(box.width).toBeLessThanOrEqual(width+1);
+   for(const button of await card.getByRole('button').all()){const b=await button.boundingBox();if(b)expect(b.height).toBeGreaterThanOrEqual(44);}
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
+  }
+ }
+});
