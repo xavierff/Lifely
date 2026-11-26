@@ -106,7 +106,8 @@ export function householdAction(s,id,ctx){
   return;
  }
  if(kind==='mediate'){
-  const ids=[Number(op),Number(rest[0])],key=ids.join('-');
+  const ids=op.split('-').map(Number),key=ids.join('-');
+  if(ids.length!==2||ids.some(id=>!Number.isInteger(id)))throw Error('Invalid sibling pair.');
   const link=s.familyStories?.siblingLinks?.[key];if(!link||link.rivalry<45)throw Error('No sibling dispute to mediate.');
   link.rivalry=clamp(link.rivalry-12);link.cooperation=clamp(link.cooperation+9);
   link.trust=clamp(link.trust+6);h.lastMediation[key]=s.age;
