@@ -1,4 +1,5 @@
 // Offline, version-2-save-compatible dialogue and autonomous social graph.
+import {emotionalReadyFor,emotionalRecordConversation,emotionalState} from './emotional-memory.mjs';
 // Branches are authored rather than generated remotely. The engine owns validation and saving.
 const hash=text=>{let h=2166136261;for(let i=0;i<String(text).length;i++)h=Math.imul(h^String(text).charCodeAt(i),16777619)>>>0;return h>>>0;};
 const bound=(v)=>Math.max(0,Math.min(100,Math.round(v)));
@@ -158,16 +159,60 @@ export function beginDialogue(s,id){
  const n=ensureNetwork(s),themeIndex=hashPick(s,id+":talk:"+s.age,dialogueThemes.length);
  n.histories[id]??=originalHistory(s,id);
  n.talked[id]=s.age;
- n.conversation={id,theme:themeIndex,stage:0,tone:"neutral",choices:[],startedAge:s.age,speaker:target.name,transcript:[]};
+ const reunion=emotionalReadyFor(s,id);
+ n.conversation={id,theme:themeIndex,stage:0,tone:"neutral",choices:[],startedAge:s.age,speaker:target.name,transcript:[],reunionId:reunion?.id||null,lastResponse:null};
  return s;
 }
 export function dialogueView(s){
  const d=networkView(s).conversation;if(!d)return null;
  const target=findPerson(s,d.id),theme=dialogueThemes[d.theme];
  if(!target||!theme)return null;
- const line=d.stage===0?theme.open:d.stage===1?theme.middle[["support","curious","direct"].indexOf(d.tone)]||theme.middle[1]:theme.close[["support","curious","direct"].indexOf(d.tone)]||theme.close[1];
- const choices=(turns[d.stage]||[]).map(c=>({text:c.text,tone:c.tone}));
- return {id:d.id,speaker:target.name,theme:theme.title,stage:d.stage,round:d.stage+1,total:3,subtext:"A conversation about "+theme.id,backstory:networkProfile(s,d.id),line,choices,transcript:d.transcript.slice(-4)};
+ const profile=networkProfile(s,d.id),reunion=d.reunionId?emotionalState(s).threads.find(x=>x.id===d.reunionId&&x.personId===d.id&&x.status==='ready'):null;
+ const earlier=(networkView(s).dialogues||[]).filter(x=>x.id===d.id&&x.complete).at(-1);
+ const temperament={
+  Driven:'I need a way forward, not just another promise.',
+  Supportive:'I want to understand you without losing myself.',
+  Cautious:'I have learned to be careful about who I trust.',
+  Competitive:'I still think we see the same challenge differently.',
+  Creative:'I keep seeing this in unexpected ways.',
+  Independent:'I want this to be my own decision.',
+  Thoughtful:'I need time to find the right words.'
+ }[profile?.personality]||'It has taken me time to make sense of this.';
+ const tones=['support','curious','direct'],tone=tones.indexOf(d.tone);
+ let line=d.stage===0?theme.open:d.stage===1?theme.middle[tone]||theme.middle[1]:theme.close[tone]||theme.close[1];
+ if(reunion){
+  const years=Math.max(1,s.age-reunion.sourceAge);
+  if(d.stage===0)line='It has been '+years+' years since we talked about '+reunion.theme+'. '+reunion.quote+' I did not expect us to be here again.';
+  if(d.stage===1)line=(d.tone==='support'?
+   'You remembered that I was carrying something real. ':
+   d.tone==='curious'?'You are willing to ask what changed instead of assuming. ':
+   'You are not pretending the distance never happened. ')+temperament;
+  if(d.stage===2)line=(reunion.originalOutcome==='strained'?
+   'I did not forget how tense things were. This time I want to know whether we can be different. ':
+   reunion.originalOutcome==='trusted'?
+   'The trust we found years ago still means something to me. ':
+   'We left some things unresolved last time. ')+temperament;
+ }else{
+  if(d.stage===0&&earlier)line='Last time, I left feeling '+earlier.outcome+'. '+line;
+  if(d.stage===1)line+=' '+temperament;
+  if(d.stage===2)line+=' '+(profile?.memoryRevealed?'I trusted you enough to share something personal. ':'')+temperament;
+ }
+ const choices=reunion?[
+  [{text:'Acknowledge what they carried and listen carefully.',tone:'support'},
+   {text:'Ask what has changed during the years apart.',tone:'curious'},
+   {text:'Name what hurt without hiding your boundaries.',tone:'direct'}],
+  [{text:'Offer a realistic way to rebuild connection.',tone:'support'},
+   {text:'Ask what they need before suggesting a plan.',tone:'curious'},
+   {text:'Be direct about what must be different.',tone:'direct'}],
+  [{text:'Make a specific promise you can actually keep.',tone:'support'},
+   {text:'Leave room for them to choose the next step.',tone:'curious'},
+   {text:'Close this chapter honestly, without pretending.',tone:'direct'}]
+ ][d.stage]:(turns[d.stage]||[]).map(c=>({text:c.text,tone:c.tone}));
+ return {id:d.id,speaker:target.name,theme:reunion?'A long-awaited reunion':theme.title,stage:d.stage,round:d.stage+1,total:3,
+  subtext:'A conversation about '+theme.id,backstory:profile,line,choices,transcript:d.transcript.slice(-4),
+  reunion:reunion?{id:reunion.id,sourceAge:reunion.sourceAge,years:s.age-reunion.sourceAge,
+   theme:reunion.theme,quote:reunion.quote,previousOutcome:reunion.originalOutcome}:null,
+  reaction:d.lastResponse};
 }
 function changeBond(s,id,amount,ctx){
  const p=findPerson(s,id);if(!p)return;
@@ -183,17 +228,28 @@ export function replyDialogue(s,index,ctx){
   n.dialogues=n.dialogues.slice(-80);n.conversation=null;return s;}
  if(!Number.isInteger(index)||index<0||index>2)throw Error("Choose one of the three responses.");
  const choice=turns[d.stage]?.[index];if(!choice)throw Error("Invalid conversation stage.");
- changeBond(s,d.id,choice.bond,ctx);ctx.change(s,choice.kindness?"kindness":choice.social?"social":"confidence",choice.kindness||choice.social||choice.confidence);
+ const profile=networkProfile(s,d.id),personality=profile?.personality||'Thoughtful';
+ const modifier=choice.tone==='support'&&personality==='Supportive'?2:
+  choice.tone==='direct'&&personality==='Cautious'?-3:
+  choice.tone==='curious'&&personality==='Creative'?2:
+  choice.tone==='direct'&&personality==='Competitive'?2:0;
+ changeBond(s,d.id,choice.bond+modifier,ctx);ctx.change(s,choice.kindness?"kindness":choice.social?"social":"confidence",choice.kindness||choice.social||choice.confidence);
+ d.lastResponse=choice.tone==='support'?d.speaker+' becomes a little more open as you listen.':
+  choice.tone==='curious'?d.speaker+' considers your question before answering.':
+  personality==='Cautious'?d.speaker+' pauses; the directness feels difficult.':
+  d.speaker+' hears your boundary, even if it is uncomfortable.';
  d.choices.push(index);d.transcript.push({turn:d.stage,text:choice.text,tone:choice.tone});
  d.tone=choice.tone;d.stage++;
  if(d.stage===2){n.histories[d.id]??=originalHistory(s,d.id);n.histories[d.id].memoryRevealed=true;}
  if(d.stage===3){const positive=d.choices.filter(i=>i===0).length,negative=d.choices.filter(i=>i===2).length;
   const outcome=positive>=2?"trusted":negative>=2?"strained":"understood";
-  const record={age:s.age,id:d.id,speaker:d.speaker,theme:dialogueThemes[d.theme].title,choices:d.choices.slice(),outcome,complete:true};
+  const record={age:s.age,id:d.id,speaker:d.speaker,theme:dialogueThemes[d.theme].title,choices:d.choices.slice(),outcome,complete:true,reunionFrom:d.reunionId||null};
   n.dialogues.push(record);n.dialogues=n.dialogues.slice(-80);
   if(outcome==="trusted"){ctx.change(s,"happiness",4);ctx.change(s,"social",3);}
   if(outcome==="strained")ctx.change(s,"stress",3);
-  n.lastEvent={age:s.age,text:d.speaker+" left your conversation feeling "+outcome+".",kind:"dialogue"};
+  const memory=emotionalRecordConversation(s,record,networkProfile(s,d.id),{reunionId:d.reunionId});
+  n.lastEvent={age:s.age,text:d.speaker+(d.reunionId?' reunited with you and left feeling ':' left your conversation feeling ')+outcome+'.',kind:d.reunionId?'reunion':'dialogue'};
+  if(memory&&d.reunionId)n.lastEvent.text+=' This memory may resurface again years later.';
   ctx.add(s,n.lastEvent.text,"people");
   n.conversation=null;
  }
