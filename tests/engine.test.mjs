@@ -1012,3 +1012,126 @@ test('existing single-classmate saves migrate into adult characters without losi
  assert.ok(arc);s=E.act(s,'autonomy:arc:'+arc.id+':0');assert.ok(E.validate(s));
  assert.ok(E.autonomyView(s).alumni[0].trust>=0);
 });
+
+function getPlayableCharacterStory(seed=15001){
+ let s=E.createLife({seed});s.age=14;s.pending=null;s=E.ageUp(s);s.pending=null;
+ const invitations=E.storyDirectorHistory(s).queue;
+ assert.ok(invitations.length,'A named personal conflict should be created at the first eligible story year.');
+ const offer=invitations[0];assert.ok(offer.firstName&&offer.secondName&&offer.firstId!==offer.secondId);
+ assert.equal(offer.age,15);
+ return {s,offer};
+}
+test('character story director selects named people from the actual living simulation',()=>{
+ const {s,offer}=getPlayableCharacterStory();
+ assert.ok(['person','alumni','parent','sibling','friend','partner','professional','child'].includes(offer.firstKind));
+ assert.ok(offer.title.length>10);
+ assert.ok(offer.firstName!==offer.secondName||offer.firstId!==offer.secondId);
+ assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+ assert.ok(E.commands(s).some(c=>c.id==='episode:start:'+offer.id&&c.enabled));
+});
+test('social episodes have three interactive, free followup decisions and a playable exit',()=>{
+ let {s,offer}=getPlayableCharacterStory(15002);
+ const priorActions=s.actions;
+ s=E.act(s,'episode:start:'+offer.id);
+ assert.equal(s.actions,priorActions-1);
+ assert.ok(E.validate(s));
+ assert.equal(E.storyDirectorView(s).round,1);
+ assert.throws(()=>E.ageUp(s),/character story/);
+ assert.equal(E.commands(s).length,0);
+ assert.throws(()=>E.storyDirectorChoose(s,9),/three/);
+ for(const [stage,index] of [[0,0],[1,1],[2,2]]){
+  const before=s;
+  const next=E.storyDirectorChoose(s,index);
+  assert.equal(before.world.storyDirector.active.phase,stage);
+  assert.equal(next.actions,priorActions-1);
+  s=next;assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+  if(stage<2){assert.equal(E.storyDirectorView(s).round,stage+2);assert.equal(E.storyDirectorView(s).options.length,3);}
+ }
+ assert.equal(E.storyDirectorView(s),null);
+ assert.ok(E.commands(s).length>0);
+ const completed=E.storyDirectorHistory(s).completed[0];
+ assert.equal(completed.choices.length,3);
+ assert.ok(['reconciled','clarified','fractured','complicated'].includes(completed.outcome));
+ const echoes=E.storyDirectorHistory(s).echoes;
+ assert.equal(echoes.length,1);
+ assert.equal(echoes[0].dueAge,17);
+ assert.equal(echoes[0].status,'scheduled');
+});
+test('character story memories have real consequences two years later without blocking life progression',()=>{
+ let {s,offer}=getPlayableCharacterStory(15003);
+ s=E.act(s,'episode:start:'+offer.id);
+ for(const index of [0,0,0])s=E.storyDirectorChoose(s,index);
+ assert.equal(E.storyDirectorHistory(s).echoes[0].status,'scheduled');
+ for(const age of [16,17]){
+  s.pending=null;s=E.ageUp(s);
+  assert.ok(E.validate(s));assert.equal(s.age,age);
+ }
+ assert.equal(E.storyDirectorHistory(s).echoes[0].status,'resolved');
+ assert.equal(E.storyDirectorHistory(s).echoes[0].resolvedAge,17);
+ assert.ok(E.storyDirectorHistory(s).news.some(n=>n.kind==='aftereffect'));
+ s.pending=null;s=E.ageUp(s);
+ assert.equal(E.storyDirectorHistory(s).news.filter(n=>n.kind==='aftereffect').length,1);
+});
+test('social story decisions are deterministic, save-safe and bounded by previous context',()=>{
+ const outcomes=[];
+ for(let seed=15010;seed<15040;seed++){
+  let {s,offer}=getPlayableCharacterStory(seed);
+  outcomes.push(offer.theme+':'+offer.firstId+':'+offer.secondId);
+  s=E.act(s,'episode:start:'+offer.id);
+  const t=E.storyDirectorView(s);
+  assert.ok(t.prompt.includes(t.lead)||t.prompt.includes(t.other));
+  assert.ok(t.prompt.length>70);
+  assert.deepEqual(E.storyDirectorChoose(s,1),E.storyDirectorChoose(s,1));
+  assert.equal(E.storyDirectorView(s).round,1);
+  const after=E.storyDirectorChoose(s,1);
+  assert.equal(E.storyDirectorView(after).round,2);
+  assert.ok(E.validate(JSON.parse(JSON.stringify(after))));
+ }
+ assert.ok(new Set(outcomes).size>=12);
+});
+test('walking away ends an episode, preserves chronology and does not take another action',()=>{
+ let {s,offer}=getPlayableCharacterStory(15050);
+ s=E.act(s,'episode:start:'+offer.id);
+ const annual=s.actions,worthBefore=E.worth(s);
+ s=E.storyDirectorChoose(s,'leave');
+ assert.equal(E.storyDirectorView(s),null);
+ assert.equal(s.actions,annual);assert.equal(E.worth(s),worthBefore);
+ assert.equal(E.storyDirectorHistory(s).completed[0].outcome,'walked away');
+ assert.equal(E.storyDirectorHistory(s).echoes.length,0);
+ assert.ok(E.validate(s));
+});
+test('unanswered story invitations expire automatically, not trapping the player',()=>{
+ let {s,offer}=getPlayableCharacterStory(15060);
+ s.pending=null;s=E.ageUp(s);assert.equal(s.age,16);
+ assert.ok(E.storyDirectorHistory(s).queue.some(e=>e.id===offer.id));
+ s.pending=null;s=E.ageUp(s);assert.equal(s.age,17);
+ assert.equal(E.storyDirectorHistory(s).queue.some(e=>e.id===offer.id),false);
+ assert.ok(E.storyDirectorHistory(s).completed.some(e=>e.id===offer.id&&e.outcome==='unanswered'));
+ assert.ok(E.validate(s));
+});
+test('new character story director remains optional on old saves and heirs inherit only concluded history',()=>{
+ let s=E.createLife({seed:15070});delete s.world.storyDirector;
+ assert.ok(E.validate(s));assert.equal(E.storyDirectorView(s),null);
+ s.age=14;s.pending=null;s=E.ageUp(s);s.pending=null;
+ const offer=E.storyDirectorHistory(s).queue[0];
+ s=E.act(s,'episode:start:'+offer.id);
+ for(const i of [0,1,2])s=E.storyDirectorChoose(s,i);
+ s.actions=3;s.pending=null;
+ s=E.act(s,'date');s=E.act(s,'child');
+ const child=s.people.find(p=>p.role==='child');child.age=20;
+ s.alive=false;s.pending=null;
+ const heir=E.legacy(s,child.id);
+ assert.ok(E.validate(heir));
+ assert.equal(E.storyDirectorHistory(heir).queue.length,0);
+ assert.equal(E.storyDirectorHistory(heir).echoes.length,0);
+ assert.equal(E.storyDirectorHistory(heir).completed.length,1);
+ assert.ok(E.storyDirectorHistory(heir).completed[0].sourceLife);
+});
+test('character-story achievements are earned only after enough completed resolutions',()=>{
+ const base=E.createLife({seed:15080});
+ assert.ok(!E.achievementStatus(base).find(x=>x.name==='trusted mediator').eligible);
+ assert.ok(!E.achievementStatus(base).find(x=>x.name==='story of a lifetime').eligible);
+ base.world.storyDirector={...E.storyDirectorState(base),completed:Array.from({length:8},(_,i)=>({outcome:i<3?'reconciled':'complicated'}))};
+ assert.ok(E.achievementStatus(base).find(x=>x.name==='trusted mediator').eligible);
+ assert.ok(E.achievementStatus(base).find(x=>x.name==='story of a lifetime').eligible);
+});
