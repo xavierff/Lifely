@@ -671,7 +671,7 @@ test('players can commit to an ambition, advance actual milestones and restore p
  await page.getByRole('button',{name:/^Exercise/}).click();
  await expect(page.getByTestId('active-life-ambition')).toHaveCount(0);
  await expect(page.getByTestId('ambition-chronicle')).toContainText('Build a healthier life');
- await page.getByRole('button',{name:'More'}).click();
+ await page.getByText('More',{exact:true}).click();
  await expect(page.getByTestId('ambition-recap')).toContainText('1 personal ambitions started');
 });
 test('ambition decisions become available only after two years, with saved path and no blocked life clock',async({page})=>{
@@ -708,6 +708,6 @@ test('expired ambitions remain readable in the life chronicle without blocking t
  for(let i=0;i<6;i++){s.pending=null;s=E.ageUp(s);if(s.pending!==null)s=E.resolve(s,0);}
  await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
  await expect(page.getByTestId('active-life-ambition')).toHaveCount(0);
- await expect(page.getByTestId('ambition-chronicle')).toContainText('abandoned').catch(async()=>{await expect(page.getByTestId('ambition-chronicle')).toContainText('expired');});
+ await expect(page.getByTestId('ambition-chronicle')).toContainText('expired');
  await expect(page.getByTestId('advance-year')).toBeEnabled();
 });
