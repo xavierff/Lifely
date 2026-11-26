@@ -210,7 +210,11 @@ export function storyDirectorView(s){
  const pressure=e.tension>=70?'High tension':e.trust>=65?'An opening for trust':'An uncertain relationship';
  return {id:e.id,title:e.title,theme:e.theme,phase:e.phase,round:e.phase+1,total:3,
   lead:e.firstName,other:e.secondName,headline:theme.beats[e.phase],prompt:withActors(theme.scenes[e.phase],e),
-  backstory:e.previous?'An earlier story with these characters involved '+e.previous+'.':theme.context,
+  backstory:(e.previous?'An earlier story with these characters involved '+e.previous+'. ':theme.context+' ')+
+  ((s.emotional?.threads||[]).filter(x=>x.personId===e.firstId||x.personId===e.secondId).at(-1)?
+   (()=>{const m=(s.emotional?.threads||[]).filter(x=>x.personId===e.firstId||x.personId===e.secondId).at(-1);
+    return m.personName+' remembers your conversation at age '+m.sourceAge+', when they felt '+m.originalOutcome+'.';})():''),
+
   pressure,meters:{trust:e.trust,tension:e.tension,clarity:e.clarity,score:e.score},
   options:choices.map(([label,note,tactic],index)=>({index,label,note,tactic})),
   last:e.last,transcript:e.choices.slice()};

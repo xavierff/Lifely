@@ -90,7 +90,14 @@ function historyRows(s,entries){
 export function chronicleView(s){
  const c=chronicleState(s),entries=Array.isArray(c.entries)?c.entries:[];
  const journal=historyRows(s,entries);
- const all=[...journal,...entries.map(e=>({...e,source:'choice'}))]
+ const echoes=(s.emotional?.threads||[]).filter(m=>(m.status==='ready'||m.status==='resolved')&&
+  (m.status!=='ready'||m.dueAge<=s.age)).map(m=>({
+   id:'reunion-'+m.id,age:m.status==='resolved'?(m.resolvedAge??m.dueAge):m.dueAge,
+   title:m.status==='resolved'?'Reunion with '+m.personName+': '+m.reunionOutcome:
+    m.personName+' remembered your conversation from age '+m.sourceAge,
+   category:'relationship',turning:true,source:'memory',choice:'',netWorth:0,changes:[],bonds:[],future:[]
+  }));
+ const all=[...journal,...echoes,...entries.map(e=>({...e,source:'choice'}))]
   .sort((a,b)=>a.age-b.age||(a.source==='history'?-1:1));
  const timeline=all.slice(-90);
  // Include the birth marker even in long lives, without affecting chronology.
