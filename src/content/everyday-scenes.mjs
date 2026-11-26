@@ -18,6 +18,26 @@ const twists=[
  'An unexpected schedule change tests everybody’s patience.',
  'A helpful stranger challenges one of your group’s assumptions.'
 ];
+const bondTwists=[
+ 'Someone you both trust has misunderstood a private conversation.',
+ 'A long-hidden ambition comes to light.',
+ 'A major opportunity may change your shared plans.',
+ 'A promise from years ago has suddenly become important.',
+ 'An old rumor reappears and divides the people around you.',
+ 'Your companion asks for more independence than you expected.',
+ 'A sudden change tests how each of you handles uncertainty.',
+ 'An unexpected act of generosity changes the mood.'
+];
+const courtTwists=[
+ 'A witness recalls a previously unmentioned detail.',
+ 'A dated record conflicts with another account.',
+ 'The fictional judge requests a clearer timeline.',
+ 'A scheduled witness cannot attend the next session.',
+ 'The hearing pauses over a procedural question.',
+ 'A new document requires careful verification.',
+ 'One part of the record remains genuinely uncertain.',
+ 'A witness offers an explanation that changes the tone.'
+];
 const options={
  bond:[
   [['Listen to what matters','Understand their needs before responding','listen'],['Plan a small adventure','Build a new shared memory','adventure'],['Offer practical help','Be dependable when it counts','practical']],
@@ -75,7 +95,7 @@ export function beginEveryday(s,id,ctx){
 function prompt(a){
  if(a.type==='bond')return [
   a.personName+' has an important day ahead. What you do first will shape how the conversation unfolds.',
-  twists[a.twist]+' '+a.personName+' looks to you for a response.',
+  bondTwists[a.twist]+' '+a.personName+' looks to you for a response.',
   a.personName+' wants to know what this relationship could become after today.'
  ][a.stage];
  if(a.type==='school')return [
@@ -85,7 +105,7 @@ function prompt(a){
  ][a.stage];
  return [
   'A fictional legal case is before the court. Begin with documented information and procedural fairness.',
-  twists[a.twist]+' The simulated witness statement raises a new question.',
+  courtTwists[a.twist]+' The simulated hearing raises a new question.',
   'The fictional hearing reaches its final stage. The decision will be recorded in your life history.'
  ][a.stage];
 }
@@ -109,7 +129,8 @@ export function replyEveryday(s,index,ctx){
  if(!Number.isInteger(index)||index<0||index>2)throw Error('Choose one of the three scene responses.');
  const stage=options[a.type]?.[a.stage],option=stage?.[index];if(!option)throw Error('Invalid scene response.');
  const approach=option[2];
- const fitted=affinity[a.type][a.preference]===approach;
+ const currentPreference=(a.preference+(a.stage===1?a.twist%3:a.stage===2?(a.choices.some(c=>c.success)?1:2):0))%3;
+ const fitted=affinity[a.type][currentPreference]===approach;
  const relevant=a.type==='bond'?Math.round(((s.stats.social||40)+(s.stats.kindness||40))/2):
   a.type==='school'?s.stats[a.trackFocus]||45:Math.round(((s.stats.knowledge||45)+(s.stats.confidence||45))/2);
  const difficulty=a.twist%3===0?10:a.twist%3===1?4:0;
@@ -145,6 +166,8 @@ export function replyEveryday(s,index,ctx){
   ctx.change(s,a.trackFocus,grade==='breakthrough'?7:grade==='progress'?5:2);
   ctx.change(s,'knowledge',grade==='breakthrough'?4:1);
   if(grade==='breakthrough'&&s.club)s.club.level=Math.min(5,s.club.level+1);
+  // Each school year changes the classmate's expectations; last year's best tactic may not work again.
+  if(e.classmate){e.classmate.preference=(e.classmate.preference+1+a.twist%3)%3;e.classmate.history.push({age:s.age,track:a.track,grade});e.classmate.history=e.classmate.history.slice(-16);}
  }else{
   const preparation=clamp((a.evidence+a.composure+a.momentum)/3+Math.min(10,a.score));
   ctx.hearing(s,preparation);
