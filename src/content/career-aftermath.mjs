@@ -111,6 +111,8 @@ export function careerAftermathYear(s,ctx){
   }
   const message=def[0]+': '+def[1]+' '+(strong?'Past preparation gives you a stronger foundation.':'Earlier tradeoffs still shape what happens next.');
   const chapter={age:s.age,phase:phase+1,title:def[0],message,delta};
+  // Offer an optional, actionable response within this year, without blocking age progression.
+  t.pending={age:s.age,phase,title:def[0],response:null};
   t.chapterLog.push(chapter);t.step++;t.nextAge=t.step===1?t.startedAge+3:t.step===2?t.startedAge+5:null;
   if(t.step===3)t.status='completed';
   c.news??=[];c.news.push({age:s.age,type:t.type,message});c.news=c.news.slice(-35);
@@ -121,4 +123,47 @@ export function careerAftermathYear(s,ctx){
 export function careerSocialHistory(s){
  const c=s.careerCampaigns||{};
  return {reactions:(c.reactions||[]).slice(-12).reverse(),aftermath:(c.aftermath||[]).slice(-16).reverse().map(x=>({...x,chapterLog:x.chapterLog.slice()}))};
+}
+
+const replies={
+ sports:[['Prepare for the rematch','Improve athletic form and show respect'],['Prioritize recovery','Reduce stress and let the rivalry settle']],
+ film:[['Reconnect with the crew','Strengthen creative partnerships'],['Pursue other inspirations','Reduce stress, maintain creative independence']],
+ business:[['Listen to returning customers','Invest attention in reliable relationships'],['Focus on core operations','Protect wellbeing and preserve the cash position']],
+ election:[['Publish a transparent public update','Invite accountable civic scrutiny'],['Step aside from the discussion','Avoid the spotlight this year']],
+ medical:[['Support the documented team review','Contribute to careful shared learning'],['Entrust the follow-up to the care team','Preserve capacity while the team continues its process']]
+};
+export function careerAftermathCommands(s){
+ if(!s.alive||s.pending!==null||s.mini||s.world?.network?.conversation||s.careerCampaigns?.active)return [];
+ const c=s.careerCampaigns;if(!c?.aftermath?.length)return [];
+ return c.aftermath.flatMap(t=>{
+  if(!t.pending||t.pending.response!==null||t.pending.age!==s.age)return [];
+  return replies[t.type].map(([label,detail],index)=>({id:'careerfollow:'+t.id+':'+index,label:t.contact.name+' · '+label,detail:t.title+' · '+detail,enabled:s.actions>0}));
+ });
+}
+export function careerAftermathRespond(s,id,ctx){
+ if(!id.startsWith('careerfollow:'))throw Error('Invalid follow-up action.');
+ const tail=id.slice('careerfollow:'.length);const pos=tail.lastIndexOf(':');
+ const threadId=tail.slice(0,pos),choice=Number(tail.slice(pos+1));
+ const c=s.careerCampaigns;const t=c?.aftermath?.find(x=>x.id===threadId);
+ if(!t?.pending||t.pending.response!==null||t.pending.age!==s.age||![0,1].includes(choice)||!Number.isInteger(choice))throw Error('This career follow-up is no longer available.');
+ const positive=choice===0;const p=t.pending;p.response=choice;
+ const current=t.chapterLog?.find(x=>x.age===s.age&&x.phase===p.phase+1);
+ if(current)current.response=replies[t.type][choice][0];
+ const cast=s.world?.characters||{};
+ const np=[...(cast.athletes||[]),...(cast.politicians||[]),...(cast.agents||[])].find(x=>x.id===t.contact.id)||c.contacts?.[t.type];
+ if(np){
+  if(typeof np.trust==='number')np.trust=clamp(np.trust+(positive?3:-1));
+  if(typeof np.respect==='number')np.respect=clamp(np.respect+(positive?2:0));
+ }
+ if(positive){
+  if(t.type==='sports'&&s.world?.sports)s.world.sports.form=clamp(s.world.sports.form+3);
+  if(t.type==='film'&&s.world?.entertainment)s.world.entertainment.fame=clamp(s.world.entertainment.fame+2);
+  if(t.type==='business'&&s.business)s.business.demand=clamp((s.business.demand??50)+3);
+  if(t.type==='election'&&s.world?.politics)s.world.politics.approval=clamp(s.world.politics.approval+2);
+  if(t.type==='medical')ctx.change(s,'knowledge',2);
+  ctx.change(s,'stress',2);
+ }else ctx.change(s,'stress',-3);
+ const message='Career follow-up with '+t.contact.name+': '+replies[t.type][choice][0]+'.';
+ c.reactions??=[];c.reactions.push({id:id+':'+s.age,age:s.age,type:t.type,source:'follow-up',person:t.contact.name,role:t.contact.role,positive,text:message,trustChange:positive?3:-1,stage:p.phase});c.reactions=c.reactions.slice(-60);
+ ctx.add(s,message,'career');return t;
 }
