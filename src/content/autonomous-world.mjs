@@ -70,7 +70,7 @@ function alumniMigration(s){
   const id=p.id||'alum-'+a.alumni.length;
   a.alumni.push({id,name:p.name,age:s.age,trust:clamp(p.trust??50),rivalry:clamp(p.rivalry??10),preference:p.preference??0,
    connection:'former classmate',status:'friends',profession:['Designer','Teacher','Founder','Athlete','Community organizer','Researcher'][a.alumni.length%6],
-   collaborations:0,contests:0,lastInteractionAge:-1,partnerId:null,history:(p.history||[]).slice(-10),schoolAge:p.joinedAge??12});
+   collaborations:0,contests:0,lastInteractionAge:-1,partnerId:null,children:0,careerLevel:0,location:'hometown',history:(p.history||[]).slice(-10),schoolAge:p.joinedAge??12});
  }
 }
 function linkKey(a,b){return [a,b].sort().join('|');}
@@ -101,6 +101,7 @@ function evolveNPCLinks(s,ctx){
   const change=Math.round((ctx.rng(s)-.43)*17+(p.preference===q.preference?3:-2));
   link.trust=clamp(link.trust+change);
   link.rivalry=clamp(link.rivalry+(change<0?4:-3)+(ctx.rng(s)<.075?18:0));
+  if(ctx.rng(s)<.09){link.trust=clamp(link.trust-13);link.rivalry=clamp(link.rivalry+19);}
   if(previous==='partners'&&ctx.rng(s)<.065){link.trust=clamp(link.trust-24);link.rivalry=clamp(link.rivalry+22);}
   link.status=relationType(link);
   if(link.status==='partners'&&previous!=='partners'){
@@ -108,6 +109,12 @@ function evolveNPCLinks(s,ctx){
    const romanticallyAvailable=!people.some(n=>n.partnerId===p.id||n.partnerId===q.id);
    link.kind=romanticallyAvailable&&ctx.rng(s)<.30?'romantic':'professional';
    if(link.kind==='romantic'){p.partnerId=q.id;q.partnerId=p.id;}
+  }
+  if(link.status==='partners'&&link.kind==='romantic'&&link.years>=4&&s.age>=22&&p.children<2&&q.children<2&&ctx.rng(s)<.08){
+   p.children++;q.children++;
+   const message=p.name+' and '+q.name+' welcomed a child into their family.';
+   link.history.push({age:s.age,status:'family',kind:'romantic',text:message});link.history=link.history.slice(-8);
+   news(s,ctx,message,'family');
   }
   if(previous==='partners'&&link.status!=='partners'){
    if(p.partnerId===q.id)p.partnerId=null;if(q.partnerId===p.id)q.partnerId=null;
@@ -194,6 +201,18 @@ export function autonomyYear(s,ctx){
   else if(p.trust>=65)p.status='ally';
   else if(p.trust<34)p.status='estranged';
   else p.status='friends';
+ }
+ if(a.alumni.length&&s.age>=20&&s.age%3===0){
+  const p=a.alumni[Math.floor(ctx.rng(s)*a.alumni.length)];
+  if(p&&ctx.rng(s)<.75){
+   const moved=ctx.rng(s)<.24;
+   if(moved){p.location=p.location==='hometown'?'another city':'hometown';}
+   else p.careerLevel=Math.min(4,(p.careerLevel||0)+1);
+   const label=moved?'relocated to '+p.location:'reached a new milestone as a '+p.profession.toLowerCase();
+   const message=p.name+' '+label+'.';
+   p.history.push({age:s.age,kind:'career',event:message});p.history=p.history.slice(-18);
+   news(s,ctx,message,'career');
+  }
  }
 }
 export function autonomyCommands(s){
