@@ -1116,7 +1116,7 @@ test('new character story director remains optional on old saves and heirs inher
  const offer=E.storyDirectorHistory(s).queue[0];
  s=E.act(s,'episode:start:'+offer.id);
  for(const i of [0,1,2])s=E.storyDirectorChoose(s,i);
- s.actions=3;s.pending=null;
+ s.age=30;s.actions=3;s.pending=null;
  s=E.act(s,'date');s=E.act(s,'child');
  const child=s.people.find(p=>p.role==='child');child.age=20;
  s.alive=false;s.pending=null;
