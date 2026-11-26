@@ -984,3 +984,31 @@ test('new autonomous world is optional in old version-2 saves and heir inheritan
  assert.equal(E.autonomyView(heir).opportunities.length,0);
  assert.ok(E.autonomyState(heir).archive.length>=oldHistory);
 });
+
+test('future story chapters cite shared school experiences and reflect earlier decisions',()=>{
+ let {s}=prepareGraduatingCohort(6201);
+ const arc=E.autonomyView(s).opportunities[0];
+ assert.ok(arc.chapterText.includes('classrooms')||arc.chapterText.includes('worked together on'));
+ assert.ok(arc.chapterText.includes(arc.npcName));
+ s.pending=null;s=E.ageUp(s);s.pending=null;
+ const command=E.commands(s).find(c=>c.id==='autonomy:arc:'+arc.id+':2');
+ assert.ok(command?.enabled);s=E.act(s,command.id);
+ assert.ok(E.validate(s));
+ const followup=E.autonomyView(s).opportunities.find(x=>x.id===arc.id);
+ assert.ok(followup.chapterText.includes('moved forward without your direct involvement'));
+ assert.equal(followup.dueAge,21);
+});
+test('existing single-classmate saves migrate into adult characters without losing their historical IDs',()=>{
+ let s=E.createLife({seed:6202});s.age=17;s.pending=null;
+ s.everydayScenes={active:null,completed:[],callbacks:[],used:{},classmate:{id:'school-peer',name:'Old Classmate',trust:80,rivalry:12,preference:1,history:[{age:14,track:'Science fair',grade:'progress'}]},schoolResults:[]};
+ assert.ok(E.validate(s));
+ s=E.ageUp(s);s.pending=null;
+ const alumni=E.autonomyView(s).alumni;
+ assert.equal(alumni.length,1);assert.equal(alumni[0].id,'school-peer');
+ assert.equal(alumni[0].name,'Old Classmate');
+ assert.ok(E.conversationPeople(s).some(p=>p.id==='school-peer'));
+ s=E.ageUp(s);s.pending=null;
+ const arc=E.autonomyView(s).opportunities.find(x=>x.ready);
+ assert.ok(arc);s=E.act(s,'autonomy:arc:'+arc.id+':0');assert.ok(E.validate(s));
+ assert.ok(E.autonomyView(s).alumni[0].trust>=0);
+});
