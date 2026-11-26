@@ -652,3 +652,62 @@ test('hobby age gates present gardening first and preserve age advancement after
  await expect(page.getByTestId('active-hobby')).toHaveCount(0);
  await expect(page.getByTestId('advance-year')).toBeEnabled();
 });
+
+test('players can commit to an ambition, advance actual milestones and restore progress',async({page})=>{
+ let s=E.createLife({name:'Mia',seed:21501});s.age=15;s.stats.health=90;s.stats.stress=20;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await expect(page.getByTestId('life-ambitions-board')).toBeVisible();
+ await page.getByTestId('ambition-begin-wellness').click();
+ await expect(page.getByTestId('active-life-ambition')).toContainText('Build a healthier life');
+ await expect(page.getByTestId('ambition-milestone-0')).toContainText('0 / 3');
+ await page.getByRole('button',{name:/^Exercise/}).click();
+ await page.reload();
+ await expect(page.getByTestId('active-life-ambition')).toContainText('Build a healthier life');
+ await expect(page.getByTestId('ambition-milestone-0')).toContainText('1 / 3');
+ await page.getByRole('button',{name:/^Exercise/}).click();
+ await expect(page.getByTestId('ambition-milestone-0')).toContainText('2 / 3');
+ await page.getByTestId('advance-year').click();
+ if(await page.getByTestId('life-decision').count())await page.getByTestId('life-decision').getByRole('button').first().click();
+ await page.getByRole('button',{name:/^Exercise/}).click();
+ await expect(page.getByTestId('active-life-ambition')).toHaveCount(0);
+ await expect(page.getByTestId('ambition-chronicle')).toContainText('Build a healthier life');
+ await page.getByText('More',{exact:true}).click();
+ await expect(page.getByTestId('ambition-recap')).toContainText('1 personal ambitions started');
+});
+test('ambition decisions become available only after two years, with saved path and no blocked life clock',async({page})=>{
+ let s=E.createLife({name:'Nico',seed:21502});s.age=22;s.stats.health=32;s.stats.stress=70;s.cash=110000;
+ s=E.act(s,'ambition:begin:wellness');
+ for(let i=0;i<2;i++){s.pending=null;s=E.ageUp(s);if(s.pending!==null)s=E.resolve(s,0);}
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await expect(page.getByTestId('ambition-turn-steady')).toBeVisible();
+ await expect(page.getByTestId('ambition-turn-bold')).toBeVisible();
+ await page.getByTestId('ambition-turn-steady').click();
+ await expect(page.getByTestId('active-life-ambition')).toContainText('steady path');
+ await expect(page.getByTestId('ambition-turn-steady')).toHaveCount(0);
+ await expect(page.getByTestId('advance-year')).toBeEnabled();
+ await page.reload();
+ await expect(page.getByTestId('active-life-ambition')).toContainText('steady path');
+});
+test('the personal ambitions board is readable and does not overflow narrow iPhone viewports',async({page})=>{
+ for(const width of [320,375,430]){
+  await page.setViewportSize({width,height:730});
+  const s=E.createLife({name:'Kai',seed:21600+width});s.age=15;
+  await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+  const board=page.getByTestId('life-ambitions-board');
+  await expect(board).toBeVisible();
+  let bounds=await board.boundingBox();
+  expect(bounds.width).toBeLessThanOrEqual(width+1);
+  await page.getByTestId('ambitions-browse').click();
+  await expect(page.getByTestId('ambition-offer-community')).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
+ }
+});
+test('expired ambitions remain readable in the life chronicle without blocking the player',async({page})=>{
+ let s=E.createLife({name:'Iris',seed:21503});s.age=12;s.stats.knowledge=20;s.skills.technical=0;
+ s=E.act(s,'ambition:begin:scholar');
+ for(let i=0;i<6;i++){s.pending=null;s=E.ageUp(s);if(s.pending!==null)s=E.resolve(s,0);}
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await expect(page.getByTestId('active-life-ambition')).toHaveCount(0);
+ await expect(page.getByTestId('ambition-chronicle')).toContainText('expired');
+ await expect(page.getByTestId('advance-year')).toBeEnabled();
+});
