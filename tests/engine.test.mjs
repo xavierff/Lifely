@@ -704,3 +704,37 @@ test('heirs inherit a completed career record but not unfinished ancestor follow
  assert.equal(E.campaignHistory(heir).aftermath.length,0);
  assert.ok(E.campaignHistory(heir).reactions.length>0);
 });
+
+test('career aftermath chapters offer optional choices without trapping the player',()=>{
+ let s=E.createLife({seed:3501});s.age=33;s.cash=100000;s.world.sports.sport='Football';
+ s=E.act(s,'campaign:start:sports');
+ for(let i=0;i<4;i++)s=E.campaignDecision(s,1);
+ s=E.ageUp(s);assert.equal(s.age,34);assert.ok(E.validate(s));
+ const thread=E.campaignHistory(s).aftermath[0];
+ assert.equal(thread.step,1);assert.equal(thread.pending.age,34);
+ // Story events are resolved before optional career actions appear.
+ if(s.pending!==null){assert.equal(E.commands(s).some(x=>x.id.startsWith('careerfollow:')),false);s=E.resolve(s,1);}
+ const opts=E.commands(s).filter(x=>x.id.startsWith('careerfollow:'));
+ assert.equal(opts.length,2);
+ const before=s.actions,money=s.cash;
+ s=E.act(s,opts[0].id);
+ assert.equal(s.actions,before-1);assert.equal(s.cash,money);
+ assert.equal(E.campaignHistory(s).aftermath[0].pending.response,0);
+ assert.equal(E.commands(s).some(x=>x.id.startsWith('careerfollow:')),false);
+ assert.ok(E.validate(s));
+ assert.throws(()=>E.act(s,opts[1].id),/not available/);
+});
+test('unanswered followups never block aging and new conversations replace old pending actions',()=>{
+ let s=E.createLife({seed:3502});s.age=31;s.cash=100000;s.world.entertainment.path='Film actor';
+ s=E.act(s,'campaign:start:film');for(let i=0;i<4;i++)s=E.campaignDecision(s,1);
+ for(let i=0;i<5;i++){s.pending=null;s=E.ageUp(s);assert.ok(E.validate(s));}
+ const t=E.campaignHistory(s).aftermath[0];
+ assert.equal(t.step,3);assert.equal(t.status,'completed');
+ assert.equal(t.pending.age,36);assert.equal(t.pending.response,null);
+ s.pending=null;
+ const options=E.commands(s).filter(x=>x.id.startsWith('careerfollow:'));
+ assert.equal(options.length,2); // Optional final response remains available this year.
+ s=E.act(s,options[1].id);
+ assert.equal(E.campaignHistory(s).aftermath[0].pending.response,1);
+ assert.ok(E.validate(s));
+});
