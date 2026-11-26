@@ -64,6 +64,18 @@ This is a **development candidate**. Success requires real-world playtesting, si
 - **Persistent design:** Old version-2 save games still work. You can leave a session without locking the game. Descendants keep family trophy history but develop their own skills and friendships.
 - **World-quality benchmarks:** See `docs/COMPETITIVE_QUALITY_SCORECARD.md` for an honest measurement plan. Feature count does not certify that Lifely is more enjoyable than BitLife. Full QA: `docs/1.6.0_HOBBY_LEAGUES.md`.
 
+## Lifely 1.8.0 — Workplace Sagas (build 18)
+
+Fifteen decades of professional choices deserve a supporting cast. All 150 regular careers now share **12 individually authored industry storylines**, each with **3 chapters, 3 contrasting decisions per chapter, and 2 persistent colleagues**. The new Work tab shows evolving relationships, independently improving rivals, commitments, progress and outcomes.
+
+- Decisions change actual professional standing, named coworkers' trust/rivalry, stress, reputation and future promotion chances. Standing also modifies annual salary by a capped modest amount.
+- Optional sequel chapters return after two simulated years; an ignored story ages out. Changing career or leaving work interrupts an incompatible active commitment.
+- Finishing earns small simulated rewards and job experience; completed professional memories appear in a child's inherited chronicle.
+- The prior Personal Ambition scholar milestone now correctly reads technical skill instead of remaining stuck at zero.
+- Local offline deterministic save state; older version-2 saves still validate. Unit tests cover every one of the 150 careers, varied outcomes, expiry, job switching, legacy, old saves; browser regression covers 320px and other phone widths.
+
+**Pending:** real-world device QA and comparative human playtests. This release is a tested development candidate, not a claim of superiority or a signed public release. See docs/1.8.0_WORKPLACE_SAGAS.md.
+
 ## Lifely 1.7.0 — Personal Ambitions (build 17)
 
 **Six-year personal ambitions** replace passive life-goal checklists with sixteen optional, individually authored campaigns. Choose a mission in the **Life** screen, see three objective milestones, and fulfill them using real simulated activities. This system connects the existing work, social, finance, hobby, travel, business, and entertainment features without forcing the player down any one path.

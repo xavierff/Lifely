@@ -56,6 +56,7 @@ function snapshotStep(s,goal,step,worth){
  const [kind,key,target,label]=step,initial=goal.baseline||{},live=metrics(s,worth);let current=0,need=target,out='';
  if(kind==='actions')current=goal.counts?.[key]||0;
  if(kind==='stat')current=s.stats[key]||0;
+ if(kind==='skill')current=s.skills?.[key]||0;
  if(kind==='lowStat'){current=s.stats[key]||0;need=0;}
  if(kind==='delta')current=Math.max(0,(live[key]||0)-(initial[key]||0));
  if(kind==='hobbyMastery')current=Math.max(0,...Object.values(s.hobbyCircuit?.disciplines||{}).map(p=>p.mastery||0));
@@ -66,7 +67,7 @@ function snapshotStep(s,goal,step,worth){
  if(kind==='family')current=(s.people||[]).filter(p=>p.alive&&(p.role==='partner'||p.role==='child')).length;
  if(kind==='hobbyMastery'||kind==='cash'||kind==='audience')need=key;
  const achieved=kind==='lowStat'?current<=target:current>=need;
- const progress=kind==='lowStat'?clamp((100-Math.max(0,current-target))*1.3):clamp(current/Math.max(1,need)*100);
+ const progress=kind==='lowStat'?clamp((100-current)/Math.max(1,100-target)*100):clamp(current/Math.max(1,need)*100);
  out=kind==='lowStat'?'Current '+current+' · target ≤'+target:
   kind==='delta'&&key==='netWorth'?'Gained $'+Math.round(current).toLocaleString('en-US')+' of $'+Math.round(need).toLocaleString('en-US'):
   Math.round(current).toLocaleString('en-US')+' / '+Math.round(need).toLocaleString('en-US');
