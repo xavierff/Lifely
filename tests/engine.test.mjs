@@ -1800,7 +1800,7 @@ test('partner contributions are transfers from independently simulated savings, 
  assert.equal(shared.household.annual.at(-1).contribution,transferred);
  assert.ok(E.validate(shared));
 });
-test('saving and learning plans change actual annual costs and children's progress',()=>{
+test('saving and learning plans change annual costs and child development',()=>{
  let s=householdSetup(67006);
  const child=s.people.find(p=>p.role==='child');const before=child.world.talent;
  const saving=settleHouseholdYear(E.act(s,'household:priority:saving'));
