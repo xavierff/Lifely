@@ -711,3 +711,50 @@ test('expired ambitions remain readable in the life chronicle without blocking t
  await expect(page.getByTestId('ambition-chronicle')).toContainText('expired');
  await expect(page.getByTestId('advance-year')).toBeEnabled();
 });
+
+test('authored workplace decisions remain meaningful after reload and can continue in later years',async({page})=>{
+ let s=E.createLife({name:'Dana',seed:45101});s.age=27;s.education=3;s.stats.knowledge=95;
+ const j=E.careers.findIndex(c=>c.industry==='Science & engineering');s=E.act(s,'job:'+j);
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByText('Work',{exact:true}).click();
+ await expect(page.getByTestId('workplace-career-board')).toContainText('The experiment that challenged the lab');
+ await page.getByTestId('workplace-begin').click();
+ const board=page.getByTestId('active-workplace-chapter');
+ await expect(board).toContainText('The surprising result');
+ await expect(board.getByRole('button')).toHaveCount(3);
+ await page.getByTestId('workplace-choice-1').click();
+ await expect(board).toHaveCount(0);
+ await expect(page.getByTestId('workplace-story-progress')).toContainText('Chapter 2/3');
+ await page.reload();await page.getByText('Work',{exact:true}).click();
+ await expect(page.getByTestId('workplace-story-progress')).toContainText('Chapter 2/3');
+ await expect(page.getByTestId('advance-year')).toBeEnabled();
+});
+test('two-year career callbacks reopen with the original colleague and saved storyline',async({page})=>{
+ let s=E.createLife({name:'Rae',seed:45102});s.age=29;s.education=3;s.stats.knowledge=90;
+ const j=E.careers.findIndex(c=>c.industry==='Transport & logistics');
+ s=E.act(s,'job:'+j);s=E.act(s,'workplace:begin');s=E.workplaceDecision(s,0);
+ for(let i=0;i<2;i++){s.pending=null;s=E.ageUp(s);if(s.pending!==null)s=E.resolve(s,0);}
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByText('Work',{exact:true}).click();
+ await page.getByTestId('workplace-continue').click();
+ await expect(page.getByTestId('active-workplace-chapter')).toContainText('CHAPTER 2/3');
+ await page.getByTestId('workplace-choice-0').click();
+ await expect(page.getByTestId('workplace-story-progress')).toContainText('Chapter 3/3');
+ await page.reload();await page.getByText('Work',{exact:true}).click();
+ await expect(page.getByTestId('workplace-story-progress')).toContainText('Chapter 3/3');
+});
+test('regular-job stories fit 320, 375 and 430 px screens without horizontal overflow',async({page})=>{
+ for(const width of [320,375,430]){
+  await page.setViewportSize({width,height:740});
+  let s=E.createLife({name:'Tia',seed:45103+width});s.age=30;s.education=3;s.stats.knowledge=100;
+  const j=E.careers.findIndex(c=>c.industry==='Public & legal');s=E.act(s,'job:'+j);
+  await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+  await page.getByText('Work',{exact:true}).click();
+  const board=page.getByTestId('workplace-career-board');
+  await expect(board).toBeVisible();
+  const box=await board.boundingBox();expect(box.width).toBeLessThanOrEqual(width+1);
+  await page.getByTestId('workplace-begin').click();
+  await expect(page.getByTestId('active-workplace-chapter')).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
+ }
+});

@@ -1432,3 +1432,110 @@ test('ambition choices are deterministic, immutable and isolated from unrelated 
  assert.deepEqual(E.act(a,'exercise'),E.act(b,'exercise'));
  assert.ok(E.validate(a));
 });
+
+test('ordinary career storytelling covers all 150 jobs and all twelve original industries',()=>{
+ assert.equal(E.workplaceTypes.length,12);
+ assert.equal(new Set(E.workplaceTypes.map(x=>x.industry)).size,12);
+ for(const job of E.careers){
+  assert.ok(E.workplaceTypes.some(x=>x.industry===job.industry),job.title+' has no story');
+  let s=E.createLife({seed:4130+job.id});s.age=25;s.education=3;s.stats.knowledge=100;s=E.act(s,'job:'+job.id);
+  assert.ok(E.commands(s).some(x=>x.id==='workplace:begin'&&x.enabled),job.title);
+  assert.ok(E.validate(s));
+ }
+});
+test('workplace arc creates two persistent colleagues and real choices',()=>{
+ let s=E.createLife({seed:44001});s.age=24;s.education=3;s.stats.knowledge=90;
+ const j=E.careers.findIndex(x=>x.industry==='Technology & data');
+ s=E.act(s,'job:'+j);const actions=s.actions;s=E.act(s,'workplace:begin');
+ assert.equal(s.actions,actions-1);
+ const view=E.workplaceView(s);assert.equal(view.chapter,1);assert.equal(view.choices.length,3);
+ assert.equal(s.workplace.contacts.technology.length,2);assert.notEqual(view.lead,view.rival);
+ assert.throws(()=>E.ageUp(s),/workplace chapter/);
+ assert.throws(()=>E.workplaceDecision(s,9),/Invalid workplace decision/);
+ const before=s;s=E.workplaceDecision(s,1);
+ assert.equal(before.workplace.active.stage,0);
+ assert.equal(s.workplace.active.status,'waiting');
+ assert.equal(s.workplace.active.stage,1);
+ assert.equal(s.workplace.active.nextAge,26);
+ assert.equal(E.workplaceView(s),null);
+ assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+});
+test('collaborative versus competitive workplace choices change different NPC stakes',()=>{
+ let s=E.createLife({seed:44002});s.age=25;s.education=3;s.stats.knowledge=100;
+ const j=E.careers.findIndex(x=>x.industry==='Finance & enterprise');
+ s=E.act(s,'job:'+j);s=E.act(s,'workplace:begin');
+ const team=E.workplaceDecision(s,0),craft=E.workplaceDecision(s,1),bold=E.workplaceDecision(s,2);
+ assert.notDeepEqual(team.stats,bold.stats);
+ assert.ok(team.workplace.contacts.finance[0].trust>bold.workplace.contacts.finance[0].trust);
+ assert.ok(bold.workplace.contacts.finance[1].rivalry>team.workplace.contacts.finance[1].rivalry);
+ assert.ok(craft.workplace.standing>bold.workplace.standing);
+ assert.ok(E.validate(team)&&E.validate(craft)&&E.validate(bold));
+});
+test('rivals grow independently, callback chapters remain age-gated and decisions persist',()=>{
+ let s=E.createLife({seed:44003});s.age=25;s.education=3;s.stats.knowledge=85;
+ const jobId=E.careers.findIndex(x=>x.industry==='Retail & administration');
+ s=E.act(s,'job:'+jobId);s=E.act(s,'workplace:begin');s=E.workplaceDecision(s,0);
+ assert.ok(!E.commands(s).some(c=>c.id==='workplace:continue'));
+ const firstRating=s.workplace.contacts.retail[1].skill;
+ for(let i=0;i<2;i++){s.pending=null;s=E.ageUp(s);if(s.pending!==null)s=E.resolve(s,0);}
+ assert.ok(s.workplace.contacts.retail[1].skill>firstRating);
+ assert.equal(s.age,27);
+ assert.ok(E.commands(s).some(c=>c.id==='workplace:continue'&&c.enabled));
+ s=JSON.parse(JSON.stringify(s));assert.ok(E.validate(s));
+ s=E.act(s,'workplace:continue');assert.equal(E.workplaceView(s).chapter,2);
+ assert.throws(()=>E.ageUp(s),/workplace chapter/);
+ s=E.workplaceDecision(s,1);assert.equal(s.workplace.active.nextAge,29);
+ assert.ok(E.validate(s));
+ for(let i=0;i<2;i++){s.pending=null;s=E.ageUp(s);if(s.pending!==null)s=E.resolve(s,0);}
+ s=E.act(s,'workplace:continue');assert.equal(E.workplaceView(s).chapter,3);
+ const initialCash=s.cash;s=E.workplaceDecision(s,1);
+ assert.equal(E.workplaceView(s),null);assert.equal(s.workplace.completed.length,1);
+ assert.equal(s.workplace.completed[0].choices.length,3);
+ assert.ok(s.workplace.completed[0].reward>=0);assert.ok(s.cash>=initialCash);
+ assert.ok(E.validate(s));
+});
+test('workplace stories are interrupted by career switching without deleting old coworkers',()=>{
+ let s=E.createLife({seed:44004});s.age=26;s.education=3;s.stats.knowledge=100;
+ const j1=E.careers.findIndex(x=>x.industry==='Education & society');
+ const j2=E.careers.findIndex(x=>x.industry==='Service & hospitality');
+ s=E.act(s,'job:'+j1);s=E.act(s,'workplace:begin');s=E.workplaceDecision(s,0);
+ s.actions=3;s=E.act(s,'job:'+j2);
+ assert.equal(s.workplace.active,null);assert.equal(s.workplace.unfulfilled[0].status,'interrupted');
+ assert.equal(s.workplace.contacts.education.length,2);
+ assert.equal(E.workplaceSummary(s).firm.industry,'Service & hospitality');
+ assert.ok(E.validate(s));
+});
+test('neglected professional commitments expire without trapping the player',()=>{
+ let s=E.createLife({seed:44005});s.age=25;s.education=3;s.stats.knowledge=100;
+ const j=E.careers.findIndex(x=>x.industry==='Nature & agriculture');
+ s=E.act(s,'job:'+j);s=E.act(s,'workplace:begin');s=E.workplaceDecision(s,0);
+ for(let i=0;i<5;i++){s.pending=null;s=E.ageUp(s);if(s.pending!==null)s=E.resolve(s,0);}
+ assert.equal(s.workplace.active,null);assert.equal(s.workplace.unfulfilled[0].status,'neglected');
+ assert.ok(E.commands(s).some(x=>x.id==='workplace:begin'));assert.ok(E.validate(s));
+});
+test('older saves remain valid and completed career decisions become ancestral records',()=>{
+ let s=E.createLife({seed:44006});delete s.workplace;assert.ok(E.validate(s));
+ s.age=28;s.education=3;s.stats.knowledge=100;
+ const j=E.careers.findIndex(x=>x.industry==='Creative & media');
+ s=E.act(s,'job:'+j);s=E.act(s,'workplace:begin');
+ for(let i=0;i<3;i++){
+  if(i>0){s.age+=2;s.actions=3;s.pending=null;s=E.act(s,'workplace:continue');}
+  s=E.workplaceDecision(s,1);
+ }
+ assert.equal(s.workplace.completed.length,1);
+ s.actions=3;s.cash=50000;s=E.act(s,'date');s=E.act(s,'child');
+ const child=s.people.find(p=>p.role==='child');child.age=21;s.alive=false;s.pending=null;
+ const heir=E.legacy(s,child.id);
+ assert.ok(E.validate(heir));assert.equal(heir.workplace.completed.length,0);
+ assert.equal(E.workplaceSummary(heir).ancestry[0].sourceLife,s.name);
+});
+test('the learning ambition now tracks technical skill and can be completed',()=>{
+ let s=E.createLife({seed:44007});s.age=18;s.stats.knowledge=80;s.skills.technical=0;
+ s=E.act(s,'ambition:begin:scholar');
+ assert.equal(E.ambitionSummary(s).active.steps[2].actual,0);
+ for(let i=0;i<3;i++){if(s.actions===0)s.actions=3;s=E.act(s,'learn');}
+ assert.equal(E.ambitionSummary(s).active.steps[0].actual,3);
+ s.actions=3;s=E.act(s,'skill:technical');s=E.act(s,'skill:technical');
+ assert.equal(E.ambitionSummary(s).active,null);
+ assert.equal(E.ambitionSummary(s).completed[0].id,'scholar');assert.ok(E.validate(s));
+});
