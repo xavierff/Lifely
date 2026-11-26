@@ -1144,3 +1144,162 @@ test('character-story achievements are earned only after enough completed resolu
  assert.ok(E.achievementStatus(base).find(x=>x.name==='trusted mediator').eligible);
  assert.ok(E.achievementStatus(base).find(x=>x.name==='story of a lifetime').eligible);
 });
+
+function readyForHobby(seed=17001,age=19){
+ const s=E.createLife({seed});s.age=age;s.pending=null;s.actions=3;
+ return s;
+}
+test('all eight original hobbies have unique tactical problems and readable strategies',()=>{
+ assert.equal(E.hobbyTypes.length,8);
+ assert.equal(new Set(E.hobbyTypes.map(x=>x.id)).size,8);
+ for(const hobby of E.hobbyTypes){
+  const s=readyForHobby(17010,Math.max(8,hobby.minAge+1));
+  const cmd='hobby:start:'+hobby.id+':practice';
+  assert.ok(E.commands(s).some(x=>x.id===cmd&&x.enabled));
+  const active=E.act(s,cmd),view=E.hobbyView(active);
+  assert.ok(view);assert.equal(view.options.length,3);assert.ok(view.prompt.length>35);
+  assert.ok(view.hint.includes('Read the situation'));
+  assert.equal(view.title,hobby.name);
+  assert.ok(E.validate(JSON.parse(JSON.stringify(active))));
+  const round=E.hobbyDecision(active,0);
+  assert.ok(E.validate(round));
+  assert.equal(E.hobbyView(round).round,2);
+ }
+});
+test('practicing a hobby plays exactly three decisions without charging extra years or activities',()=>{
+ let s=readyForHobby(17002);
+ const before=E.worth(s);
+ s=E.act(s,'hobby:start:chess:practice');
+ assert.equal(s.actions,2);assert.equal(E.hobbyView(s).mode,'practice');
+ assert.ok(E.validate(s));
+ assert.throws(()=>E.ageUp(s),/hobby challenge/);
+ assert.deepEqual(E.hobbyDecision(s,1),E.hobbyDecision(s,1));
+ assert.throws(()=>E.hobbyDecision(s,3),/three tactical responses/);
+ for(const [round,i] of [1,0,2].entries()){
+  s=E.hobbyDecision(s,i);
+  assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+  if(round<2)assert.equal(E.hobbyView(s).round,round+2);
+ }
+ assert.equal(E.hobbyView(s),null);
+ assert.equal(s.age,19);assert.equal(s.actions,2);
+ assert.equal(E.worth(s),before);
+ const p=E.hobbySummary(s).profiles.find(x=>x.id==='chess');
+ assert.ok(p.mastery>0);assert.equal(p.practice,1);assert.equal(p.contests,0);
+ assert.equal(E.hobbySummary(s).history[0].lessons.length,3);
+ assert.ok(!E.commands(s).some(x=>x.id==='hobby:start:chess:contest'&&x.enabled));
+});
+test('contests have skill-first fair answers, rivals and bounded cash prizes',()=>{
+ let s=readyForHobby(17003,25);let last=E.worth(s);
+ s=E.act(s,'hobby:start:streetball:contest');
+ const challenger=E.hobbyView(s).opponent;
+ let correctCount=0;
+ // Given the visible cue, each of the three authored moments has a unique optimal tactic.
+ const tellToChoice={'The defender overcommits':1,'A teammate cuts':0,'The opponent is tired':2};
+ while(E.hobbyView(s)){
+  const cue=E.hobbyView(s).prompt;
+  const key=Object.keys(tellToChoice).find(k=>cue.startsWith(k));
+  assert.ok(key,'Tactical problem should have a readable answer.');
+  s=E.hobbyDecision(s,tellToChoice[key]);
+  correctCount++;
+ }
+ assert.equal(correctCount,3);
+ const p=E.hobbySummary(s).profiles.find(x=>x.id==='streetball');
+ assert.equal(p.contests,1);
+ assert.ok(p.wins+p.losses===1);
+ assert.equal(p.rivals.reduce((a,b)=>a+b.encounters,0),1);
+ assert.ok(p.mastery>0);
+ const reward=E.worth(s)-last;
+ assert.ok(reward>=0&&reward<=1500);
+ assert.equal(reward,E.hobbySummary(s).history[0].reward);
+ assert.ok(E.validate(s));
+});
+test('strategy is skill-driven: correct tactics outperform clearly wrong tactics under same seed',()=>{
+ const outcomes=[];
+ for(let seed=17100;seed<17125;seed++){
+  const start=readyForHobby(seed,25),a=E.act(start,'hobby:start:chess:contest');
+  let right=a,wrong=a;
+  const cues={
+   'Your opponent leaves':1,
+   'A tempting pawn':0,
+   'A close endgame':2
+  };
+  for(let stage=0;stage<3;stage++){
+   const cue=E.hobbyView(right).prompt;
+   const key=Object.keys(cues).find(k=>cue.startsWith(k));assert.ok(key);
+   right=E.hobbyDecision(right,cues[key]);
+   wrong=E.hobbyDecision(wrong,(cues[key]+1)%3);
+  }
+  outcomes.push([E.hobbySummary(right).history[0].score,E.hobbySummary(wrong).history[0].score]);
+  assert.ok(E.validate(right)&&E.validate(wrong));
+ }
+ assert.ok(outcomes.every(([a,b])=>a>=b));
+ assert.ok(outcomes.some(([a,b])=>a>b));
+});
+test('two activities per year, and each discipline permits only one session per year',()=>{
+ let s=readyForHobby(17004,25);
+ for(const id of ['chess','dance']){
+  s=E.act(s,'hobby:start:'+id+':practice');
+  for(const i of [0,1,2])s=E.hobbyDecision(s,i);
+  assert.ok(E.validate(s));
+ }
+ assert.equal(E.hobbySummary(s).playedThisAge,2);
+ assert.equal(E.commands(s).filter(c=>c.id.startsWith('hobby:start:')).filter(c=>c.enabled).length,0);
+ assert.ok(E.commands(s).some(c=>c.id==='rest'&&c.enabled));
+ s=E.ageUp(s);s.pending=null;
+ assert.equal(E.hobbySummary(s).playedThisAge,0);
+ assert.ok(E.commands(s).some(c=>c.id==='hobby:start:chess:practice'&&c.enabled));
+});
+test('young children can garden safely, while older hobbies and competitions are age-gated',()=>{
+ let s=readyForHobby(17005,6);
+ let ids=E.commands(s).filter(c=>c.id.startsWith('hobby:start:')).map(c=>c.id);
+ assert.ok(ids.includes('hobby:start:gardening:practice'));
+ assert.ok(!ids.includes('hobby:start:chess:practice'));
+ assert.ok(!ids.includes('hobby:start:gardening:contest'));
+ s=E.act(s,'hobby:start:gardening:practice');
+ for(const i of [1,0,2])s=E.hobbyDecision(s,i);
+ assert.ok(E.validate(s));
+ assert.ok(E.hobbySummary(s).history[0].reward===0);
+});
+test('rivals train independently across decades and trophy collections persist',()=>{
+ let s=readyForHobby(17006,25);
+ s=E.act(s,'hobby:start:openmic:contest');
+ for(const i of [1,0,2])s=E.hobbyDecision(s,i);
+ const old=E.hobbySummary(s).profiles.find(x=>x.id==='openmic');
+ const firstRating=old.rivals[0].rating;
+ for(let i=0;i<7;i++){
+  s.pending=null;s=E.ageUp(s);
+  assert.ok(E.validate(s));
+ }
+ const now=E.hobbySummary(s).profiles.find(x=>x.id==='openmic');
+ assert.ok(now.rivals[0].rating>=firstRating);
+ assert.ok(now.rivals[0].rating<=100);
+ assert.ok(E.hobbySummary(s).news.some(x=>x.text.includes('challenging you again')));
+ assert.ok(now.mastery>=old.mastery);
+});
+test('abandoning a hobby never traps the game and does not duplicate rewards',()=>{
+ let s=readyForHobby(17007,25);
+ const worth=E.worth(s);
+ s=E.act(s,'hobby:start:gamejam:contest');
+ s=E.hobbyDecision(s,1);
+ s=E.hobbyDecision(s,'leave');
+ assert.equal(E.hobbyView(s),null);
+ assert.equal(E.worth(s),worth);
+ assert.ok(E.validate(s));
+ const summary=E.hobbySummary(s).profiles.find(x=>x.id==='gamejam');
+ assert.equal(summary.wins,0);assert.equal(summary.contests,0);
+ s.pending=null;s=E.ageUp(s);assert.ok(E.validate(s));
+});
+test('old version-2 saves without hobbies remain valid and descendant inherits trophies, not unfinished activities',()=>{
+ let s=readyForHobby(17008,28);delete s.hobbyCircuit;
+ assert.ok(E.validate(s));assert.equal(E.hobbySummary(s).history.length,0);
+ s=E.act(s,'hobby:start:streetball:contest');
+ for(const i of [1,0,2])s=E.hobbyDecision(s,i);
+ s.actions=3;s.pending=null;s=E.act(s,'date');s=E.act(s,'child');
+ const child=s.people.find(p=>p.role==='child');child.age=20;
+ s.alive=false;s.pending=null;
+ const heir=E.legacy(s,child.id);
+ assert.ok(E.validate(heir));
+ assert.equal(E.hobbySummary(heir).profiles.find(x=>x.id==='streetball').mastery,0);
+ assert.equal(E.hobbySummary(heir).history.length,0);
+ assert.ok(E.hobbyState(heir).hallOfFame.length<=12);
+});

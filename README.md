@@ -1,6 +1,6 @@
 # Lifely
 
-An original, offline, choice-driven life simulator. The repository contains a **1.5.0 character-story development candidate (build 15)**. This is not an App Store-ready or externally verified BitLife-parity release.
+An original, offline, choice-driven life simulator. The repository contains a **1.6.0 playable-hobby development candidate (build 16)**. This is not an App Store-ready or externally verified BitLife-parity release.
 
 ## 1.1.0 interactive career playfields (build 10 candidate)
 
@@ -54,6 +54,15 @@ The new **Life Director** is an original, offline social drama system designed t
 - **More reasons to replay:** New "Trusted mediator" and "Story of a lifetime" achievements reward long-term investment in people. Older version-2 saves remain valid; descendants inherit only concluded story history.
 
 This is a **development candidate**. Success requires real-world playtesting, signed builds, accessibility/sound checks and release review; it is **not** a verified claim that Lifely is superior to BitLife. Full test and signoff details: `docs/1.5.0_CHARACTER_STORIES.md`.
+
+## 1.6.0 — A fun ordinary year
+
+- **Eight playable hobby circuits:** Chess, street basketball, open-mic music, cooking, dance, indie games, photography and community gardening. Each activity has three distinct, original tactical situations with three choices each. Visual cues make the decisions understandable; player skill and the right strategy outweigh random luck.
+- **Competitions and skills:** Practice to develop mastery or compete against two recurring opponents per discipline. There are five amateur-to-legend league levels, independent opponent growth, remembered matches, streaks, championship points, trophies and bounded adult prize money.
+- **Real life connections:** Supportive friends or family can attend sessions and grow closer through shared accomplishments. Music and sports affect relevant world systems; indie game development can help an existing business.
+- **No treadmill:** One game costs one yearly action, the remaining three turns are free. Each discipline has a yearly cooldown and at most two sessions overall per year, so hobbies supplement other lives rather than dominate them.
+- **Persistent design:** Old version-2 save games still work. You can leave a session without locking the game. Descendants keep family trophy history but develop their own skills and friendships.
+- **World-quality benchmarks:** See `docs/COMPETITIVE_QUALITY_SCORECARD.md` for an honest measurement plan. Feature count does not certify that Lifely is more enjoyable than BitLife. Full QA: `docs/1.6.0_HOBBY_LEAGUES.md`.
 
 ## Play and build
 Use Node 22.13+ and npm. Install dependencies, align the Expo versions and run the tests:

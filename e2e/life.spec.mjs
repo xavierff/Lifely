@@ -566,3 +566,89 @@ test('unanswered personal invitations expire without blocking years, and resolve
  await expect(page.getByTestId('story-director-history')).toContainText('unanswered');
  await expect(page.getByTestId('advance-year')).toBeEnabled();
 });
+
+function hobbyPreparedLife(seed,age=19){
+ const s=E.createLife({seed});s.age=age;s.pending=null;s.actions=3;return s;
+}
+test('hobby selection, three tactical rounds and saved mastery are playable in the normal life tab',async({page})=>{
+ const s=hobbyPreparedLife(18001);
+ await page.goto('/');
+ await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);
+ await page.reload();
+ const overview=page.getByTestId('hobby-league-overview');
+ await expect(overview).toContainText('YOUR PLAYABLE HOBBIES');
+ await expect(overview.getByTestId('hobby-tile-chess')).toBeVisible();
+ await overview.getByTestId('hobby-tile-chess').click();
+ await overview.getByTestId('hobby-action-hobby-start-chess-practice').click();
+ const board=page.getByTestId('hobby-circuit-board');
+ await expect(board).toBeVisible();
+ await expect(board).toContainText('ROUND 1 OF 3');
+ await expect(page.getByTestId('advance-year')).toBeDisabled();
+ await board.getByTestId('hobby-choice-1').click();
+ await expect(board).toContainText('ROUND 2 OF 3');
+ await expect(board.getByTestId('hobby-round-feedback')).toBeVisible();
+ await page.reload();
+ await expect(page.getByTestId('hobby-circuit-board')).toContainText('ROUND 2 OF 3');
+ await page.getByTestId('hobby-choice-0').click();
+ await page.getByTestId('hobby-choice-2').click();
+ await expect(page.getByTestId('active-hobby')).toHaveCount(0);
+ await expect(page.getByTestId('hobby-last-result')).toBeVisible();
+ await expect(page.getByTestId('advance-year')).toBeEnabled();
+ await page.reload();
+ await expect(page.getByTestId('hobby-last-result')).toBeVisible();
+ await expect(page.getByTestId('hobby-league-overview')).toContainText('YOUR HOBBY CHRONICLE');
+});
+test('hobby league profile presents evolving rivals, and an eligible contest awards results',async({page})=>{
+ const s=hobbyPreparedLife(18002,26);
+ await page.goto('/');
+ await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);
+ await page.reload();
+ const overview=page.getByTestId('hobby-league-overview');
+ await overview.getByTestId('hobby-tile-streetball').click();
+ await overview.getByTestId('hobby-action-hobby-start-streetball-contest').click();
+ const board=page.getByTestId('hobby-circuit-board');
+ await expect(board).toContainText('LIVE CONTEST');
+ for(const expected of [1,0,2]){
+  const prompt=await board.getByText(/The defender overcommits|A teammate cuts|The opponent is tired/).innerText();
+  const choice=prompt.startsWith('The defender')?1:prompt.startsWith('A teammate')?0:2;
+  await board.getByTestId('hobby-choice-'+choice).click();
+ }
+ await expect(board).toHaveCount(0);
+ await expect(overview.getByTestId('hobby-profile')).toContainText('OPPONENTS WHO KEEP IMPROVING');
+ await expect(overview.getByTestId('hobby-last-result')).toContainText('3/3');
+ await expect(overview).toContainText('TROPHIES');
+});
+test('hobbies fit 320px phones and have touch-friendly tactical choices',async({page})=>{
+ for(const width of [320,375,430]){
+  await page.setViewportSize({width,height:780});
+  const s=hobbyPreparedLife(18200+width);
+  await page.goto('/');
+  await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);
+  await page.reload();
+  const overview=page.getByTestId('hobby-league-overview');
+  await expect(overview).toBeVisible();
+  let rect=await overview.boundingBox();
+  expect(rect.width).toBeLessThanOrEqual(width+1);
+  await overview.getByTestId('hobby-tile-photography').click();
+  await overview.getByTestId('hobby-action-hobby-start-photography-practice').click();
+  const board=page.getByTestId('hobby-circuit-board');
+  rect=await board.boundingBox();expect(rect.width).toBeLessThanOrEqual(width+1);
+  for(const c of await board.getByRole('button').all()){
+   const b=await c.boundingBox();if(b)expect(b.height).toBeGreaterThanOrEqual(44);
+  }
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
+ }
+});
+test('hobby age gates present gardening first and preserve age advancement after abandoning training',async({page})=>{
+ const s=hobbyPreparedLife(18005,6);
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ const overview=page.getByTestId('hobby-league-overview');
+ await overview.getByTestId('hobby-tile-gardening').click();
+ await expect(overview.getByTestId('hobby-action-hobby-start-gardening-practice')).toBeVisible();
+ await expect(overview.getByTestId('hobby-action-hobby-start-gardening-contest')).toHaveCount(0);
+ await overview.getByTestId('hobby-action-hobby-start-gardening-practice').click();
+ await expect(page.getByTestId('active-hobby')).toBeVisible();
+ await page.getByRole('button',{name:'Leave this hobby session'}).click();
+ await expect(page.getByTestId('active-hobby')).toHaveCount(0);
+ await expect(page.getByTestId('advance-year')).toBeEnabled();
+});
