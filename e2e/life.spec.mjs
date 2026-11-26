@@ -914,3 +914,65 @@ test('co-parenting, property and elder care views fit narrow phone screens',asyn
   await expect(page.getByTestId('transition-money-recap')).toBeVisible();
  }
 });
+
+test('regional economy displays five original sectors, six countries and an authored player choice',async({page})=>{
+ let s=E.createLife({name:'Arden',seed:78001});s.age=29;s.cash=50000;s.actions=3;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ const board=page.getByTestId('world-pulse-board');await expect(board).toBeVisible();
+ await expect(page.getByTestId('world-pulse-economy')).toContainText('Innovation & research');
+ await expect(page.getByTestId('world-pulse-rivals')).toContainText('Aster House');
+ await page.getByTestId('pulse-show-countries').click();
+ await expect(page.getByTestId('pulse-country-comparison')).toContainText('Indonesia');
+ await page.getByTestId('pulse-pulse-begin-technology').click();
+ const project=page.getByTestId('active-world-project');
+ await expect(project).toContainText('The prototype that could reshape the district');
+ await expect(project.getByRole('button')).toHaveCount(3);
+ await expect(page.getByTestId('advance-year')).toBeDisabled();
+ await page.getByTestId('pulse-decision-0').click();
+ await expect(project).toHaveCount(0);
+ await expect(page.getByTestId('pulse-project-progress')).toContainText('Chapter 2/3');
+ await page.reload();
+ await expect(page.getByTestId('pulse-project-progress')).toContainText('Chapter 2/3');
+ await expect(page.getByTestId('advance-year')).toBeEnabled();
+});
+test('regional project returns after two years and remembers the exact original sector and rivals',async({page})=>{
+ let s=E.createLife({name:'Blake',seed:78002});s.age=31;s.cash=35000;s.actions=3;
+ s=E.act(s,'pulse:begin:care');s=E.worldPulseDecision(s,1);
+ for(let i=0;i<2;i++){s.pending=null;s=E.ageUp(s);if(s.pending!==null)s=E.resolve(s,0);}
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ const board=page.getByTestId('world-pulse-board');await expect(board).toBeVisible();
+ await expect(page.getByTestId('pulse-project-progress')).toContainText('Chapter 2/3');
+ await page.getByTestId('pulse-pulse-continue').click();
+ const chapter=page.getByTestId('active-world-project');
+ await expect(chapter).toContainText('A difficult allocation');
+ await page.getByTestId('pulse-decision-1').click();
+ await expect(page.getByTestId('pulse-project-progress')).toContainText('Chapter 3/3');
+ await page.reload();await expect(page.getByTestId('pulse-project-progress')).toContainText('Chapter 3/3');
+});
+test('rival collaboration changes real alliance trust and local conditions across a save reload',async({page})=>{
+ let s=E.createLife({name:'Casey',seed:78003});s.age=36;s.cash=12000;s.actions=3;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByTestId('pulse-pulse-collaborate-aster').click();
+ const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('lifely.save.v2')));
+ expect(saved.worldPulse.rivals.find(x=>x.id==='aster').trust).toBe(52);
+ expect(saved.cash).toBe(11650);
+ await expect(page.getByTestId('world-pulse-rivals')).toContainText('Aster House');
+ await page.reload();
+ const restored=await page.evaluate(()=>JSON.parse(localStorage.getItem('lifely.save.v2')));
+ expect(restored.worldPulse.rivals.find(x=>x.id==='aster').history[0].action).toBe('collaboration');
+ expect(E.validate(restored)).toBe(true);
+});
+test('living world board and career outlook remain responsive at 320, 375 and 430px',async({page})=>{
+ for(const width of [320,375,430]){
+  await page.setViewportSize({width,height:740});
+  let s=E.createLife({name:'Lee',seed:78100+width});s.age=26;s.cash=7500;s.actions=3;
+  await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+  const board=page.getByTestId('world-pulse-board');await expect(board).toBeVisible();
+  const rect=await board.boundingBox();expect(rect.width).toBeLessThanOrEqual(width+1);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
+  await page.getByText('Work',{exact:true}).click();
+  await expect(page.getByTestId('world-pulse-career')).toBeVisible();
+  await page.getByText('More',{exact:true}).click();
+  await expect(page.getByTestId('world-pulse-legacy')).toBeVisible();
+ }
+});
