@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {View,Text,Pressable,StyleSheet,Animated,AccessibilityInfo} from 'react-native';
-import {useAudioPlayer} from 'expo-audio';
+import {useAudioPlayer,setAudioModeAsync} from 'expo-audio';
 const C={white:'#F4FAF5',muted:'#BAD0C9',lime:'#D9F4A5',gold:'#F7DAA0',border:'#507869',dark:'#132925',rose:'#F3B7C7',blue:'#A0CFFF'};
 const capped=x=>Math.max(0,Math.min(100,Number(x)||0));
 function Meter({label,value,tint=C.lime}){
@@ -58,6 +58,7 @@ export default function EverydaySceneBoard({view,onChoice,soundEnabled=true}){
  const lastKey=view?.last?view.id+':'+view.last.stage+':'+view.history.length:null;
  const previous=useRef(lastKey);
  useEffect(()=>{
+  setAudioModeAsync({playsInSilentMode:true,shouldPlayInBackground:false}).catch(()=>{});
   AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(()=>{});
   const subscription=AccessibilityInfo.addEventListener?.('reduceMotionChanged',setReduceMotion);
   return()=>subscription?.remove?.();
