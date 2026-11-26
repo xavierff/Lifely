@@ -976,3 +976,70 @@ test('living world board and career outlook remain responsive at 320, 375 and 43
   await expect(page.getByTestId('world-pulse-legacy')).toBeVisible();
  }
 });
+
+test('life focus changes future story preference for free and preserves it after save reload',async({page})=>{
+ let s=E.createLife({name:'Noel',seed:85001});s.age=29;s.cash=10000;s.actions=3;
+ await page.goto('/');
+ await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);
+ await page.reload();
+ const board=page.getByTestId('story-focus-board');
+ await expect(board).toBeVisible();
+ await expect(board).toContainText('Surprise me');
+ await page.getByTestId('flow-change-focus').click();
+ await expect(page.getByTestId('flow-focus-options')).toBeVisible();
+ await page.getByTestId('flow-focus-relationships').click();
+ await expect(board).toContainText('People & family');
+ const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('lifely.save.v2')));
+ expect(saved.actions).toBe(3);
+ expect(saved.flow.focus).toBe('relationships');
+ await page.reload();
+ await expect(page.getByTestId('story-focus-board')).toContainText('People & family');
+});
+test('stress and financial hardship surface valid recommended actions that truly change the character',async({page})=>{
+ let s=E.createLife({name:'Ari',seed:85002});s.age=34;s.cash=1200;s.actions=3;
+ s.stats.stress=86;s.debt=15000;s.annual={salary:8000,balance:-3200};
+ const oldStress=s.stats.stress;
+ await page.goto('/');
+ await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);
+ await page.reload();
+ const tips=page.getByTestId('flow-next-actions');
+ await expect(tips).toBeVisible();
+ await expect(tips).toContainText('Rest');
+ await page.getByTestId('flow-suggestion-rest').click();
+ const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('lifely.save.v2')));
+ expect(stored.stats.stress).toBeLessThan(oldStress);
+ expect(stored.actions).toBe(2);
+ expect(E.validate(stored)).toBe(true);
+});
+test('a real event becomes an immediately visible remembered decision and a continuing story thread',async({page})=>{
+ let s=E.createLife({name:'Mira',seed:85003});s.age=27;s.cash=8500;s.actions=3;s.pending=null;
+ s=E.ageUp(s);expect(E.pending(s)).not.toBe(null);
+ await page.goto('/');
+ await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);
+ await page.reload();
+ await expect(page.getByTestId('life-decision')).toBeVisible();
+ await page.getByTestId('life-decision').getByRole('button').first().click();
+ await expect(page.getByTestId('flow-last-choice')).toBeVisible();
+ await page.getByTestId('flow-show-history').click();
+ await expect(page.getByTestId('flow-story-history')).toBeVisible();
+ await expect(page.getByTestId('flow-story-history')).toContainText('remembered event');
+ await page.reload();
+ await expect(page.getByTestId('flow-last-choice')).toBeVisible();
+});
+test('guided Life board remains legible and choices usable on narrow phones',async({page})=>{
+ for(const width of [320,375,430]){
+  await page.setViewportSize({width,height:730});
+  let s=E.createLife({name:'Luca',seed:85060+width});s.age=32;s.cash=5000;s.actions=3;
+  await page.goto('/');
+  await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);
+  await page.reload();
+  const board=page.getByTestId('story-focus-board');await expect(board).toBeVisible();
+  const bounds=await board.boundingBox();expect(bounds.width).toBeLessThanOrEqual(width+1);
+  await page.getByTestId('flow-change-focus').click();
+  await expect(page.getByTestId('flow-focus-wellbeing')).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
+  await page.getByText('More',{exact:true}).click();
+  await expect(page.getByTestId('flow-life-balance')).toBeVisible();
+  await expect(page.getByTestId('flow-legacy-board')).toBeVisible();
+ }
+});
