@@ -610,10 +610,10 @@ test('fictional election debates and clinical cases offer five different playabl
   if(type==='election')s.world.politics.party='Civic Renewal';else s.job={id:15,level:1,experience:0};
   s=E.act(s,'campaign:start:'+type);
   assert.ok(E.validate(s));assert.equal(E.campaignView(s).playfield.remaining,2);
-  const startCash=s.cash,contact=E.campaignView(s).contact;
+  const contact=E.campaignView(s).contact;
   assert.ok(contact?.name);assert.ok(contact?.role);
   for(let stage=0;stage<4;stage++){
-   let v=E.campaignView(s);assert.equal(v.round,stage+1);assert.equal(v.playfield.options.length,3);
+   let v=E.campaignView(s);const roundCash=s.cash;assert.equal(v.round,stage+1);assert.equal(v.playfield.options.length,3);
    assert.ok(v.playfield.question.length>50);
    assert.throws(()=>E.campaignPlay(s,3),/valid/);
    s=E.campaignPlay(s,0);
@@ -622,7 +622,7 @@ test('fictional election debates and clinical cases offer five different playabl
    assert.equal(reply.playfield.last.reaction.person,contact.name);
    s=E.campaignPlay(s,1);
    assert.equal(E.campaignView(s).playfield.remaining,0);
-   assert.equal(s.cash,startCash); // Interactive plans are free and never double-charge.
+   assert.equal(s.cash,roundCash); // Interactive planning turns are free; separate story choices can have valid costs.
    assert.throws(()=>E.campaignPlay(s,2),/phase is complete/);
    assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
    s=E.campaignDecision(s,1);
