@@ -1303,3 +1303,132 @@ test('old version-2 saves without hobbies remain valid and descendant inherits t
  assert.equal(E.hobbySummary(heir).history.length,0);
  assert.ok(E.hobbyState(heir).hallOfFame.length<=12);
 });
+
+test('personal ambitions offer sixteen original long-term tracks and preserve older saves',()=>{
+ let s=E.createLife({seed:20401});delete s.ambitions;
+ assert.ok(E.validate(s));assert.equal(E.ambitionSummary(s).active,null);
+ assert.equal(E.ambitionTypes.length,16);
+ assert.equal(new Set(E.ambitionTypes.map(x=>x.id)).size,16);
+ assert.equal(E.commands(s).some(c=>c.id.startsWith('ambition:begin:')),false);
+ s.age=12;
+ assert.ok(E.commands(s).find(c=>c.id==='ambition:begin:wellness'));
+ assert.ok(!E.commands(s).find(c=>c.id==='ambition:begin:financial'));
+ assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+});
+test('one personal ambition consumes one action and advances only from actual gameplay',()=>{
+ let s=E.createLife({seed:20402});s.age=15;s.stats.health=72;s.stats.stress=43;
+ const before=E.ambitionSummary(s);
+ assert.equal(before.completed.length,0);
+ s=E.act(s,'ambition:begin:wellness');
+ assert.equal(s.actions,2);
+ assert.equal(E.ambitionSummary(s).active.steps.length,3);
+ assert.equal(E.ambitionSummary(s).active.yearsLeft,6);
+ assert.throws(()=>E.act(s,'ambition:begin:scholar'),/not available/);
+ assert.ok(!E.ambitionSummary(s).active.steps[0].achieved);
+ s=E.act(s,'exercise');s=E.act(s,'exercise');
+ assert.equal(E.ambitionSummary(s).active.steps[0].actual,2);
+ assert.equal(E.ambitionSummary(s).completed.length,0);
+ s.actions=3;
+ const money=s.cash;s=E.act(s,'exercise');
+ assert.equal(E.ambitionSummary(s).active,null);
+ assert.equal(E.ambitionSummary(s).completed[0].id,'wellness');
+ assert.equal(E.ambitionSummary(s).completed[0].steps.length,3);
+ assert.equal(s.cash,money+100);
+ assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+});
+test('personal ambitions measure financial progress relative to commitment, not accumulated earlier wealth',()=>{
+ let s=E.createLife({seed:20403});s.age=30;s.cash=50000;
+ s=E.act(s,'ambition:begin:financial');
+ assert.equal(E.ambitionSummary(s).active.steps[1].actual,0);
+ assert.equal(E.ambitionSummary(s).active.steps[2].target,3000);
+ s=E.act(s,'save:1000');s=E.act(s,'save:1000');
+ assert.equal(E.ambitionSummary(s).active.steps[0].actual,2);
+ assert.equal(E.ambitionSummary(s).completed.length,0);
+ s.actions=3;s.cash+=16000;s=E.act(s,'rest');
+ assert.equal(E.ambitionSummary(s).active,null);
+ assert.equal(E.ambitionSummary(s).completed[0].status,'completed');
+ assert.ok(E.validate(s));
+});
+test('business and career ambitions require an actual business or job, not mere age',()=>{
+ let s=E.createLife({seed:20404});s.age=28;s.cash=500000;
+ assert.ok(!E.commands(s).some(c=>c.id==='ambition:begin:enterprise'));
+ assert.ok(!E.commands(s).some(c=>c.id==='ambition:begin:career'));
+ s=E.act(s,'business:studio');
+ assert.ok(E.commands(s).some(c=>c.id==='ambition:begin:enterprise'));
+ assert.ok(!E.commands(s).some(c=>c.id==='ambition:begin:career'));
+ s=E.act(s,'ambition:begin:enterprise');
+ assert.equal(E.ambitionSummary(s).active.name,'Grow a business worth trusting');
+ assert.ok(E.validate(s));
+});
+test('personal ambition supports a midcourse strategic tradeoff, without free money',()=>{
+ let s=E.createLife({seed:20405});s.age=18;s.cash=100000;s.stats.health=40;s.stats.stress=65;
+ s=E.act(s,'ambition:begin:wellness');
+ assert.equal(E.commands(s).some(c=>c.id==='ambition:turn:bold'),false);
+ for(let i=0;i<2;i++){s.pending=null;s=E.ageUp(s);if(s.pending!==null)s=E.resolve(s,0);}
+ assert.equal(s.age,20);assert.ok(E.validate(s));
+ assert.ok(E.commands(s).some(c=>c.id==='ambition:turn:bold'&&c.enabled));
+ const before=s.cash,stress=s.stats.stress;
+ s=E.act(s,'ambition:turn:bold');
+ assert.equal(s.cash,before-1000);
+ assert.equal(s.stats.stress,Math.min(100,stress+3));
+ assert.equal(E.ambitionSummary(s).active.path,'bold');
+ assert.equal(E.ambitionSummary(s).active.bonus,1700);
+ assert.ok(!E.commands(s).some(c=>c.id.startsWith('ambition:turn:')));
+ assert.ok(E.validate(s));
+});
+test('ignored ambitions expire on the sixth birthday and never stop aging',()=>{
+ let s=E.createLife({seed:20406});s.age=12;s.stats.knowledge=20;s.skills.technical=0;
+ s=E.act(s,'ambition:begin:scholar');
+ assert.ok(E.ambitionSummary(s).active);
+ for(let i=0;i<6;i++){
+  s.pending=null;s=E.ageUp(s);if(s.pending!==null)s=E.resolve(s,0);
+  assert.ok(E.validate(s));
+ }
+ assert.equal(s.age,18);
+ assert.equal(E.ambitionSummary(s).active,null);
+ assert.equal(E.ambitionSummary(s).unfulfilled[0].status,'expired');
+ assert.equal(E.ambitionSummary(s).completed.length,0);
+});
+test('players can change course, with abandoned ambitions archived separately',()=>{
+ let s=E.createLife({seed:20407});s.age=25;
+ s=E.act(s,'ambition:begin:scholar');
+ const earlier=s.actions;s=E.act(s,'ambition:retire');
+ assert.equal(s.actions,earlier-1);
+ assert.equal(E.ambitionSummary(s).active,null);
+ assert.equal(E.ambitionSummary(s).unfulfilled[0].status,'abandoned');
+ assert.equal(E.ambitionSummary(s).completed.length,0);
+ assert.ok(E.commands(s).some(c=>c.id==='ambition:begin:wellness'));
+ assert.ok(E.validate(s));
+});
+test('real hobby sessions advance the goals but no trophy is awarded for practicing alone',()=>{
+ let s=E.createLife({seed:20408});s.age=14;s.stats.health=95;
+ s=E.act(s,'ambition:begin:hobby-explorer');
+ assert.ok(E.ambitionSummary(s).active);
+ s=E.act(s,'hobby:start:chess:practice');
+ for(let i=0;i<3;i++)s=E.hobbyDecision(s,1);
+ assert.ok(E.validate(s));
+ assert.equal(E.ambitionSummary(s).active.steps[0].actual,1);
+ assert.equal(E.ambitionSummary(s).active.steps[2].actual,0);
+ assert.equal(E.ambitionSummary(s).completed.length,0);
+});
+test('completed ambitions become heir history without transferring unfulfilled active goals',()=>{
+ let s=E.createLife({seed:20409});s.age=30;s.cash=30000;s.stats.health=72;s.stats.stress=43;
+ s=E.act(s,'ambition:begin:wellness');
+ for(let i=0;i<3;i++){if(s.actions===0)s.actions=3;s=E.act(s,'exercise');}
+ assert.equal(E.ambitionSummary(s).completed.length,1);
+ s.actions=3;s=E.act(s,'date');s=E.act(s,'child');
+ const child=s.people.find(p=>p.role==='child');assert.ok(child);child.age=22;
+ s.alive=false;s.pending=null;
+ const heir=E.legacy(s,child.id);
+ assert.ok(E.validate(heir));
+ assert.equal(E.ambitionSummary(heir).completed.length,0);
+ assert.equal(E.ambitionSummary(heir).ancestral[0].name,'Build a healthier life');
+ assert.equal(E.ambitionSummary(heir).ancestral[0].sourceLife,s.name);
+});
+test('ambition choices are deterministic, immutable and isolated from unrelated prior actions',()=>{
+ let s=E.createLife({seed:20410});s.age=16;s.stats.health=70;s.stats.stress=45;
+ const a=E.act(s,'ambition:begin:wellness'),b=E.act(s,'ambition:begin:wellness');
+ assert.deepEqual(a,b);assert.equal(s.ambitions,undefined);
+ assert.deepEqual(E.act(a,'exercise'),E.act(b,'exercise'));
+ assert.ok(E.validate(a));
+});
