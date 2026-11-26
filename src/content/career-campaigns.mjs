@@ -1,6 +1,7 @@
 // Lifely 1.0 — authored profession simulations, deterministic offline state.
 // Four distinct steps per profession; results connect to the existing simulation.
 import {initialCareerPlayfield,careerPlayfieldView,careerPlayfieldAct} from './career-playfields.mjs';
+import {ensureCareerSocial,careerContact,careerReaction,scheduleCareerAftermath,careerSocialHistory} from './career-aftermath.mjs';
 // All salaries, election processes and clinical events are fictional abstractions.
 
 export const careerCampaignTypes=[
@@ -108,7 +109,7 @@ export const careerCampaignEligible=(s,type,jobTitle)=>{
  return false;
 };
 export function careerCampaignState(s){return s.careerCampaigns||{active:null,completed:[],lastStarted:{},totals:{},news:[]};}
-export function ensureCareerCampaign(s){s.careerCampaigns??={active:null,completed:[],lastStarted:{},totals:{},news:[]};return s.careerCampaigns;}
+export function ensureCareerCampaign(s){ensureCareerSocial(s);return s.careerCampaigns;}
 export function careerCampaignCommands(s,jobTitle){
  if(!s.alive||s.pending!==null||s.mini||s.world?.network?.conversation||s.careerCampaigns?.active)return [];
  const c=careerCampaignState(s);
@@ -123,6 +124,7 @@ export function campaignBegin(s,type,jobTitle,ctx){
  const active={id:'career-'+type+'-'+s.age+'-'+(c.completed.length+Object.keys(c.lastStarted).length),type,startedAge:s.age,stage:0,quality:40,team:45,reach:20,risk:8,
   spend:def.entry,choices:[],playfield:initialCareerPlayfield(type),stakeholder:rival?.name||null,stakeholderId:rival?.id||null,sector:s.business?.sector||null,
   theme:type==='film'?(w.entertainment?.path||'Film actor'):type==='sports'?(w.sports?.sport||'Athletics'):type==='election'?(w.politics?.party||'Civic campaign'):type==='medical'?(jobTitle||'Medical specialist'):(s.business?.sector||'Company')};
+ active.contact=careerContact(s,active);active.reactions=[];
  c.active=active;ctx.add(s,'Started '+def.title.toLowerCase()+'.','career');return active;
 }
 export function campaignView(s){
@@ -130,7 +132,7 @@ export function campaignView(s){
  const def=careerCampaignTypes.find(t=>t.id===a.type),stage=def?.stages[a.stage];if(!def||!stage)return null;
  return {id:a.id,type:a.type,icon:def.icon,title:def.title,theme:a.theme,subtitle:def.subtitle,round:a.stage+1,total:4,phase:stage.title,prompt:stage.prompt,
   quality:a.quality,team:a.team,reach:a.reach,risk:a.risk,cost:a.spend,stakeholder:a.stakeholder,
-  choices:stage.choices.map((x,i)=>({index:i,label:x.label,detail:x.detail,cost:x.cost,enabled:s.cash>=x.cost})),history:a.choices.slice(),playfield:careerPlayfieldView(s,a)};
+  choices:stage.choices.map((x,i)=>({index:i,label:x.label,detail:x.detail,cost:x.cost,enabled:s.cash>=x.cost})),history:a.choices.slice(),playfield:careerPlayfieldView(s,a),contact:a.contact||null,lastReaction:a.reactions?.at(-1)||null};
 }
 function award(s,a,ctx){
  const def=careerCampaignTypes.find(t=>t.id===a.type),w=s.world,pro=s.profession,rival=a.stakeholderId;
@@ -140,12 +142,12 @@ function award(s,a,ctx){
  const opponent=a.type==='sports'?w.characters?.athletes?.find(p=>p.id===rival)?.form||50:a.type==='election'?w.characters?.politicians?.find(p=>p.id===rival)?.approval||50:50;
  const pressure=a.type==='sports'||a.type==='election'?Math.max(0,opponent-50)*.12:0;
  const p=a.playfield;
-  const interactiveImpact=a.type==='sports'&&p?(p.ours-p.theirs)*2:a.type==='film'&&p?(p.usable-p.retakes)*1.5+(p.coverage||[]).filter(n=>n>0).length*2:a.type==='business'&&p?Math.min(8,p.orders/12):0;
+  const interactiveImpact=a.type==='sports'&&p?(p.ours-p.theirs)*2:a.type==='film'&&p?(p.usable-p.retakes)*1.5+(p.coverage||[]).filter(n=>n>0).length*2:a.type==='business'&&p?Math.min(8,p.orders/12):a.type==='election'&&p?Math.max(-9,Math.min(12,(p.credibility-50)*.12+(p.community-48)*.08+(p.poll-45)*.12)):a.type==='medical'&&p?Math.min(12,(p.safety-48)*.14+(p.consent-42)*.07+(p.coordination-52)*.06):0;
   const rating=clamp(a.quality*.37+a.team*.21+a.reach*.22+skill*.22-a.risk*.19-pressure+interactiveImpact,0,100);
  const chance=Math.max(.08,Math.min(.95,.14+rating*.0083-a.risk*.0007));
  // Played match goals decide non-drawn sports results; a draw uses the existing skill/rating tiebreak.
   const matchDecided=a.type==='sports'&&(p?.plays?.some(x=>x.stage>=2))&&p.ours!==p.theirs;
-  const succeeded=matchDecided?p.ours>p.theirs:ctx.rng(s)<chance;
+  const succeeded=a.type==='medical'&&p?.safety<35?false:matchDecided?p.ours>p.theirs:ctx.rng(s)<chance;
  const grade=succeeded?(rating>=72?'breakthrough':rating>=48?'successful':'close finish'):(rating>=66?'close loss':'setback');
  let gross=0,fee=0,message='';
  if(a.type==='film'){
@@ -167,20 +169,20 @@ function award(s,a,ctx){
   const scoreline=p?.plays?.some(x=>x.stage>=2)?' Tournament score '+p.ours+'–'+p.theirs+(p.ours===p.theirs?' (resolved by a rating tiebreak).':'.'):'';
    message=(succeeded?'The season ended with a competition victory.':'Your rival prevailed this season, leaving a clear rematch to work toward.')+scoreline;
  }else if(a.type==='election'){
-  const p=w.politics;p.party??='Civic Renewal';p.elections++;p.lastElectionAge=s.age;p.campaignFunds=Math.max(0,(p.campaignFunds||0)-Math.min(1500,p.campaignFunds||0));
-  p.approval=clamp(p.approval+(succeeded?Math.round(7+rating/15):-7));
-  if(succeeded){p.wins++;p.office=p.wins>=3?'Regional executive':p.wins===2?'Representative':'Councillor';p.term=4;
+  const pol=w.politics;pol.party??='Civic Renewal';pol.elections++;pol.lastElectionAge=s.age;pol.campaignFunds=Math.max(0,(pol.campaignFunds||0)-Math.min(1500,pol.campaignFunds||0));
+  pol.approval=clamp(pol.approval+(succeeded?Math.round(7+rating/15):-7));
+  if(succeeded){pol.wins++;pol.office=pol.wins>=3?'Regional executive':pol.wins===2?'Representative':'Councillor';pol.term=4;
    if(s.job)s.job=null;ctx.change(s,'reputation',8);
   }else ctx.change(s,'stress',6);
   if(pro?.id==='politics'){pro.attempts=(pro.attempts||0)+1;if(succeeded)pro.wins=(pro.wins||0)+1;pro.metric=clamp(pro.metric+(succeeded?7:-6));}
-  const opponent=w.characters?.politicians?.find(p=>p.id===rival);if(opponent){if(succeeded)opponent.losses++;else opponent.wins++;opponent.approval=clamp(opponent.approval+(succeeded?-5:5));}
-  message=succeeded?'The fictional election returned a mandate for your campaign.':'Your fictional campaign lost; volunteers and residents now expect accountability.';
+  const opponent=w.characters?.politicians?.find(p=>pol.id===rival);if(opponent){if(succeeded)opponent.losses++;else opponent.wins++;opponent.approval=clamp(opponent.approval+(succeeded?-5:5));}
+  message=(succeeded?'The fictional election returned a mandate for your campaign.':'Your fictional campaign lost; volunteers and residents now expect accountability.')+(p?.credibility!==undefined?' Public trust '+pol.credibility+'/100, community confidence '+pol.community+'/100.':'');
  }else if(a.type==='medical'){
   if(succeeded){ctx.change(s,'reputation',6);ctx.change(s,'knowledge',4);ctx.change(s,'kindness',3);if(pro?.id==='doctor'){pro.clients=(pro.clients||0)+1;pro.wins=(pro.wins||0)+1;pro.metric=clamp(pro.metric+7);}
   }else{ctx.change(s,'stress',7);ctx.change(s,'reputation',-4);if(pro?.id==='doctor')pro.metric=clamp(pro.metric-4);}
   if(pro?.id==='doctor')pro.attempts=(pro.attempts||0)+1;
   if(s.job){s.job.experience=clamp((s.job.experience||0)+(succeeded?9:3));ctx.change(s,'performance',succeeded?5:-3);}
-  message=succeeded?'The fictional care team completed a safe, coordinated follow-up.':'The team identified a safety gap and escalated it for supervised review.';
+  message=(succeeded?'The fictional care team completed a safe, coordinated follow-up.':'The team identified a safety gap and escalated it for supervised review.')+(p?.safety!==undefined?' Documentation/safety '+p.safety+'/100, consent '+p.consent+'/100.':'');
  }else if(a.type==='business'){
   const b=s.business;if(b){b.demand??=50;b.competition??=50;b.products??=[];b.quality=clamp(b.quality+(succeeded?Math.round(7+rating/14):-6));b.demand=clamp(b.demand+(succeeded?Math.round(7+rating/11):-4));b.competition=clamp(b.competition+(succeeded?2:4));
    if(succeeded){b.products??=[];if(b.products.length<10)b.products.push('Customer-led launch '+(b.products.length+1));gross=Math.round(Math.max(0,(b.capital||0)*(.08+rating/900)));
@@ -194,7 +196,9 @@ function award(s,a,ctx){
 }
 export function campaignPlay(s,selection,ctx){
  const a=ensureCareerCampaign(s).active;if(!s.alive||!a)throw Error('No career project is active.');
- return careerPlayfieldAct(s,a,selection,ctx);
+ const play=careerPlayfieldAct(s,a,selection,ctx);
+ play.reaction=careerReaction(s,a,{success:play.success,index:selection,source:'play'});
+ return play;
 }
 export function campaignReply(s,selection,ctx){
  const c=ensureCareerCampaign(s),a=c.active,def=careerCampaignTypes.find(t=>t.id===a?.type);if(!s.alive||!a||!def)throw Error('No career project is active.');
@@ -207,12 +211,15 @@ export function campaignReply(s,selection,ctx){
  if(choice.cost)ctx.spend(s,choice.cost);
  a.spend+=choice.cost;a.quality=clamp(a.quality+choice.quality);a.team=clamp(a.team+choice.team);a.reach=clamp(a.reach+choice.reach);a.risk=clamp(a.risk+choice.risk);
  a.choices.push({step:a.stage,index:selection,label:choice.label,cost:choice.cost,age:s.age});
+ careerReaction(s,a,{success:selection!==2,index:selection,source:'story'});
  if(choice.risk>15)ctx.change(s,'stress',4);else if(choice.team>10)ctx.change(s,'social',2);
  a.stage++;
+ if(a.playfield)a.playfield.last=null; // Do not replay stale feedback in the next scene.
  if(a.type==='sports'&&a.stage===2&&a.playfield)a.playfield.fatigue=18; // Recovery before elimination match.
  if(a.stage===4){
   const result=award(s,a,ctx),rec={...a,status:'completed',endedAge:s.age,outcome:result.grade,result};
   c.completed.push(rec);c.completed=c.completed.slice(-50);c.active=null;c.totals[a.type]=(c.totals[a.type]||0)+1;
+   scheduleCareerAftermath(s,a,result);
   c.news.push({age:s.age,type:a.type,message:result.message});c.news=c.news.slice(-25);
   s.world??={};s.world.news??=[];s.world.news.push({age:s.age,text:result.message,domain:'career'});s.world.news=s.world.news.slice(-32);
   ctx.add(s,def.title+': '+result.grade+' ('+result.rating+'/100). '+result.message,'career');
@@ -222,10 +229,10 @@ export function campaignReply(s,selection,ctx){
 }
 export function campaignHistory(s){
  const c=careerCampaignState(s);
- return {completed:c.completed.slice(-12).reverse(),totals:c.totals,news:c.news.slice(-6).reverse(),count:c.completed.length};
+ return {completed:c.completed.slice(-12).reverse(),totals:c.totals,news:c.news.slice(-6).reverse(),count:c.completed.length,...careerSocialHistory(s)};
 }
 export function campaignInheritance(next,previous){
  const parent=previous.careerCampaigns;if(!parent)return next;
- next.careerCampaigns={active:null,lastStarted:{},totals:{},completed:(parent.completed||[]).slice(-8).map(x=>({...x,rememberedFrom:previous.name})),news:(parent.news||[]).slice(-5)};
+ next.careerCampaigns={active:null,lastStarted:{},totals:{},completed:(parent.completed||[]).slice(-8).map(x=>({...x,rememberedFrom:previous.name})),news:(parent.news||[]).slice(-5),reactions:(parent.reactions||[]).slice(-8).map(x=>({...x,rememberedFrom:previous.name})),aftermath:[],contacts:{}};
  return next;
 }

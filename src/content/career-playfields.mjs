@@ -1,4 +1,5 @@
 // Interactive career playfields. Offline, seeded through the engine RNG and compatible with older saves.
+import {initialSpecialPlayfield,specialCareerView,specialCareerAct} from './career-special-playfields.mjs';
 const clamp=(n,lo=0,hi=100)=>Math.max(lo,Math.min(hi,Math.round(n)));
 const OPTIONS={
  sports:[{label:'Attack left wing',note:'Exploit space at the edge',icon:'↖'},{label:'Build through center',note:'Patient passing and control',icon:'↑'},{label:'Break down right wing',note:'Fast overlap and finish',icon:'↗'}],
@@ -9,10 +10,10 @@ export function initialCareerPlayfield(type){
  if(type==='sports')return {ours:0,theirs:0,fatigue:8,trainingHits:0,adjustments:0,plays:[],last:null};
  if(type==='film')return {takes:0,usable:0,retakes:0,coverage:[0,0,0],plays:[],last:null};
  if(type==='business')return {customers:20,orders:0,loyalty:50,trend:[20],plays:[],last:null};
- return null;
+ return initialSpecialPlayfield(type);
 }
 export function careerPlayfieldView(s,a){
- if(!OPTIONS[a.type])return null;
+ if(!OPTIONS[a.type])return specialCareerView(s,a);
  const p=a.playfield||initialCareerPlayfield(a.type);
  const roundPlays=p.plays.filter(x=>x.stage===a.stage);
  const remaining=Math.max(0,2-roundPlays.length);
@@ -29,7 +30,7 @@ export function careerPlayfieldView(s,a){
   hint:'Choose two operating priorities per phase. Sales are projections until the project ends; no extra cash is charged for planning.'};
 }
 export function careerPlayfieldAct(s,a,index,ctx){
- if(!OPTIONS[a.type])throw Error('This career has no interactive playfield.');
+ if(!OPTIONS[a.type])return specialCareerAct(s,a,index,ctx);
  if(!Number.isInteger(index)||index<0||index>2)throw Error('Choose a valid playfield action.');
  a.playfield??=initialCareerPlayfield(a.type);
  const p=a.playfield;

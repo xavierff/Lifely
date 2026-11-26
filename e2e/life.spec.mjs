@@ -293,3 +293,80 @@ test('business dashboard makes planning controls playable without charging cash 
  await expect(board).toContainText('Projected orders');
  await expect(page.getByTestId('playfield-feedback')).toBeVisible();
 });
+
+test('fictional civic debate is playable, shows rival reaction and saves across reload',async({page})=>{
+ let s=E.createLife({seed:3410});s.age=32;s.cash=90000;s.world.politics.party='Civic Renewal';s.stats.reputation=90;s.stats.social=90;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByRole('tab',{name:'Work'}).click();await page.getByRole('button',{name:/Run an election campaign/}).click();
+ const panel=page.getByTestId('career-project'),board=page.getByTestId('interactive-election-debate');
+ await expect(board).toContainText('FICTIONAL CIVIC DEBATE');
+ await expect(board).toContainText('Credibility');await expect(board).toContainText('Community trust');
+ await expect(page.getByTestId('career-npc')).toBeVisible();
+ await page.getByTestId('election-action-0').click();
+ await expect(page.getByTestId('playfield-feedback')).toBeVisible();
+ await page.reload();
+ await expect(board).toBeVisible();
+ await expect(page.getByTestId('career-npc')).toContainText('Civic opponent');
+ await page.getByTestId('election-action-1').click();
+ await expect(page.getByTestId('election-action-2')).toBeDisabled();
+ await expect(panel).toContainText('Now make the story decision');
+});
+test('fictional clinical case makes consent and safety visible with preserved action outcomes',async({page})=>{
+ let s=E.createLife({seed:3411});s.age=32;s.cash=90000;s.job={id:15,level:1,experience:0};s.stats.knowledge=92;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByRole('tab',{name:'Work'}).click();await page.getByRole('button',{name:/Coordinate a clinical case/}).click();
+ const board=page.getByTestId('interactive-medical-case');
+ await expect(board).toContainText('CLINICAL CASE BOARD');await expect(board).toContainText('Informed consent');
+ await expect(board).toContainText('Safety & records');await expect(board).toContainText('PATIENT-CARE HANDOFF');
+ await page.getByTestId('medical-action-0').click();
+ await expect(page.getByTestId('career-npc')).toBeVisible();
+ await expect(page.getByTestId('playfield-feedback')).toBeVisible();
+ await page.reload();await expect(board).toContainText('Documented reviews: 1');
+});
+test('career sounds can be muted persistently without affecting saved progress',async({page})=>{
+ let s=E.createLife({seed:3412});s.age=32;s.cash=90000;s.world.entertainment.path='Film director';
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByRole('tab',{name:'Work'}).click();await page.getByRole('button',{name:/Produce a film/}).click();
+ const sound=page.getByRole('button',{name:/Sound effects: On/});await expect(sound).toBeVisible();
+ await sound.click();await expect(page.getByRole('button',{name:/Sound effects: Off/})).toBeVisible();
+ await page.reload();await expect(page.getByRole('button',{name:/Sound effects: Off/})).toBeVisible();
+ await page.getByTestId('film-action-1').click();await expect(page.getByTestId('playfield-feedback')).toBeVisible();
+});
+test('medical and civic boards remain touch friendly on narrow screens',async({page})=>{
+ for(const width of [320,375,430]){
+  await page.setViewportSize({width,height:760});
+  for(const type of ['election','medical']){
+   let s=E.createLife({seed:3430+width+(type==='election'?1:2)});s.age=31;s.cash=90000;
+   if(type==='election')s.world.politics.party='Civic Renewal';else s.job={id:15,level:1,experience:0};
+   await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+   await page.getByRole('tab',{name:'Work'}).click();
+   await page.getByRole('button',{name:type==='election'?/Run an election campaign/:/Coordinate a clinical case/}).click();
+   const board=page.getByTestId(type==='election'?'interactive-election-debate':'interactive-medical-case');
+   const bounds=await board.boundingBox();expect(bounds.width).toBeLessThanOrEqual(width);
+   for(const button of await board.getByRole('button').all()){const rect=await button.boundingBox();if(rect)expect(rect.height).toBeGreaterThanOrEqual(44);}
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
+  }
+ }
+});
+test('multi-year career consequences appear in Work and Life after a completed project',async({page})=>{
+ let s=E.createLife({seed:3431});s.age=35;s.cash=90000;s.world.entertainment.path='Film director';
+ s=E.act(s,'campaign:start:film');for(let i=0;i<4;i++)s=E.campaignDecision(s,1);
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await expect(page.getByTestId('career-life-update')).toBeVisible();
+ await page.getByRole('tab',{name:'Work'}).click();
+ const panel=page.getByTestId('career-aftermath');await expect(panel).toContainText('CAREER CONSEQUENCES');
+ await expect(panel).toContainText('Next chapter at age 36');
+ await expect(page.getByTestId('career-reactions')).toBeVisible();
+});
+
+test('a returning career story offers a visible playable response years later',async({page})=>{
+ let s=E.createLife({seed:3601});s.age=35;s.cash=85000;s.world.sports.sport='Football';
+ s=E.act(s,'campaign:start:sports');for(let i=0;i<4;i++)s=E.campaignDecision(s,1);
+ s=E.ageUp(s);s.pending=null;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByRole('tab',{name:'Work'}).click();
+ await expect(page.getByText('Career follow-up decisions')).toBeVisible();
+ await page.getByRole('button',{name:/Prepare for the rematch/}).click();
+ await expect(page.getByText('Career follow-up decisions')).toHaveCount(0);
+ await expect(page.getByTestId('career-reactions')).toContainText('Career follow-up');
+});

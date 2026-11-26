@@ -602,3 +602,139 @@ test('career play actions remain deterministic and do not silently spend money',
  assert.equal(s.careerCampaigns.active.playfield.plays.length,0);
  assert.equal(E.campaignView(first).playfield.plays,1);
 });
+
+test('fictional election debates and clinical cases offer five different playable professions',()=>{
+ assert.equal(E.careerCampaignTypes.length,5);
+ for(const type of ['election','medical']){
+  let s=E.createLife({seed:type==='election'?3101:3102});s.age=31;s.cash=100000;s.stats.knowledge=92;s.stats.social=85;s.stats.reputation=85;
+  if(type==='election')s.world.politics.party='Civic Renewal';else s.job={id:15,level:1,experience:0};
+  s=E.act(s,'campaign:start:'+type);
+  assert.ok(E.validate(s));assert.equal(E.campaignView(s).playfield.remaining,2);
+  const contact=E.campaignView(s).contact;
+  assert.ok(contact?.name);assert.ok(contact?.role);
+  for(let stage=0;stage<4;stage++){
+   let v=E.campaignView(s);const roundCash=s.cash;assert.equal(v.round,stage+1);assert.equal(v.playfield.options.length,3);
+   assert.ok(v.playfield.question.length>50);
+   assert.throws(()=>E.campaignPlay(s,3),/valid/);
+   s=E.campaignPlay(s,0);
+   const reply=E.campaignView(s);
+   assert.ok(reply.playfield.last.reaction);assert.equal(reply.playfield.remaining,1);
+   assert.equal(reply.playfield.last.reaction.person,contact.name);
+   s=E.campaignPlay(s,1);
+   assert.equal(E.campaignView(s).playfield.remaining,0);
+   assert.equal(s.cash,roundCash); // Interactive planning turns are free; separate story choices can have valid costs.
+   assert.throws(()=>E.campaignPlay(s,2),/phase is complete/);
+   assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+   s=E.campaignDecision(s,1);
+   assert.ok(E.validate(s));
+  }
+  const complete=E.campaignHistory(s);
+  assert.equal(complete.completed[0].playfield.plays.length,8);
+  assert.equal(complete.reactions.length,12);
+  assert.equal(complete.aftermath.length,1);
+  assert.equal(complete.aftermath[0].nextAge,32);
+  assert.equal(E.campaignView(s),null);
+  assert.ok(Number.isFinite(complete.completed[0].result.rating));
+ }
+});
+test('tactical civic answers change trust and rival reaction across saved scenes',()=>{
+ let s=E.createLife({seed:3103});s.age=34;s.cash=80000;s.world.politics.party='Civic Renewal';
+ s=E.act(s,'campaign:start:election');
+ const contact=E.campaignView(s).contact;
+ const rival=s.world.characters.politicians.find(x=>x.id===contact.id);
+ assert.ok(rival);
+ const oldRespect=rival.respect;
+ s=E.campaignPlay(s,0);
+ const reaction=E.campaignView(s).lastReaction;
+ assert.equal(reaction.person,contact.name);
+ assert.ok(s.world.characters.politicians.find(x=>x.id===contact.id).respect>oldRespect);
+ assert.ok(s.careerCampaigns.reactions.length>0);
+ const replay=E.campaignPlay(s,1);assert.ok(E.validate(replay));
+ assert.equal(s.careerCampaigns.active.playfield.plays.length,1);
+ let migration=E.createLife({seed:3104});migration.age=30;migration.cash=50000;migration.job={id:15,level:1,experience:0};
+ migration=E.act(migration,'campaign:start:medical');delete migration.careerCampaigns.active.playfield;
+ assert.equal(E.campaignView(migration).playfield.safety,48);
+ migration=E.campaignPlay(migration,0);assert.ok(E.validate(migration));
+});
+test('medical decisions emphasize consent and supervision without clinical diagnosis',()=>{
+ let s=E.createLife({seed:3105});s.age=30;s.cash=70000;s.job={id:15,level:1,experience:0};s.stats.knowledge=90;s.skills.technical=95;
+ s=E.act(s,'campaign:start:medical');
+ const initial=E.campaignView(s).playfield;
+ assert.equal(initial.caseId,'CASE A-17');assert.ok(initial.question.includes('records'));
+ s=E.campaignPlay(s,0);
+ assert.ok(E.campaignView(s).playfield.safety>initial.safety);
+ s=E.campaignDecision(s,1);
+ s=E.campaignPlay(s,0);
+ assert.ok(E.campaignView(s).playfield.consent>initial.consent);
+ assert.ok(E.validate(s));
+});
+test('career project aftermath returns at years one, three and five without blocking unrelated life events',()=>{
+ for(const type of ['sports','film','election','medical','business']){
+  let s=E.createLife({seed:3200+['sports','film','election','medical','business'].indexOf(type)});
+  s.age=35;s.cash=100000;s.stats.knowledge=96;s.stats.health=96;s.stats.creativity=92;s.stats.reputation=94;
+  if(type==='sports')s.world.sports.sport='Tennis';
+  if(type==='film')s.world.entertainment.path='Film director';
+  if(type==='election')s.world.politics.party='Civic Renewal';
+  if(type==='medical')s.job={id:15,level:1,experience:0};
+  if(type==='business')s.business={sector:'shop',capital:20000,quality:68,demand:50};
+  s=E.act(s,'campaign:start:'+type);
+  for(let stage=0;stage<4;stage++)s=E.campaignDecision(s,1);
+  let life=E.campaignHistory(s).aftermath[0];
+  assert.equal(life.startedAge,35);assert.equal(life.nextAge,36);
+  const log=[];
+  for(let i=0;i<5;i++){
+   s.pending=null;s=E.ageUp(s);assert.ok(E.validate(s));
+   life=E.campaignHistory(s).aftermath[0];log.push(life.step);
+  }
+  assert.deepEqual(log,[1,1,2,2,3]);
+  assert.deepEqual(life.chapterLog.map(x=>x.age),[36,38,40]);
+  assert.equal(life.status,'completed');assert.equal(life.nextAge,null);
+  assert.ok(life.chapterLog.every(x=>x.message.length>65));
+ }
+});
+test('heirs inherit a completed career record but not unfinished ancestor followups',()=>{
+ let s=E.createLife({seed:3301});s.age=35;s.cash=100000;s.world.entertainment.path='Film director';
+ s=E.act(s,'campaign:start:film');for(let stage=0;stage<4;stage++)s=E.campaignDecision(s,1);
+ s.actions=3;s=E.act(s,'date');s=E.act(s,'child');
+ const child=s.people.find(x=>x.role==='child');child.age=20;
+ s.alive=false;s.pending=null;
+ const heir=E.legacy(s,child.id);
+ assert.ok(E.validate(heir));
+ assert.equal(E.campaignHistory(heir).completed.length,1);
+ assert.equal(E.campaignHistory(heir).aftermath.length,0);
+ assert.ok(E.campaignHistory(heir).reactions.length>0);
+});
+
+test('career aftermath chapters offer optional choices without trapping the player',()=>{
+ let s=E.createLife({seed:3501});s.age=33;s.cash=100000;s.world.sports.sport='Football';
+ s=E.act(s,'campaign:start:sports');
+ for(let i=0;i<4;i++)s=E.campaignDecision(s,1);
+ s=E.ageUp(s);assert.equal(s.age,34);assert.ok(E.validate(s));
+ const thread=E.campaignHistory(s).aftermath[0];
+ assert.equal(thread.step,1);assert.equal(thread.pending.age,34);
+ // Story events are resolved before optional career actions appear.
+ if(s.pending!==null){assert.equal(E.commands(s).some(x=>x.id.startsWith('careerfollow:')),false);s=E.resolve(s,1);}
+ const opts=E.commands(s).filter(x=>x.id.startsWith('careerfollow:'));
+ assert.equal(opts.length,2);
+ const before=s.actions,money=s.cash;
+ s=E.act(s,opts[0].id);
+ assert.equal(s.actions,before-1);assert.equal(s.cash,money);
+ assert.equal(E.campaignHistory(s).aftermath[0].pending.response,0);
+ assert.equal(E.commands(s).some(x=>x.id.startsWith('careerfollow:')),false);
+ assert.ok(E.validate(s));
+ assert.throws(()=>E.act(s,opts[1].id),/not available/);
+});
+test('unanswered followups never block aging and new conversations replace old pending actions',()=>{
+ let s=E.createLife({seed:3502});s.age=31;s.cash=100000;s.world.entertainment.path='Film actor';
+ s=E.act(s,'campaign:start:film');for(let i=0;i<4;i++)s=E.campaignDecision(s,1);
+ for(let i=0;i<5;i++){s.pending=null;s=E.ageUp(s);assert.ok(E.validate(s));}
+ const t=E.campaignHistory(s).aftermath[0];
+ assert.equal(t.step,3);assert.equal(t.status,'completed');
+ assert.equal(t.pending.age,36);assert.equal(t.pending.response,null);
+ s.pending=null;
+ const options=E.commands(s).filter(x=>x.id.startsWith('careerfollow:'));
+ assert.equal(options.length,2); // Optional final response remains available this year.
+ s=E.act(s,options[1].id);
+ assert.equal(E.campaignHistory(s).aftermath[0].pending.response,1);
+ assert.ok(E.validate(s));
+});
