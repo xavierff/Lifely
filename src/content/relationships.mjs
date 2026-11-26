@@ -118,7 +118,7 @@ const idKey=s=>String(s.lifeId||s.name||"unknown");
 const hashPick=(s,key,len)=>hash(idKey(s)+":"+key)%len;
 export function conversationPeople(s){
  const c=s.world?.characters||{},p=(s.people||[]).filter(a=>a.alive).map(a=>({id:"person-"+a.id,name:a.name,kind:"person",role:a.role,age:a.age,source:a}));
- const actors=[...(c.athletes||[]).map(a=>({...a,kind:"athlete"})),...(c.politicians||[]).map(a=>({...a,kind:"politician"})),...(c.agents||[]).map(a=>({...a,kind:"agent"}))];
+ const actors=[...(c.athletes||[]).map(a=>({...a,kind:"athlete"})),...(c.politicians||[]).map(a=>({...a,kind:"politician"})),...(c.agents||[]).map(a=>({...a,kind:"agent"})),...(s.world?.autonomy?.alumni||[]).map(a=>({...a,kind:"alumni",role:"Former classmate"}))];
  return [...p,...actors];
 }
 const findPerson=(s,id)=>conversationPeople(s).find(p=>p.id===id);
@@ -173,7 +173,8 @@ function changeBond(s,id,amount,ctx){
  const p=findPerson(s,id);if(!p)return;
  if(p.kind==="person"){const original=s.people.find(a=>a.id===Number(id.slice(7)));if(original)ctx.bond(s,original,amount,"A meaningful conversation");}
  else{const obj=s.world.characters?.athletes?.find(a=>a.id===id)||s.world.characters?.politicians?.find(a=>a.id===id)||s.world.characters?.agents?.find(a=>a.id===id);
-  if(obj){if(obj.trust!==undefined)obj.trust=bound(obj.trust+amount);if(obj.respect!==undefined)obj.respect=bound(obj.respect+amount);if(obj.rivalry!==undefined)obj.rivalry=bound(obj.rivalry-Math.round(amount*.7));}}
+  if(obj){if(obj.trust!==undefined)obj.trust=bound(obj.trust+amount);if(obj.respect!==undefined)obj.respect=bound(obj.respect+amount);if(obj.rivalry!==undefined)obj.rivalry=bound(obj.rivalry-Math.round(amount*.7));}
+   const alumni=s.world?.autonomy?.alumni?.find(a=>a.id===id);if(alumni){alumni.trust=bound(alumni.trust+amount);alumni.rivalry=bound(alumni.rivalry-Math.round(amount*.7));}}
 }
 export function replyDialogue(s,index,ctx){
  const n=ensureNetwork(s),d=n.conversation;
@@ -237,6 +238,7 @@ export function relationshipYear(s,ctx){
     else if(node.kind==="athlete"){const athlete=s.world.characters?.athletes?.find(p=>p.id===id);if(athlete)athlete.form=bound(athlete.form+(upbeat?2:-4));}
     else if(node.kind==="politician"){const politician=s.world.characters?.politicians?.find(p=>p.id===id);if(politician)politician.approval=bound(politician.approval+(upbeat?3:-5));}
     else if(node.kind==="agent"){const agent=s.world.characters?.agents?.find(p=>p.id===id);if(agent)agent.network=bound(agent.network+(upbeat?3:-5));}
+     else if(node.kind==="alumni"){const alum=s.world.autonomy?.alumni?.find(p=>p.id===id);if(alum){alum.trust=bound(alum.trust+(upbeat?3:-4));alum.rivalry=bound(alum.rivalry+(upbeat?-2:5));}}
    }
    const name1=findPerson(s,e.a)?.name||"A former friend",name2=findPerson(s,e.b)?.name||"someone";
    let label=e.status==="allies"?"formed a lasting alliance":e.status==="friends"?"became close friends":e.status==="betrayed"?"suffered a betrayal":"grew apart";
