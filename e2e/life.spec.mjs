@@ -828,7 +828,7 @@ test('household cash reserves move money without changing net worth and persist 
 });
 test('a family education fund belongs to the selected child and shows actual talent',async({page})=>{
  let s=E.createLife({name:'Zara',seed:68002});s.age=35;s.cash=20000;
- s=E.act(s,'child');const id=s.people.find(p=>p.role==='child').id;
+ s=E.act(s,'date');s=E.act(s,'child');const id=s.people.find(p=>p.role==='child').id;
  s.people.find(p=>p.id===id).age=10;s.actions=3;
  await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);
  await page.reload();await page.getByText('Money',{exact:true}).click();
