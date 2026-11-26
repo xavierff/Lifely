@@ -64,6 +64,7 @@ function snapshotStep(s,goal,step,worth){
  if(kind==='audience')current=s.audience||0;
  if(kind==='business')current=s.business?.[key]||0;
  if(kind==='family')current=(s.people||[]).filter(p=>p.alive&&(p.role==='partner'||p.role==='child')).length;
+ if(kind==='hobbyMastery'||kind==='cash'||kind==='audience')need=key;
  const achieved=kind==='lowStat'?current<=target:current>=need;
  const progress=kind==='lowStat'?clamp((100-Math.max(0,current-target))*1.3):clamp(current/Math.max(1,need)*100);
  out=kind==='lowStat'?'Current '+current+' · target ≤'+target:
