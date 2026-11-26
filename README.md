@@ -64,6 +64,21 @@ This is a **development candidate**. Success requires real-world playtesting, si
 - **Persistent design:** Old version-2 save games still work. You can leave a session without locking the game. Descendants keep family trophy history but develop their own skills and friendships.
 - **World-quality benchmarks:** See `docs/COMPETITIVE_QUALITY_SCORECARD.md` for an honest measurement plan. Feature count does not certify that Lifely is more enjoyable than BitLife. Full QA: `docs/1.6.0_HOBBY_LEAGUES.md`.
 
+## Lifely 1.7.0 — Personal Ambitions (build 17)
+
+**Six-year personal ambitions** replace passive life-goal checklists with sixteen optional, individually authored campaigns. Choose a mission in the **Life** screen, see three objective milestones, and fulfill them using real simulated activities. This system connects the existing work, social, finance, hobby, travel, business, and entertainment features without forcing the player down any one path.
+
+- The 16 ambitions are grouped around healthy habits, scholarship, friendships, community, hobbies, creativity, career progression, financial security, entrepreneurship, exploration, family, mediation, resilience, mentorship, championships, and a creative audience. Goals appear at appropriate ages and with real prerequisites (e.g., owning a business).
+- Every campaign has three independently measurable milestones and a six-year deadline. Counts start **when the player commits**; achievements, money and hobby victories from earlier years do not count as new progress.
+- After two years, an optional strategic turning point provides three different trade-offs: adopt a sustainable pace, invest a real $1,000 and accept stress for greater reward, or work with a trusted companion. Completing or missing a campaign has an actual, saved outcome.
+- The responsive ambition board displays progress with accessible labels, recommended campaigns, and a concise personal chronicle. Ancestral achievements survive succession as family history without inheriting unfulfilled obligations.
+- Data is local and deterministic. Older version-2 saves do not require conversion. Ambition histories and active milestones have bounded storage and validation.
+- No in-app purchasing, server, external dependency, or release submission was added.
+
+**Release boundary:** CI is not device QA. Before store submission, verify long-term engagement and reward balance through human playtests, old-save migrations on physical devices, sound/accessibility, and signed builds. Never claim Lifely exceeds BitLife from features alone.
+
+See `docs/1.7.0_PERSONAL_AMBITIONS.md` for QA and a comparative quality rubric.
+
 ## Play and build
 Use Node 22.13+ and npm. Install dependencies, align the Expo versions and run the tests:
 ```sh
