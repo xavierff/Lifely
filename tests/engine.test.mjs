@@ -851,3 +851,136 @@ test('old saves and heirs do not inherit active everyday obligations',()=>{
  assert.equal(E.everydayView(heir),null);
  assert.equal(E.everydayHistory(heir).completed.length,1);
 });
+
+function prepareGraduatingCohort(seed){
+ let s=E.createLife({seed});s.age=17;s.actions=3;s.pending=null;
+ s=E.act(s,'scene:start:school');
+ const first=E.everydayView(s).personName;
+ for(const i of [0,1,2])s=E.sceneChoice(s,i);
+ assert.ok(E.validate(s));
+ s.pending=null;s=E.ageUp(s);
+ assert.equal(s.age,18);assert.ok(E.validate(s));
+ return {s,first};
+}
+test('school cohort has four distinct people who can become adult alumni without losing earlier results',()=>{
+ let s=E.createLife({seed:6101});s.age=12;s.actions=3;s.pending=null;
+ s=E.act(s,'scene:start:school');
+ const first=E.everydayView(s).personName;
+ for(const i of [0,1,2])s=E.sceneChoice(s,i);
+ assert.equal(E.everydayHistory(s).classmates.length,4);
+ assert.equal(new Set(E.everydayHistory(s).classmates.map(x=>x.name)).size,4);
+ s.age=13;s.actions=3;s.pending=null;
+ s=E.act(s,'scene:start:school');
+ assert.notEqual(E.everydayView(s).personName,first);
+ for(const i of [0,1,2])s=E.sceneChoice(s,i);
+ assert.equal(E.everydayHistory(s).schoolResults.length,2);
+ assert.ok(E.validate(s));
+ s.age=17;s.actions=3;s.pending=null;
+ s=E.ageUp(s);
+ const alumni=E.autonomyView(s).alumni;
+ assert.equal(alumni.length,4);
+ assert.ok(alumni.some(x=>x.name===first));
+ assert.ok(alumni.every(x=>x.age===18&&x.id.startsWith('alum-')));
+ assert.ok(E.conversationPeople(s).some(p=>p.id===alumni[0].id));
+ assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+});
+test('alumni form autonomous lifelong social links and influence the existing relationship graph',()=>{
+ let {s}=prepareGraduatingCohort(6102);
+ assert.equal(E.autonomyView(s).alumni.length,4);
+ const arcs=E.autonomyView(s).opportunities;
+ assert.ok(arcs.length>=1&&arcs[0].dueAge===19);
+ for(let i=0;i<12;i++){s.pending=null;s=E.ageUp(s);assert.ok(E.validate(s));}
+ const state=E.autonomyView(s);
+ assert.ok(state.links.length>=3);
+ assert.ok(state.links.every(x=>x.years>=1));
+ assert.ok(s.world.network.edges.some(x=>x.a.startsWith('alum-')||x.b.startsWith('alum-')));
+ assert.ok(state.news.length>0);
+ assert.ok(state.alumni.some(x=>x.careerLevel>0||x.location==='another city'));
+});
+test('autonomous partner relationships emerge from compatible adult classmates without player interaction',()=>{
+ let {s}=prepareGraduatingCohort(6103);
+ for(const p of s.world.autonomy.alumni){p.trust=94;p.rivalry=4;p.preference=1;}
+ for(let i=0;i<11;i++){s.pending=null;s=E.ageUp(s);assert.ok(E.validate(s));}
+ const links=E.autonomyView(s).links;
+ assert.ok(links.length>=3);
+ assert.ok(links.some(x=>x.status==='partners'||x.history.some(h=>h.status==='partners')),'Expected a recorded friendship-to-partnership transition');
+ assert.ok(links.every(x=>x.trust>=0&&x.trust<=100));
+});
+test('player can reconnect, compete or partner professionally with an adult classmate once a year',()=>{
+ let {s}=prepareGraduatingCohort(6104);s.pending=null;
+ const id=E.autonomyView(s).alumni[0].id;
+ const choices=E.commands(s).filter(x=>x.id.startsWith('autonomy:alumni:'+id+':'));
+ assert.equal(choices.length,3);assert.ok(choices.some(x=>x.enabled));
+ const oldActions=s.actions,oldNet=E.worth(s);
+ s=E.act(s,choices.find(x=>x.id.endsWith(':reconnect')).id);
+ assert.equal(s.actions,oldActions-1);
+ assert.equal(E.worth(s),oldNet);
+ assert.equal(E.autonomyView(s).alumni[0].lastInteractionAge,18);
+ assert.equal(E.commands(s).filter(x=>x.id.startsWith('autonomy:alumni:'+id+':')).length,0);
+ assert.ok(E.validate(s));
+ s.pending=null;s=E.ageUp(s);s.pending=null;
+ const p=s.world.autonomy.alumni[0];p.trust=100;
+ const collab=E.commands(s).find(x=>x.id==='autonomy:alumni:'+id+':collaborate');
+ assert.ok(collab.enabled);
+ s=E.act(s,collab.id);assert.ok(E.validate(s));
+ assert.ok(s.world.autonomy.alumni[0].collaborations===1);
+});
+test('major autonomous event creates playable opportunities after one, three and five years',()=>{
+ let {s}=prepareGraduatingCohort(6105);
+ const original=E.autonomyView(s).opportunities.find(x=>x.startedAge===18);
+ assert.ok(original);assert.equal(original.dueAge,19);
+ const seen=[];
+ for(const [age,option] of [[19,0],[21,1],[23,0]]){
+  while(s.age<age){s.pending=null;s=E.ageUp(s);assert.ok(E.validate(s));}
+  s.pending=null;
+  const arc=E.autonomyView(s).opportunities.find(x=>x.id===original.id);
+  assert.ok(arc?.ready);assert.equal(arc.stage,seen.length);
+  const cmds=E.commands(s).filter(x=>x.id.startsWith('autonomy:arc:'+arc.id+':'));
+  assert.equal(cmds.length,3);assert.ok(cmds[option].enabled);
+  const cash=s.cash;
+  s=E.act(s,cmds[option].id);seen.push(age);
+  assert.equal(s.actions,2);assert.equal(s.cash,cash);
+  assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+ }
+ const completed=E.autonomyView(s).completed.find(x=>x.id===original.id);
+ assert.ok(completed);assert.equal(completed.history.length,3);
+ assert.deepEqual(completed.history.map(h=>h.age),[19,21,23]);
+ assert.equal(E.autonomyView(s).opportunities.some(x=>x.id===original.id),false);
+ assert.ok(E.autonomyView(s).news.some(x=>/concluded/.test(x.text)));
+});
+test('skipping future invitations never traps age progression and records the missed chapters',()=>{
+ let {s}=prepareGraduatingCohort(6106);
+ const original=E.autonomyView(s).opportunities.find(x=>x.startedAge===18);
+ for(let i=0;i<7;i++){s.pending=null;s=E.ageUp(s);assert.ok(E.validate(s));}
+ const completed=E.autonomyView(s).completed.find(x=>x.id===original.id);
+ assert.ok(completed);
+ assert.deepEqual(completed.history.map(h=>h.outcome),['unanswered','unanswered','unanswered']);
+ assert.ok(completed.endedAge>=24);
+});
+test('alumni are ordinary persistent conversation partners in the original social dialogue system',()=>{
+ let {s}=prepareGraduatingCohort(6107);s.pending=null;
+ const alum=E.autonomyView(s).alumni[0];
+ const cmd=E.commands(s).find(x=>x.id==='dialogue:open:'+alum.id);
+ assert.ok(cmd.enabled);
+ s=E.act(s,cmd.id);assert.equal(E.dialogueView(s).speaker,alum.name);
+ for(const i of [0,1,0]){s=E.dialogueReply(s,i);assert.ok(E.validate(s));}
+ assert.equal(E.dialogueView(s),null);
+ assert.ok(E.networkView(s).dialogues.some(x=>x.id===alum.id));
+});
+test('new autonomous world is optional in old version-2 saves and heir inheritance preserves only legacy history',()=>{
+ let s=E.createLife({seed:6108});delete s.world.autonomy;
+ assert.ok(E.validate(s));assert.equal(E.autonomyView(s).alumni.length,0);
+ s.age=17;s.pending=null;s=E.act(s,'scene:start:school');
+ for(const i of [0,1,2])s=E.sceneChoice(s,i);
+ s.pending=null;s=E.ageUp(s);
+ for(let i=0;i<6;i++){s.pending=null;s=E.ageUp(s);}
+ const oldHistory=E.autonomyView(s).completed.length;
+ s.actions=3;s.pending=null;s=E.act(s,'date');s=E.act(s,'child');
+ const child=s.people.find(x=>x.role==='child');child.age=20;
+ s.alive=false;s.pending=null;
+ const heir=E.legacy(s,child.id);
+ assert.ok(E.validate(heir));
+ assert.equal(E.autonomyView(heir).alumni.length,0);
+ assert.equal(E.autonomyView(heir).opportunities.length,0);
+ assert.ok(E.autonomyState(heir).archive.length>=oldHistory);
+});
