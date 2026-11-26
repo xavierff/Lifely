@@ -1,6 +1,6 @@
 # Lifely
 
-An original, offline, choice-driven life simulator. The repository contains a **1.3.0 interactive-life development candidate (build 12)**. This is not an App Store-ready or externally verified BitLife-parity release.
+An original, offline, choice-driven life simulator. The repository contains a **1.4.0 autonomous-world development candidate (build 14)**. This is not an App Store-ready or externally verified BitLife-parity release.
 
 ## 1.1.0 interactive career playfields (build 10 candidate)
 
@@ -29,6 +29,17 @@ All values and scenarios are fictionalized. No live election data, medical diagn
 - **Offline UI polish:** 44+ point tap targets, three distinct graphical playfields, responsive panels, narrated *text* feedback, screen-reader descriptions, and original bundled UI sound effects with the existing sound toggle and reduced-motion support.
 
 This is an **original playable development candidate**, not a verified BitLife competitor winner or signed App Store/Play Store build. See `docs/1.3.0_EVERYDAY_SCENES.md` for test and release gates.
+
+## 1.4.0 — The world doesn't wait for you
+
+- **Four-character student circles:** classroom projects now rotate through a roster of distinct classmates. Each carries their own trust, rivalry, preferences, career path and school memories, instead of repeatedly replacing one anonymous peer.
+- **Lifelong alumni:** former classmates graduate with you at age 18 and remain available as named adult social contacts. They can be challenged, supported or recruited as collaborators. Adult friends also work with the existing three-stage dialogue network.
+- **Autonomous friendships and breakups:** classmates develop friendships, professional or romantic partnerships, rivalries, estrangements and sometimes families independently. Their relationships evolve each year, including unexpected changes; they gain career milestones and sometimes relocate.
+- **Three-chapter world opportunities:** former classmates and friends start original fictional story arcs about reunions, creative work, community projects, enterprises, competitions and mentorship. The story returns at simulated ages +1, +3 and +5. Each chapter gives three different actions. The outcomes affect existing stats, NPC trust, careers, business demand or social reputation. Ignoring the invitation never blocks ageing.
+- **Living-world UI:** the People screen now includes a visually navigable alumni roster, connection statuses and an interactive, multiyear opportunity timeline. The Life screen surfaces ready story chapters, and the Work screen shows the full school cohort.
+- **Continuity:** no new account or server; the game stays offline. Earlier version-2 saves continue to load. Future generations inherit a chronicle of important family and world history, not unfinished obligations or unrelated personal NPCs.
+
+This is an **original development build**, not verified BitLife parity. Avoid representing generated relationship outcomes as real people or actual life predictions. A native signed release and physical-device accessibility/audio tests remain outstanding. See `docs/1.4.0_AUTONOMOUS_WORLD.md` for QA.
 
 ## Play and build
 Use Node 22.13+ and npm. Install dependencies, align the Expo versions and run the tests:

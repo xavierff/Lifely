@@ -60,7 +60,7 @@ const phases={
  school:['Project kickoff','A surprising setback','The showcase'],
  court:['Case review','Witness examination','Closing statements']
 };
-export const emptyEverydayScenes=()=>({active:null,completed:[],callbacks:[],used:{},classmate:null});
+export const emptyEverydayScenes=()=>({active:null,completed:[],callbacks:[],used:{},classmate:null,classmates:[]});
 export function everydayState(s){return s.everydayScenes||emptyEverydayScenes();}
 const ensure=s=>(s.everydayScenes??=emptyEverydayScenes());
 const pick=(ctx,s,size)=>Math.floor(ctx.rng(s)*size);
@@ -83,11 +83,20 @@ export function beginEveryday(s,id,ctx){
  if(type==='bond'){person=human(s,Number(parts[3]));if(!person)throw Error('Relationship unavailable.');}
  else if(type==='school'){
   track=tracks[pick(ctx,s,tracks.length)];
-  if(!e.classmate)e.classmate={id:'school-peer',name:peerNames[pick(ctx,s,peerNames.length)],trust:50,rivalry:15,preference:pick(ctx,s,3),history:[]};
-  person=e.classmate;
+  if(!Array.isArray(e.classmates)||!e.classmates.length){
+   const prior=e.classmate;
+   const first=prior?Math.max(0,peerNames.indexOf(prior.name)):pick(ctx,s,peerNames.length);
+   e.classmates=Array.from({length:4},(_,i)=>{
+    if(i===0&&prior)return {...prior,id:'alum-0',history:(prior.history||[]).slice(-16),joinedAge:prior.joinedAge??s.age};
+    return {id:'alum-'+i,name:peerNames[(first+i*3)%peerNames.length],trust:clamp(46+pick(ctx,s,14)),rivalry:clamp(11+pick(ctx,s,20)),
+     preference:pick(ctx,s,3),joinedAge:s.age,history:[]};
+   });
+  }
+  person=e.classmates[(e.schoolResults?.length||0)%e.classmates.length];
+  e.classmate=person;
  }else if(type!=='court')throw Error('Unknown everyday scene.');
  const preference=type==='bond'?(person.world?.personality==='Restless'?1:person.world?.personality==='Pragmatic'?2:pick(ctx,s,3)):type==='school'?person.preference:pick(ctx,s,3);
- const a={id:'scene-'+type+'-'+s.age+'-'+(e.completed.length+1),type,startedAge:s.age,stage:0,personId:type==='bond'?person.id:null,personName:person?.name||'Court officials',personRole:type==='bond'?person.role:type==='school'?'Classmate':'Fictional court',track:track?.name||null,trackFocus:track?.focus||null,preference,twist:pick(ctx,s,twists.length),momentum:48,trust:50,composure:58,evidence:42,tension:14,choices:[],last:null,score:0};
+ const a={id:'scene-'+type+'-'+s.age+'-'+(e.completed.length+1),type,startedAge:s.age,stage:0,personId:type==='bond'?person.id:null,classmateId:type==='school'?person.id:null,personName:person?.name||'Court officials',personRole:type==='bond'?person.role:type==='school'?'Classmate':'Fictional court',track:track?.name||null,trackFocus:track?.focus||null,preference,twist:pick(ctx,s,twists.length),momentum:48,trust:50,composure:58,evidence:42,tension:14,choices:[],last:null,score:0};
  e.active=a;e.used[type==='bond'?'bond-'+person.id:type]=s.age;
  ctx.add(s,'Started '+(type==='school'?'a school showcase':type==='bond'?'a meaningful day with '+a.personName:'a fictional courtroom hearing')+'.','activity');
  return a;
@@ -146,7 +155,7 @@ export function replyEveryday(s,index,ctx){
   if(p){ctx.bond(s,p,succeeded?(fitted?7:3):-4,'Interactive relationship memory');if(p.world){p.world.trust=clamp(p.world.trust+(succeeded?4:-5));p.world.rivalry=clamp(p.world.rivalry+(succeeded?-2:5));}}
   ctx.change(s,succeeded?'happiness':'stress',succeeded?2:3);
  }else if(a.type==='school'){
-  const p=e.classmate;if(p){p.trust=clamp(p.trust+(succeeded?5:-5));p.rivalry=clamp(p.rivalry+(succeeded?-2:6));}
+  const p=e.classmates?.find(x=>x.id===a.classmateId)||e.classmate;if(p){p.trust=clamp(p.trust+(succeeded?5:-5));p.rivalry=clamp(p.rivalry+(succeeded?-2:6));}
   ctx.change(s,succeeded?'confidence':'stress',succeeded?2:3);
  }else ctx.change(s,succeeded?'confidence':'stress',succeeded?2:3);
  const reaction=a.personName+(succeeded?(fitted?' notices you understood what mattered.':' appreciates the effort, though the outcome surprised them.'):' reacts unexpectedly and asks you to reconsider your approach.');
@@ -167,7 +176,8 @@ export function replyEveryday(s,index,ctx){
   ctx.change(s,'knowledge',grade==='breakthrough'?4:1);
   if(grade==='breakthrough'&&s.club)s.club.level=Math.min(5,s.club.level+1);
   // Each school year changes the classmate's expectations; last year's best tactic may not work again.
-  if(e.classmate){e.classmate.preference=(e.classmate.preference+1+a.twist%3)%3;e.classmate.history.push({age:s.age,track:a.track,grade});e.classmate.history=e.classmate.history.slice(-16);}
+  const graduatingPeer=e.classmates?.find(x=>x.id===a.classmateId)||e.classmate;
+  if(graduatingPeer){graduatingPeer.preference=(graduatingPeer.preference+1+a.twist%3)%3;graduatingPeer.history??=[];graduatingPeer.history.push({age:s.age,track:a.track,grade});graduatingPeer.history=graduatingPeer.history.slice(-16);}
  }else{
   const preparation=clamp((a.evidence+a.composure+a.momentum)/3+Math.min(10,a.score));
   ctx.hearing(s,preparation);
@@ -176,7 +186,7 @@ export function replyEveryday(s,index,ctx){
  }
  e.completed.push(record);e.completed=e.completed.slice(-45);e.active=null;
  if(a.type==='bond'||a.type==='school'){
-  e.callbacks.push({id:'callback-'+a.id,title:a.type==='bond'?'The day '+a.personName+' remembered':'The '+a.track+' reunion',type:a.type,startedAge:s.age,dueAge:s.age+(a.type==='school'?1:2),personId:a.personId,personName:a.personName,grade,status:'scheduled'});
+  e.callbacks.push({id:'callback-'+a.id,title:a.type==='bond'?'The day '+a.personName+' remembered':'The '+a.track+' reunion',type:a.type,startedAge:s.age,dueAge:s.age+(a.type==='school'?1:2),personId:a.personId,classmateId:a.classmateId,personName:a.personName,grade,status:'scheduled'});
   e.callbacks=e.callbacks.slice(-24);
  }
  ctx.add(s,(a.type==='court'?'Fictional courtroom concluded: '+record.verdict:a.type==='school'?a.track+' ended with '+grade:'Relationship day with '+a.personName+' ended with '+grade)+'.','milestone');
@@ -187,7 +197,7 @@ export function everydayYear(s,ctx){
  for(const cb of e.callbacks){
   if(cb.status==='scheduled'&&s.age>=cb.dueAge){
    cb.status=s.age===cb.dueAge?'open':'expired';
-   const p=cb.type==='bond'?human(s,cb.personId):e.classmate;
+   const p=cb.type==='bond'?human(s,cb.personId):(e.classmates?.find(x=>x.id===cb.classmateId)||e.classmate);
    if(!p||(!p.alive&&cb.type==='bond')){cb.status='expired';continue;}
    cb.message=cb.type==='bond'?
     cb.personName+' brings up your conversation from age '+cb.startedAge+'. They have their own interpretation of what happened.':
@@ -207,12 +217,12 @@ export function everydayCallback(s,id,ctx){
  if(cb.type==='bond'){
   const p=human(s,cb.personId);
   if(p){ctx.bond(s,p,index===0?7:-2,'A remembered life decision');if(p.world)p.world.trust=clamp(p.world.trust+(index===0?5:-3));memory(p,s.age,index===0?'We reconnected after a long period apart.':'We agreed to maintain separate boundaries.');}
- }else if(e.classmate){e.classmate.trust=clamp(e.classmate.trust+(index===0?7:-2));ctx.change(s,index===0?'knowledge':'stress',index===0?3:-2);}
+ }else {const peer=e.classmates?.find(x=>x.id===cb.classmateId)||e.classmate;if(peer){peer.trust=clamp(peer.trust+(index===0?7:-2));ctx.change(s,index===0?'knowledge':'stress',index===0?3:-2);}}
  ctx.add(s,(index===0?'Reconnected with ':'Kept a respectful distance from ')+cb.personName+' after a story from age '+cb.startedAge+'.','people');
  return cb;
 }
 export function everydayHistory(s){
- const e=everydayState(s);return {active:e.active,completed:(e.completed||[]).slice(-16).reverse(),callbacks:(e.callbacks||[]).slice(-12).reverse(),schoolResults:(e.schoolResults||[]).slice(-12).reverse(),classmate:e.classmate};
+ const e=everydayState(s);return {active:e.active,completed:(e.completed||[]).slice(-16).reverse(),callbacks:(e.callbacks||[]).slice(-12).reverse(),schoolResults:(e.schoolResults||[]).slice(-12).reverse(),classmate:e.classmate,classmates:(e.classmates||[]).slice()};
 }
 export function inheritEveryday(next,previous){
  const e=previous.everydayScenes;if(!e)return next;
