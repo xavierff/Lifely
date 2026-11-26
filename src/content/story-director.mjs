@@ -162,7 +162,16 @@ export function storyDirectorYear(s,ctx){
  const d=ensure(s);
  // Clear stale offers without blocking the clock.
  for(const e of d.queue.filter(x=>s.age-x.age>1)){
-  e.status='expired';d.completed.push({...e,outcome:'unanswered',endedAge:s.age});d.queue=d.queue.filter(x=>x.id!==e.id);
+  e.status='expired';
+  const independent=ctx.rng(s)<.52?'resolved the disagreement without you':'grew further apart while you stayed away';
+  e.independentResolution=e.firstName+' and '+e.secondName+' '+independent+'.';
+  const repair=independent.startsWith('resolved');
+  npcInfluence(s,e.firstId,repair?2:-3,repair?-1:4,e.independentResolution,ctx);
+  npcInfluence(s,e.secondId,repair?2:-3,repair?-1:4,e.independentResolution,ctx);
+  d.completed.push({...e,outcome:'unanswered',endedAge:s.age});
+  d.queue=d.queue.filter(x=>x.id!==e.id);
+  d.news.push({age:s.age,text:e.independentResolution,kind:'independent'});
+  ctx.add(s,e.independentResolution,'people');
  }
  for(const echo of d.echoes){
   if(echo.status!=='scheduled'||s.age<echo.dueAge)continue;
@@ -235,12 +244,19 @@ export function storyDirectorReply(s,index,ctx){
  e.trust=clamp(e.trust+(success?8:-6)+(tactic==='care'?4:tactic==='bold'?-3:0));
  e.tension=clamp(e.tension+(success?-5:10)+tradeoff);
  e.clarity=clamp(e.clarity+(tactic==='truth'?(success?12:4):success?4:-2));
- const message=success?e.firstName+' recognizes the effort, but '+e.secondName+' has their own view.':
-  e.secondName+' is not persuaded; a detail you missed changes the conversation.';
+ const reaction=success?(tactic==='bold'?e.firstName+' likes your conviction, but '+e.secondName+' worries you rushed.':
+   tactic==='care'?e.secondName+' feels heard, while '+e.firstName+' wonders if you are avoiding the issue.':
+   'Both people appreciate the clarity, even if the truth is uncomfortable.'):
+   tactic==='bold'?e.secondName+' is upset that you pushed too quickly.':
+   tactic==='care'?e.firstName+' thinks you missed an important practical issue.':
+   e.secondName+' questions the evidence you presented.';
+ const message=reaction;
  e.last={phase:e.phase,index,tactic,choice:choice[0],success,chance,preference,feedback:message};
  e.choices.push({...e.last});
- npcInfluence(s,e.firstId,success?3:-3,success?-2:4,choice[0]+' in '+e.title,ctx);
- npcInfluence(s,e.secondId,success?2:-2,success?-1:3,'The group navigated '+e.title,ctx);
+ const firstDelta=tactic==='bold'?(success?7:-4):tactic==='care'?(success?3:-2):(success?4:-3);
+ const secondDelta=tactic==='bold'?(success?-3:-6):tactic==='care'?(success?7:-1):(success?3:-3);
+ npcInfluence(s,e.firstId,firstDelta,firstDelta>=0?-2:4,choice[0]+' in '+e.title,ctx);
+ npcInfluence(s,e.secondId,secondDelta,secondDelta>=0?-2:4,'The group navigated '+e.title,ctx);
  clampStat(s,success?'social':'stress',success?2:3,ctx);
  if(tactic==='truth')clampStat(s,'knowledge',success?2:1,ctx);
  if(tactic==='care')clampStat(s,'kindness',1,ctx);
