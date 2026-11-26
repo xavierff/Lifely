@@ -64,6 +64,19 @@ This is a **development candidate**. Success requires real-world playtesting, si
 - **Persistent design:** Old version-2 save games still work. You can leave a session without locking the game. Descendants keep family trophy history but develop their own skills and friendships.
 - **World-quality benchmarks:** See `docs/COMPETITIVE_QUALITY_SCORECARD.md` for an honest measurement plan. Feature count does not certify that Lifely is more enjoyable than BitLife. Full QA: `docs/1.6.0_HOBBY_LEAGUES.md`.
 
+## Lifely 1.10.0 — Household Economy & Care (build 20)
+
+**Household money is no longer just a single annual expense.** Families can earmark existing cash for emergencies and individual children's education, choose long-term spending priorities, negotiate an optional financial agreement with a partner, choose how care responsibilities are shared and repair sibling rivalries. All transfers are real in-game accounting: an action cannot create money by moving it between accounts.
+
+- Real emergency and education funds count toward net worth once, rather than appearing as a reward. Spending a child's education fund really reduces net worth and improves that child's abilities.
+- Partner contributions are transferred directly from independently simulated NPC savings and are not taxed as newly earned salary; partners do not automatically share finances without the player's agreement.
+- Annual spending priorities can improve children's learning, reduce expenses or protect family wellbeing. Responsibilities add or reduce costs and stress. All actual effects appear on the Money dashboard and annual financial record.
+- Mediation is available only for existing sibling disputes and changes real sibling rivalry and cooperation; limited to once per year per pair.
+- During succession, children keep funds earmarked for them. The general estate is distributed separately; the selected heir and siblings are not paid the same reserves twice. The next generation inherits financial history, not its parent's household controls.
+- All systems work offline; old version-2 saves remain valid. Engine and Playwright tests cover genuine cash transfers, balancing, household decisions, reserved assets, inheritance fairness, regressions and responsive mobile widths.
+
+**Still required:** signed native builds, physical-device QA, extended playtests, economy balancing and independent comparisons before any claim that Lifely surpasses BitLife. See `docs/1.10.0_HOUSEHOLD_ECONOMY.md`.
+
 ## Lifely 1.9.0 — Family Dynasty Stories (build 19)
 
 **Original family storylines with real, intergenerational consequences.** Twelve authored themes and 36 chapters make marriage, parenting, sibling bonds, elder care, reconciliation and family identity develop over years instead of resetting each age.

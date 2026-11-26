@@ -1729,3 +1729,161 @@ test('reject corrupt family state but continue validating old saves',()=>{
  assert.equal(E.validate(wrong),false);
  assert.ok(E.validate(s));
 });
+
+function householdSetup(seed=67001){
+ let s=E.createLife({seed});s.age=38;s.cash=120000;
+ s=E.act(s,'date');s=E.act(s,'child');s=E.act(s,'child');s.actions=3;
+ const children=s.people.filter(p=>p.role==='child');
+ children[0].age=9;children[1].age=16;
+ return s;
+}
+function settleHouseholdYear(s){
+ s.pending=null;
+ const n=E.ageUp(s);return n.pending===null?n:E.resolve(n,0);
+}
+test('household economy is optional for old v2 saves and starts with zero protected assets',()=>{
+ let s=E.createLife({seed:67002});
+ assert.equal(E.householdAssets(s),0);
+ assert.equal(E.householdSummary(s).emergency,0);
+ assert.ok(E.validate(s));
+ delete s.household;assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+ assert.equal(E.commands(s).some(x=>x.id.startsWith('household:')),false);
+ s.age=18;
+ assert.ok(E.commands(s).some(x=>x.id==='household:priority:saving'));
+});
+test('reserve deposits and withdrawals move real money, preserve net worth and do not mint assets',()=>{
+ let s=householdSetup(67003);
+ const worth=E.worth(s),cash=s.cash;
+ s=E.act(s,'household:reserve:deposit:1500');
+ assert.equal(s.cash,cash-1500);
+ assert.equal(E.householdAssets(s),1500);
+ assert.equal(E.worth(s),worth);
+ s=E.act(s,'household:reserve:withdraw:500');
+ assert.equal(s.cash,cash-1000);
+ assert.equal(E.householdSummary(s).emergency,1000);
+ assert.equal(E.worth(s),worth);
+ assert.throws(()=>E.act(s,'household:reserve:withdraw:1500'),/not available/i);
+ for(let i=0;i<25;i++){
+  s.actions=3;s=E.act(s,'household:reserve:deposit:500');
+  s=E.act(s,'household:reserve:withdraw:500');
+ }
+ assert.equal(E.worth(s),worth);
+ assert.ok(s.household.ledger.length<=32);
+ assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+});
+test('child education savings are earmarked until a real expense, boosting child talent once per year',()=>{
+ let s=householdSetup(67004);
+ const child=s.people.find(p=>p.role==='child'),cash=s.cash,worth=E.worth(s),talent=child.world.talent;
+ s=E.act(s,'household:education:deposit:'+child.id+':1500');
+ assert.equal(s.cash,cash-1500);assert.equal(E.worth(s),worth);
+ assert.equal(E.householdSummary(s).children.find(p=>p.id===child.id).amount,1500);
+ s=E.act(s,'household:education:use:'+child.id+':1000');
+ assert.equal(s.household.education[child.id],500);
+ assert.equal(E.worth(s),worth-1000);
+ assert.equal(s.people.find(p=>p.id===child.id).world.talent,talent+5);
+ assert.ok(!E.commands(s).some(c=>c.id==='household:education:use:'+child.id+':1000'&&c.enabled));
+ assert.ok(E.validate(s));
+});
+test('partner contributions are transfers from independently simulated savings, not imaginary income',()=>{
+ let s=householdSetup(67005);
+ const partner=s.people.find(p=>p.role==='partner');partner.world.cash=20000;partner.world.trust=82;
+ const baseline=settleHouseholdYear(s);
+ const agreed=E.act(s,'household:agreement:shared');
+ const shared=settleHouseholdYear(agreed);
+ const transferred=shared.annual.partnerContribution;
+ assert.ok(transferred>0&&transferred<=1600);
+ const oldPartner=baseline.people.find(p=>p.id===partner.id).world.cash;
+ const newPartner=shared.people.find(p=>p.id===partner.id).world.cash;
+ assert.equal(oldPartner-newPartner,transferred);
+ assert.equal(shared.annual.balance-baseline.annual.balance,transferred);
+ assert.equal(shared.annual.householdExpenseChange,0);
+ assert.equal(shared.household.annual.at(-1).contribution,transferred);
+ assert.ok(E.validate(shared));
+});
+test('saving and learning plans change actual annual costs and children's progress',()=>{
+ let s=householdSetup(67006);
+ const child=s.people.find(p=>p.role==='child');const before=child.world.talent;
+ const saving=settleHouseholdYear(E.act(s,'household:priority:saving'));
+ const learning=settleHouseholdYear(E.act(s,'household:priority:learning'));
+ assert.ok(saving.annual.householdExpenseChange<0);
+ assert.ok(learning.annual.householdExpenseChange>0);
+ assert.ok(learning.annual.expenses>saving.annual.expenses);
+ assert.equal(learning.household.annual.at(-1).educationBoosts,2);
+ assert.equal(learning.people.find(p=>p.id===child.id).world.talent-saving.people.find(p=>p.id===child.id).world.talent,2);
+ assert.ok(E.validate(learning)&&E.validate(saving));
+ assert.ok(learning.stats.stress<=100);
+});
+test('household responsibilities affect yearly costs or stress with real partner trust consequences',()=>{
+ let s=householdSetup(67007);
+ const solo=settleHouseholdYear(E.act(s,'household:duties:solo'));
+ const outsourced=settleHouseholdYear(E.act(s,'household:duties:outsource'));
+ assert.equal(solo.annual.householdExpenseChange,0);
+ assert.ok(outsourced.annual.householdExpenseChange>0);
+ assert.ok(outsourced.annual.expenses>solo.annual.expenses);
+ assert.ok(solo.stats.stress>=outsourced.stats.stress);
+ assert.ok(E.validate(solo)&&E.validate(outsourced));
+});
+test('sibling mediation reduces a real preexisting rivalry and cannot be spammed in one year',()=>{
+ let s=householdSetup(67008);const children=s.people.filter(p=>p.role==='child');
+ let cmd=E.commands(s).find(x=>x.id.startsWith('family:begin:siblings-and-space:'));
+ assert.ok(cmd);
+ s=E.act(s,cmd.id);s=E.familyDecision(s,2);
+ const link=Object.values(s.familyStories.siblingLinks)[0];link.rivalry=61;
+ const id='household:mediate:'+link.ids.join('-');
+ assert.ok(E.commands(s).some(x=>x.id===id&&x.enabled));
+ const first=link.rivalry,bond=children[0].bond;
+ s=E.act(s,id);
+ assert.equal(s.familyStories.siblingLinks[link.ids.join('-')].rivalry,first-12);
+ assert.ok(s.people.find(p=>p.id===children[0].id).bond>bond-12);
+ assert.ok(!E.commands(s).some(x=>x.id===id&&x.enabled));
+ assert.ok(E.validate(s));
+});
+test('living children keep their designated education funds while estate shares are distributed only once',()=>{
+ let s=householdSetup(67009);
+ const [a,b]=s.people.filter(p=>p.role==='child');
+ s=E.act(s,'household:education:deposit:'+a.id+':1500');
+ s=E.act(s,'household:education:deposit:'+b.id+':500');
+ const estate=E.worth(s),aCash=a.world.cash,bCash=b.world.cash;
+ s.alive=false;s.pending=null;
+ const heir=E.legacy(s,a.id);
+ assert.ok(E.validate(heir));
+ assert.equal(heir.cash,estate-500+aCash);
+ assert.equal(heir.people.find(p=>p.id===b.id).world.cash,bCash+500);
+ assert.equal(E.householdAssets(heir),0,'all protected money was distributed exactly once');
+ assert.equal(E.householdSummary(heir).generationNotes.length,1);
+});
+test('preferred heir and reserved child funds are accounted for separately, including nonpreferred heirs',()=>{
+ let s=householdSetup(67010);
+ const [a,b]=s.people.filter(p=>p.role==='child');
+ s=E.act(s,'household:education:deposit:'+a.id+':1500');
+ s=E.act(s,'household:education:deposit:'+b.id+':500');
+ s.world.dynasty.heirId=b.id;
+ const total=E.worth(s),general=total-2000,aCash=a.world.cash,bCash=b.world.cash;
+ s.alive=false;s.pending=null;
+ const heir=E.legacy(s,a.id);
+ assert.ok(E.validate(heir));
+ assert.equal(heir.cash,Math.round(general*.4)+1500+aCash);
+ assert.equal(heir.people.find(p=>p.id===b.id).world.cash,bCash+500+general-Math.round(general*.4));
+});
+test('household state is validated and legacy compatibility survives inactive or missing finances',()=>{
+ let s=householdSetup(67011);
+ s=E.act(s,'household:reserve:deposit:500');
+ assert.ok(E.validate(s));
+ const wrong=JSON.parse(JSON.stringify(s));wrong.household.emergency=-1;assert.equal(E.validate(wrong),false);
+ const wrong2=JSON.parse(JSON.stringify(s));wrong2.household.education[4]=-500;assert.equal(E.validate(wrong2),false);
+ const wrong3=JSON.parse(JSON.stringify(s));wrong3.household.priority='printing-money';assert.equal(E.validate(wrong3),false);
+ delete s.household;assert.ok(E.validate(s));
+});
+test('independent partners, minors, job activity and household actions retain normal command locking',()=>{
+ let s=E.createLife({seed:67012});
+ assert.ok(!E.commands(s).some(x=>x.id.startsWith('household:')));
+ s.age=20;s.cash=2000;
+ assert.ok(!E.commands(s).some(x=>x.id.startsWith('household:agreement:')));
+ const before=s.cash;
+ s=E.act(s,'household:reserve:deposit:1500');
+ assert.equal(s.cash,before-1500);
+ s.actions=0;
+ assert.ok(!E.commands(s).some(x=>x.id.startsWith('household:reserve:')&&x.enabled));
+ assert.throws(()=>E.act(s,'household:reserve:deposit:500'),/not available/i);
+ assert.ok(E.validate(s));
+});

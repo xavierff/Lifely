@@ -808,3 +808,51 @@ test('parenting and sibling interaction boards fit narrow phones without overflo
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
  }
 });
+
+test('household cash reserves move money without changing net worth and persist after reload',async({page})=>{
+ let s=E.createLife({name:'Nora',seed:68001});s.age=32;s.cash=32000;
+ const worth=E.worth(s);
+ await page.goto('/');
+ await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);
+ await page.reload();await page.getByText('Money',{exact:true}).click();
+ const board=page.getByTestId('household-board');
+ await expect(board).toBeVisible();
+ await page.getByTestId('household-household-reserve-deposit-1500').click();
+ await expect(page.getByTestId('household-financial-snapshot')).toContainText('$1,500');
+ await expect(page.getByText('Net worth').first()).toBeVisible();
+ await page.reload();await page.getByText('Money',{exact:true}).click();
+ await expect(page.getByTestId('household-financial-snapshot')).toContainText('$1,500');
+ const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('lifely.save.v2')));
+ expect(E.worth(saved)).toBe(worth);
+ expect(saved.cash).toBe(30500);
+});
+test('a family education fund belongs to the selected child and shows actual talent',async({page})=>{
+ let s=E.createLife({name:'Zara',seed:68002});s.age=35;s.cash=20000;
+ s=E.act(s,'child');const id=s.people.find(p=>p.role==='child').id;
+ s.people.find(p=>p.id===id).age=10;s.actions=3;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);
+ await page.reload();await page.getByText('Money',{exact:true}).click();
+ await expect(page.getByTestId('household-education-funds')).toBeVisible();
+ await page.getByTestId('household-household-education-deposit-'+id+'-1500').click();
+ await expect(page.getByTestId('household-education-funds')).toContainText('$1,500');
+ await page.reload();await page.getByText('Money',{exact:true}).click();
+ await page.getByTestId('household-household-education-use-'+id+'-1000').click();
+ const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('lifely.save.v2')));
+ expect(stored.household.education[id]).toBe(500);
+ expect(E.validate(stored)).toBe(true);
+});
+test('household planner and financial dashboard remain legible on 320, 375 and 430px screens',async({page})=>{
+ for(const width of [320,375,430]){
+  await page.setViewportSize({width,height:740});
+  let s=E.createLife({name:'Jules',seed:68030+width});s.age=31;s.cash=50000;
+  s=E.act(s,'date');s=E.act(s,'child');const c=s.people.find(p=>p.role==='child');c.age=11;
+  await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);
+  await page.reload();await page.getByText('Money',{exact:true}).click();
+  const board=page.getByTestId('household-board');await expect(board).toBeVisible();
+  const rect=await board.boundingBox();
+  expect(rect.width).toBeLessThanOrEqual(width+1);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
+  await page.getByText('People',{exact:true}).click();
+  await expect(page.getByTestId('household-family-recap')).toBeVisible();
+ }
+});
