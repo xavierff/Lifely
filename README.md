@@ -1,6 +1,6 @@
 # Lifely
 
-An original, offline, choice-driven life simulator. The repository contains a **1.4.0 autonomous-world development candidate (build 14)**. This is not an App Store-ready or externally verified BitLife-parity release.
+An original, offline, choice-driven life simulator. The repository contains a **1.5.0 character-story development candidate (build 15)**. This is not an App Store-ready or externally verified BitLife-parity release.
 
 ## 1.1.0 interactive career playfields (build 10 candidate)
 
@@ -40,6 +40,20 @@ This is an **original playable development candidate**, not a verified BitLife c
 - **Continuity:** no new account or server; the game stays offline. Earlier version-2 saves continue to load. Future generations inherit a chronicle of important family and world history, not unfinished obligations or unrelated personal NPCs.
 
 This is an **original development build**, not verified BitLife parity. Avoid representing generated relationship outcomes as real people or actual life predictions. A native signed release and physical-device accessibility/audio tests remain outstanding. See `docs/1.4.0_AUTONOMOUS_WORLD.md` for QA.
+
+## 1.5.0 — Character stories that respond to you
+
+The new **Life Director** is an original, offline social drama system designed to improve the ordinary years between career and financial milestones.
+
+- **Eight individually written conflicts** about remembered promises, rumors, family expectations, workplace credit, loyalty, financial favors, mentoring and rivalries. Each has three distinct situations and nine authored response choices.
+- **Actual cast and context:** Drama draws named parents, friends, former classmates and professional contacts from the active save; work, business, personality stats, existing NPC trust, rivalry and recent themes influence selection and outcomes.
+- **Two-person social stages:** A new compact board displays the people involved, trust, clarity, tension, difficult decisions and individual reactions. The three rounds happen within one yearly activity, without artificial additional time or action costs.
+- **Tradeoffs and evolving motivations:** Listening, investigating and taking bold action all have benefits and risks. Character responses adapt to earlier phases, current relationship pressure and a seeded world.
+- **Consequences are real:** Depending on the conflict, decisions can change family bonds, character trust and rivalry, emotional wellbeing, job performance, professional success, business demand and reputation. A concluded story can generate a second, non-blocking effect two simulated years later.
+- **Readable continuity:** The Life tab surfaces new invitations and approaching reminders; People keeps an outcome journal and progress summary. Stories are optional and expire gracefully rather than preventing the player from aging.
+- **More reasons to replay:** New "Trusted mediator" and "Story of a lifetime" achievements reward long-term investment in people. Older version-2 saves remain valid; descendants inherit only concluded story history.
+
+This is a **development candidate**. Success requires real-world playtesting, signed builds, accessibility/sound checks and release review; it is **not** a verified claim that Lifely is superior to BitLife. Full test and signoff details: `docs/1.5.0_CHARACTER_STORIES.md`.
 
 ## Play and build
 Use Node 22.13+ and npm. Install dependencies, align the Expo versions and run the tests:

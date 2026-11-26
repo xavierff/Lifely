@@ -514,3 +514,55 @@ test('autonomous social world stays within narrow phone viewports',async({page})
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
  }
 });
+
+function episodeReadyLife(seed){
+ let s=E.createLife({seed});s.age=14;s.pending=null;s=E.ageUp(s);s.pending=null;
+ return s;
+}
+test('a named, choice-driven social story is playable with persistent round-by-round saving',async({page})=>{
+ const s=episodeReadyLife(16001);
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await expect(page.getByTestId('new-character-episodes')).toContainText('A STORY ONLY YOU CAN DECIDE');
+ await page.getByRole('button',{name:/Enter the story:/}).first().click();
+ await expect(page.getByTestId('character-episode')).toBeVisible();
+ await expect(page.getByTestId('character-story-board')).toContainText('SCENE 1/3');
+ await expect(page.getByTestId('advance-year')).toBeDisabled();
+ await page.getByTestId('episode-choice-0').click();
+ await expect(page.getByTestId('character-story-board')).toContainText('SCENE 2/3');
+ await expect(page.getByTestId('episode-reaction')).toBeVisible();
+ await page.reload();
+ await expect(page.getByTestId('character-story-board')).toContainText('SCENE 2/3');
+ await page.getByTestId('episode-choice-1').click();
+ await page.getByTestId('episode-choice-2').click();
+ await expect(page.getByTestId('character-episode')).toHaveCount(0);
+ await expect(page.getByTestId('story-echo-pulse')).toBeVisible();
+ await expect(page.getByTestId('advance-year')).toBeEnabled();
+ await page.getByRole('tab',{name:'People'}).click();
+ await expect(page.getByTestId('story-director-history')).toContainText('LIVING STORIES');
+});
+test('the social story board remains accessible and does not overflow on narrow phones',async({page})=>{
+ for(const width of [320,375,430]){
+  await page.setViewportSize({width,height:790});
+  const s=episodeReadyLife(16100+width);
+  await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+  await page.getByRole('button',{name:/Enter the story:/}).first().click();
+  const board=page.getByTestId('character-story-board');
+  await expect(board).toBeVisible();
+  const box=await board.boundingBox();
+  expect(box.width).toBeLessThanOrEqual(width+1);
+  for(const button of await board.getByRole('button').all()){
+   const rect=await button.boundingBox();
+   if(rect)expect(rect.height).toBeGreaterThanOrEqual(44);
+  }
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
+ }
+});
+test('unanswered personal invitations expire without blocking years, and resolved dramas echo later',async({page})=>{
+ let s=episodeReadyLife(16005);
+ s.pending=null;s=E.ageUp(s);s.pending=null;s=E.ageUp(s);s.pending=null;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await expect(page.getByTestId('new-character-episodes')).toHaveCount(0);
+ await page.getByRole('tab',{name:'People'}).click();
+ await expect(page.getByTestId('story-director-history')).toContainText('unanswered');
+ await expect(page.getByTestId('advance-year')).toBeEnabled();
+});

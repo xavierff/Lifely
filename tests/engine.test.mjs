@@ -38,7 +38,7 @@ test('legacy carries an adult heir’s earned assets and education',()=>{let s=E
 
 test('each profession exposes a signature action with annual cooldown',()=>{for(const p of E.professions){let s=E.createLife({seed:8});s.age=p.age;s.cash=500000;s.education=3;s.stats[p.stat]=90;if(p.id==='entrepreneur')s=E.act(s,'business:studio');if(p.id==='investor')s=E.act(s,'invest:10000');s=E.act(s,'profession:'+p.id);s.profession.wins=3;s.profession.attempts=3;s.audience=3000;s.actions=3;assert.ok(E.commands(s).some(c=>c.id==='pro:special'&&c.enabled));s=E.act(s,'pro:special');assert.equal(s.profession.specials,1);assert.ok(!E.commands(s).some(c=>c.id==='pro:special'&&c.enabled));assert.ok(E.validate(s));}});
 
-test('catalog targets, distinct prompts and valid IDs',()=>{let s=E.createLife({seed:2});assert.equal(E.events.length,1109);assert.equal(new Set(E.events.map(e=>e.prompt)).size,1109);assert.equal(E.careers.length,150);assert.equal(new Set(E.careers.map(j=>j.title)).size,150);assert.equal(E.achievementStatus(s).length,124);assert.equal(new Set(E.achievementStatus(s).map(a=>a.name)).size,124);assert.equal(E.challengeProgress(s).length,62);assert.equal(new Set(E.challengeProgress(s).map(c=>c.id)).size,62);for(let i=0;i<E.events.length;i++)assert.equal(E.events[i].id,i);});
+test('catalog targets, distinct prompts and valid IDs',()=>{let s=E.createLife({seed:2});assert.equal(E.events.length,1109);assert.equal(new Set(E.events.map(e=>e.prompt)).size,1109);assert.equal(E.careers.length,150);assert.equal(new Set(E.careers.map(j=>j.title)).size,150);assert.equal(E.achievementStatus(s).length,126);assert.equal(new Set(E.achievementStatus(s).map(a=>a.name)).size,126);assert.equal(E.challengeProgress(s).length,62);assert.equal(new Set(E.challengeProgress(s).map(c=>c.id)).size,62);for(let i=0;i<E.events.length;i++)assert.equal(E.events[i].id,i);});
 test('bank savings conserve net worth and earn simulated interest',()=>{let s=E.createLife({seed:5});s.age=30;s.cash=100000;const before=E.worth(s);s=E.act(s,'save:10000');assert.equal(E.worth(s),before);assert.equal(s.bankSavings,10000);s=E.act(s,'unsave:1000');assert.equal(E.worth(s),before);assert.equal(s.bankSavings,9000);s=E.ageUp(s);assert.equal(s.bankSavings,9225);assert.equal(s.annual.savingsInterest,225);assert.ok(E.validate(s));});
 test('company hiring, products, marketing and cash flow',()=>{let s=E.createLife({seed:4});s.age=30;s.cash=500000;s=E.act(s,'business:studio');s=E.act(s,'company:hire');s=E.act(s,'company:product');assert.equal(s.business.employees,1);assert.equal(s.business.products.length,1);assert.equal(s.progression.productsLaunched,1);s.actions=3;let worth=E.worth(s);s=E.act(s,'company:capital');assert.equal(E.worth(s),worth);s=E.act(s,'company:marketing');assert.ok(s.business.demand>=70);s=E.ageUp(s);assert.equal(s.business.lastProfit,s.business.revenue-s.business.payroll-s.business.operating);assert.equal(s.annual.business,s.business.lastProfit);assert.ok(E.validate(s));});
 test('every regular job is reachable and supports industry-specific training',()=>{for(const j of E.careers){let s=E.createLife({seed:20});s.age=25;s.education=3;s.stats.knowledge=100;s=E.act(s,'job:'+j.id);s=E.act(s,'careertrain');assert.equal(s.job.id,j.id);assert.equal(s.job.experience,12);assert.equal(s.skills[j.skill],6);assert.ok(E.validate(s));}});
@@ -54,7 +54,7 @@ test('player profile deduplicates completed lives and retains collections',()=>{
 test('six world domains, stable content IDs and new collection are present',()=>{
  let s=E.createLife({seed:7});assert.equal(E.domains.length,6);assert.equal(E.destinations.length,18);assert.equal(E.events.length,1109);assert.equal(new Set(E.events.map(e=>e.prompt)).size,1109);
  assert.equal(E.events.filter(e=>e.origin==='world-drama').length,48);assert.ok(E.events.slice(1036).every((e,i)=>e.id===1036+i));
- assert.equal(E.achievementStatus(s).length,124);assert.equal(E.challengeProgress(s).length,62);assert.equal(E.ribbons.length,32);
+ assert.equal(E.achievementStatus(s).length,126);assert.equal(E.challengeProgress(s).length,62);assert.equal(E.ribbons.length,32);
  for(const d of E.domains)assert.equal(E.events.filter(e=>e.domain===d.id).length,8);
 });
 test('entertainment release and sport competition carry financial and annual consequences',()=>{
@@ -1011,4 +1011,136 @@ test('existing single-classmate saves migrate into adult characters without losi
  const arc=E.autonomyView(s).opportunities.find(x=>x.ready);
  assert.ok(arc);s=E.act(s,'autonomy:arc:'+arc.id+':0');assert.ok(E.validate(s));
  assert.ok(E.autonomyView(s).alumni[0].trust>=0);
+});
+
+function getPlayableCharacterStory(seed=15001){
+ let s=E.createLife({seed});s.age=14;s.pending=null;s=E.ageUp(s);s.pending=null;
+ const invitations=E.storyDirectorHistory(s).queue;
+ assert.ok(invitations.length,'A named personal conflict should be created at the first eligible story year.');
+ const offer=invitations[0];assert.ok(offer.firstName&&offer.secondName&&offer.firstId!==offer.secondId);
+ assert.equal(offer.age,15);
+ return {s,offer};
+}
+test('character story director selects named people from the actual living simulation',()=>{
+ const {s,offer}=getPlayableCharacterStory();
+ assert.ok(['person','alumni','parent','sibling','friend','partner','professional','child'].includes(offer.firstKind));
+ assert.ok(offer.title.length>10);
+ assert.ok(offer.firstName!==offer.secondName||offer.firstId!==offer.secondId);
+ assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+ assert.ok(E.commands(s).some(c=>c.id==='episode:start:'+offer.id&&c.enabled));
+});
+test('social episodes have three interactive, free followup decisions and a playable exit',()=>{
+ let {s,offer}=getPlayableCharacterStory(15002);
+ const priorActions=s.actions;
+ s=E.act(s,'episode:start:'+offer.id);
+ assert.equal(s.actions,priorActions-1);
+ assert.ok(E.validate(s));
+ assert.equal(E.storyDirectorView(s).round,1);
+ assert.throws(()=>E.ageUp(s),/character story/);
+ assert.equal(E.commands(s).length,0);
+ assert.throws(()=>E.storyDirectorChoose(s,9),/three/);
+ for(const [stage,index] of [[0,0],[1,1],[2,2]]){
+  const before=s;
+  const next=E.storyDirectorChoose(s,index);
+  assert.equal(before.world.storyDirector.active.phase,stage);
+  assert.equal(next.actions,priorActions-1);
+  s=next;assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
+  if(stage<2){assert.equal(E.storyDirectorView(s).round,stage+2);assert.equal(E.storyDirectorView(s).options.length,3);}
+ }
+ assert.equal(E.storyDirectorView(s),null);
+ assert.ok(E.commands(s).length>0);
+ const completed=E.storyDirectorHistory(s).completed[0];
+ assert.equal(completed.choices.length,3);
+ assert.ok(['reconciled','clarified','fractured','complicated'].includes(completed.outcome));
+ const echoes=E.storyDirectorHistory(s).echoes;
+ assert.equal(echoes.length,1);
+ assert.equal(echoes[0].dueAge,17);
+ assert.equal(echoes[0].status,'scheduled');
+});
+test('character story memories have real consequences two years later without blocking life progression',()=>{
+ let {s,offer}=getPlayableCharacterStory(15003);
+ s=E.act(s,'episode:start:'+offer.id);
+ for(const index of [0,0,0])s=E.storyDirectorChoose(s,index);
+ assert.equal(E.storyDirectorHistory(s).echoes[0].status,'scheduled');
+ for(const age of [16,17]){
+  s.pending=null;s=E.ageUp(s);
+  assert.ok(E.validate(s));assert.equal(s.age,age);
+ }
+ assert.equal(E.storyDirectorHistory(s).echoes[0].status,'resolved');
+ assert.equal(E.storyDirectorHistory(s).echoes[0].resolvedAge,17);
+ assert.ok(E.storyDirectorHistory(s).news.some(n=>n.kind==='aftereffect'));
+ s.pending=null;s=E.ageUp(s);
+ assert.equal(E.storyDirectorHistory(s).news.filter(n=>n.kind==='aftereffect').length,1);
+});
+test('social story decisions are deterministic, save-safe and bounded by previous context',()=>{
+ const outcomes=[];
+ for(let seed=15010;seed<15040;seed++){
+  let {s,offer}=getPlayableCharacterStory(seed);
+  outcomes.push(offer.theme+':'+offer.firstId+':'+offer.secondId);
+  s=E.act(s,'episode:start:'+offer.id);
+  const t=E.storyDirectorView(s);
+  assert.ok(t.prompt.includes(t.lead)||t.prompt.includes(t.other));
+  assert.ok(t.prompt.length>70);
+  assert.deepEqual(E.storyDirectorChoose(s,1),E.storyDirectorChoose(s,1));
+  assert.equal(E.storyDirectorView(s).round,1);
+  const after=E.storyDirectorChoose(s,1);
+  assert.equal(E.storyDirectorView(after).round,2);
+  assert.ok(E.validate(JSON.parse(JSON.stringify(after))));
+ }
+ // An early teenager may only know two parents; theme variety is intentionally bounded.
+ assert.ok(new Set(outcomes).size>=6);
+ const adultOutcomes=[];
+ for(let seed=15100;seed<15130;seed++){
+  let t=E.createLife({seed});t.age=23;t.pending=null;t=E.ageUp(t);t.pending=null;
+  const offer=E.storyDirectorHistory(t).queue[0];
+  assert.ok(offer);
+  adultOutcomes.push(offer.theme+':'+offer.firstId+':'+offer.secondId);
+ }
+ assert.ok(new Set(adultOutcomes).size>=12,'Adults should encounter more cast/plot combinations than teens.');
+});
+test('walking away ends an episode, preserves chronology and does not take another action',()=>{
+ let {s,offer}=getPlayableCharacterStory(15050);
+ s=E.act(s,'episode:start:'+offer.id);
+ const annual=s.actions,worthBefore=E.worth(s);
+ s=E.storyDirectorChoose(s,'leave');
+ assert.equal(E.storyDirectorView(s),null);
+ assert.equal(s.actions,annual);assert.equal(E.worth(s),worthBefore);
+ assert.equal(E.storyDirectorHistory(s).completed[0].outcome,'walked away');
+ assert.equal(E.storyDirectorHistory(s).echoes.length,0);
+ assert.ok(E.validate(s));
+});
+test('unanswered story invitations expire automatically, not trapping the player',()=>{
+ let {s,offer}=getPlayableCharacterStory(15060);
+ s.pending=null;s=E.ageUp(s);assert.equal(s.age,16);
+ assert.ok(E.storyDirectorHistory(s).queue.some(e=>e.id===offer.id));
+ s.pending=null;s=E.ageUp(s);assert.equal(s.age,17);
+ assert.equal(E.storyDirectorHistory(s).queue.some(e=>e.id===offer.id),false);
+ assert.ok(E.storyDirectorHistory(s).completed.some(e=>e.id===offer.id&&e.outcome==='unanswered'));
+ assert.ok(E.validate(s));
+});
+test('new character story director remains optional on old saves and heirs inherit only concluded history',()=>{
+ let s=E.createLife({seed:15070});delete s.world.storyDirector;
+ assert.ok(E.validate(s));assert.equal(E.storyDirectorView(s),null);
+ s.age=14;s.pending=null;s=E.ageUp(s);s.pending=null;
+ const offer=E.storyDirectorHistory(s).queue[0];
+ s=E.act(s,'episode:start:'+offer.id);
+ for(const i of [0,1,2])s=E.storyDirectorChoose(s,i);
+ s.age=30;s.actions=3;s.pending=null;
+ s=E.act(s,'date');s=E.act(s,'child');
+ const child=s.people.find(p=>p.role==='child');child.age=20;
+ s.alive=false;s.pending=null;
+ const heir=E.legacy(s,child.id);
+ assert.ok(E.validate(heir));
+ assert.equal(E.storyDirectorHistory(heir).queue.length,0);
+ assert.equal(E.storyDirectorHistory(heir).echoes.length,0);
+ assert.equal(E.storyDirectorHistory(heir).completed.length,1);
+ assert.ok(E.storyDirectorHistory(heir).completed[0].sourceLife);
+});
+test('character-story achievements are earned only after enough completed resolutions',()=>{
+ const base=E.createLife({seed:15080});
+ assert.ok(!E.achievementStatus(base).find(x=>x.name==='trusted mediator').eligible);
+ assert.ok(!E.achievementStatus(base).find(x=>x.name==='story of a lifetime').eligible);
+ base.world.storyDirector={...E.storyDirectorState(base),completed:Array.from({length:8},(_,i)=>({outcome:i<3?'reconciled':'complicated'}))};
+ assert.ok(E.achievementStatus(base).find(x=>x.name==='trusted mediator').eligible);
+ assert.ok(E.achievementStatus(base).find(x=>x.name==='story of a lifetime').eligible);
 });
