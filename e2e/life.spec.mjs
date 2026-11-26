@@ -306,7 +306,7 @@ test('fictional civic debate is playable, shows rival reaction and saves across 
  await expect(page.getByTestId('playfield-feedback')).toBeVisible();
  await page.reload();
  await expect(board).toBeVisible();
- await expect(page.getByTestId('career-npc')).toContainText('acknowledges');
+ await expect(page.getByTestId('career-npc')).toContainText('Civic opponent');
  await page.getByTestId('election-action-1').click();
  await expect(page.getByTestId('election-action-2')).toBeDisabled();
  await expect(panel).toContainText('Now make the story decision');
