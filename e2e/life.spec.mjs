@@ -451,3 +451,66 @@ test('everyday boards remain legible and tappable on small phones',async({page})
   }
  }
 });
+
+function cohortLife(seed){
+ let s=E.createLife({seed});s.age=17;s.actions=3;s.pending=null;s=E.act(s,'scene:start:school');
+ for(const i of [0,1,2])s=E.sceneChoice(s,i);
+ s.pending=null;s=E.ageUp(s);s.pending=null;
+ return s;
+}
+test('school friends become persistent adult contacts with detailed profiles and playable choices',async({page})=>{
+ let s=cohortLife(7101);
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByRole('tab',{name:'People'}).click();
+ const board=page.getByTestId('living-world-board');
+ await expect(board).toContainText('YOUR LIVING SOCIAL WORLD');
+ await expect(board).toContainText('4 ALUMNI');
+ await expect(board.getByTestId('alumni-alum-0')).toBeVisible();
+ await board.getByTestId('alumni-alum-1').click();
+ await expect(board.getByTestId('alumni-profile')).toContainText('Former classmate');
+ await board.getByRole('button',{name:/Reconnect with/}).click();
+ await expect(board.getByTestId('alumni-profile')).toBeVisible();
+ await page.reload();
+ await page.getByRole('tab',{name:'People'}).click();
+ await expect(page.getByTestId('living-world-board')).toContainText('4 ALUMNI');
+});
+test('autonomous social graph remembers partnerships and rivalries across simulated years',async({page})=>{
+ let s=cohortLife(7102);
+ for(let y=0;y<12;y++){s.pending=null;s=E.ageUp(s);}
+ s.pending=null;
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await page.getByRole('tab',{name:'People'}).click();
+ const board=page.getByTestId('living-world-board');
+ await expect(board.getByTestId('autonomous-relationships')).toBeVisible();
+ await expect(board).toContainText('RELATIONSHIPS DEVELOPING ON THEIR OWN');
+ await expect(board).toContainText('years connected');
+});
+test('living world opportunities return after a year and become real playable story decisions',async({page})=>{
+ let s=cohortLife(7103);s=E.ageUp(s);s.pending=null;
+ const opportunity=E.autonomyView(s).opportunities.find(x=>x.ready);
+ expect(opportunity).toBeTruthy();
+ await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+ await expect(page.getByTestId('living-world-pulse')).toBeVisible();
+ await page.getByRole('tab',{name:'People'}).click();
+ const board=page.getByTestId('living-world-board');
+ await expect(board.getByTestId('autonomous-opportunities')).toContainText('YOUR RESPONSE IS READY');
+ const button=board.getByRole('button',{name:/Join the next chapter/});
+ await expect(button).toBeVisible();await button.click();
+ await expect(board).toContainText('RETURNING AT AGE 21');
+ await page.reload();await page.getByRole('tab',{name:'People'}).click();
+ await expect(page.getByTestId('living-world-board')).toContainText('CHAPTER 2/3');
+});
+test('autonomous social world stays within narrow phone viewports',async({page})=>{
+ for(const width of [320,375,430]){
+  await page.setViewportSize({width,height:780});
+  const s=cohortLife(7200+width);
+  await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
+  await page.getByRole('tab',{name:'People'}).click();
+  const board=page.getByTestId('living-world-board');
+  const rect=await board.boundingBox();expect(rect.width).toBeLessThanOrEqual(width);
+  for(const button of await board.getByRole('button').all()){
+   const b=await button.boundingBox();if(b)expect(b.height).toBeGreaterThanOrEqual(44);
+  }
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
+ }
+});
