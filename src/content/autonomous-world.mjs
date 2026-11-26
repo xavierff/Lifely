@@ -45,7 +45,7 @@ function news(s,ctx,msg,kind='people'){
 }
 const personFor=(s,id)=>{
  const a=autonomyState(s);
- if(id?.startsWith('alum-'))return a.alumni.find(x=>x.id===id);
+ const alumnus=a.alumni.find(x=>x.id===id);if(alumnus)return alumnus;
  if(id?.startsWith('person-'))return s.people.find(x=>'person-'+x.id===id&&x.alive);
  const c=s.world?.characters||{};
  return [...(c.athletes||[]),...(c.politicians||[]),...(c.agents||[])].find(x=>x.id===id);
