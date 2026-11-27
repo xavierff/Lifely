@@ -72,7 +72,7 @@ test('two real organizations with distinct living representatives form one link 
  const s=setup(122003),l=s.organizationNetwork.links[0];
  assert.equal(l.aId,s.socialCircles.groups[0].id);
  assert.equal(l.bId,s.socialCircles.groups[1].id);
- assert.equal(l.status,'cooperating');
+ assert.equal(l.status,'allied','shared real NPC membership creates an existing alliance');
  assert.equal(l.leaderA,'person-'+s.people[0].id);
  assert.equal(l.leaderB,'person-'+s.people[1].id);
  assert.equal(l.event.status,'planned');

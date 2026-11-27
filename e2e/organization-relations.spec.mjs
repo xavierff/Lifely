@@ -47,7 +47,7 @@ test('two organizations host a public gathering, and player support affects real
  await page.getByRole('tab',{name:'World'}).click();
  const board=page.getByTestId('intergroup-world-board');
  await expect(board).toContainText('Alliances, rivals & public life');
- await expect(board.getByTestId('intergroup-link-'+l.id)).toContainText('Open skills');
+ await expect(board.getByTestId('intergroup-link-'+l.id)).toContainText('Intergenerational neighborhood forum');
  await expect(board.getByTestId('intergroup-link-'+l.id).getByTestId('intergroup-public-event')).toBeVisible();
  await board.getByTestId('intergroup-decision').getByRole('button',{name:/Broker a public pact between both groups/}).click();
  await expect(board.getByTestId('intergroup-impact')).toContainText('Trust +12');
