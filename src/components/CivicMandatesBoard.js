@@ -121,6 +121,19 @@ function Delivery({d,commands,onAction,compact}){
  </View>;
 }
 
+function Reversal({x,commands,onAction}){
+ const choices=commands.filter(c=>c.id.startsWith('mandate:reversal:'+x.id+':'));
+ return <View style={S.card} testID={'public-reversal-'+x.id}>
+  <Text style={S.overline}>PUBLIC ACCOUNTABILITY DISPUTE</Text>
+  <Text style={S.heading}>{x.issueName}</Text>
+  <Text style={S.desc}>{x.challenger||'Former challenger'} vs {x.opponent||'Former representative'}</Text>
+  <Gauge name="Reform pressure" n={x.pressure} warning/>
+  <Gauge name="Mutual trust" n={x.trust}/>
+  <Text style={S.small}>{x.ending?x.ending.replaceAll('-',' '):'Resolution expected at age '+x.dueAge}</Text>
+  {x.pending&&choices.map(c=><Pressable key={c.id} testID={'reversal-choice-'+c.id.split(':').at(-1)} accessibilityRole="button" accessibilityState={{disabled:!c.enabled}} disabled={!c.enabled} onPress={()=>onAction(c.id)} style={[S.choice,!c.enabled&&S.disabled]}><Text style={S.choiceText}>{c.label}</Text><Text style={S.small}>{c.detail}</Text></Pressable>)}
+  {x.history.slice(-3).reverse().map((h,i)=><Text key={i} style={S.small}>Age {h.age}: {h.text}</Text>)}
+ </View>;
+}
 function Result({r}){
  return <View style={S.history}>
   <View style={S.split}><Text style={S.personName}>{r.issueName}</Text>
@@ -134,7 +147,8 @@ export default function CivicMandatesBoard({view,commands=[],onAction,compact=fa
  const recent=view.completed?.find(x=>x.endedAge===view.age&&
   (!onlyProfessional||x.issue==='skills-access'));
  const deliveries=(view.deliveries||[]).filter(x=>!onlyProfessional||x.issue==='skills-access');
- const deliveryNotice=deliveries.some(x=>x.pending||x.endedAge===view.age);
+ const reversals=(view.reversals||[]).filter(x=>!onlyProfessional||x.issue==='skills-access');
+ const deliveryNotice=deliveries.some(x=>x.pending||x.endedAge===view.age)||reversals.some(x=>x.pending||x.endedAge===view.age);
  if(compact&&!(active?.pending||active?.decisions.at(-1)?.age===view.age||recent||deliveryNotice))return null;
  return <View testID={compact?'civic-campaign-preview':'civic-campaign-board'} style={S.root}>
   <View style={S.split}><View style={{flex:1,gap:3}}>
@@ -146,6 +160,7 @@ export default function CivicMandatesBoard({view,commands=[],onAction,compact=fa
    <Active m={active} commands={commands} onAction={onAction} compact={compact}/>:null}
   {deliveries.filter(d=>!compact||d.pending||d.endedAge===view.age).slice(0,compact?1:3).map(d=><Delivery
    key={d.id} d={d} commands={commands} onAction={onAction} compact={compact}/>)}
+  {reversals.filter(x=>!compact||x.pending||x.endedAge===view.age).slice(0,compact?1:3).map(x=><Reversal key={x.id} x={x} commands={commands} onAction={onAction}/>)}
   {compact&&!active&&recent?<View testID="civic-recent-result" style={S.card}>
    <Text style={S.overline}>LATEST CIVIC OUTCOME</Text>
    <Result r={recent}/>
