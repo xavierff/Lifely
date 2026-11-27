@@ -1,0 +1,29 @@
+import React,{useState,useEffect,useRef} from 'react';
+import {View,Text,Pressable,StyleSheet,Animated,AccessibilityInfo} from 'react-native';
+function Meter({label,n,tint='#C8E8AB'}){return <View style={S.meter}><View style={S.row}><Text style={S.small}>{label}</Text><Text style={S.small}>{n}/100</Text></View><View style={S.track} accessibilityRole="progressbar" accessibilityLabel={label} accessibilityValue={{min:0,max:100,now:n}}><View style={{height:7,borderRadius:5,width:n+'%',backgroundColor:tint}}/></View></View>}
+function Action({c,onAction}){return <Pressable testID={'romance-action-'+c.id.replace(/:/g,'-')} accessibilityRole="button" accessibilityState={{disabled:!c.enabled}} disabled={!c.enabled} onPress={()=>onAction(c.id)} style={[S.action,!c.enabled&&{opacity:.5}]}><Text style={S.name}>{c.label}</Text><Text style={S.small}>{c.detail}</Text></Pressable>}
+export default function RomanceFamilyBoard({view,commands,blocked,onAction}){
+ const [show,setShow]=useState(null),[reduced,setReduced]=useState(false),scale=useRef(new Animated.Value(1)).current;
+ const p=view.partner,latest=view.history[0],prior=useRef(latest?.id);
+ useEffect(()=>{AccessibilityInfo.isReduceMotionEnabled().then(setReduced).catch(()=>{});const sub=AccessibilityInfo.addEventListener?.('reduceMotionChanged',setReduced);return()=>sub?.remove?.();},[]);
+ useEffect(()=>{if(latest?.id!==prior.current&&!reduced){scale.setValue(.97);Animated.spring(scale,{toValue:1,useNativeDriver:true,tension:95,friction:7}).start();}prior.current=latest?.id;},[latest?.id,reduced]);
+ const options=commands.filter(c=>c.id.startsWith('romance:')),couple=options.filter(c=>!c.id.startsWith('romance:parent:'));
+ if(!p&&!view.children.length&&!view.history.length&&!view.legacy.length&&!options.length)return null;
+ return <View testID="romance-family-board" style={S.root}>
+  <Text style={S.eyebrow}>LOVE, CONNECTION & GROWING TOGETHER</Text><Text style={S.title}>Relationships and family</Text>
+  {p?<View style={S.panel} testID="romance-partner">
+   <View style={S.row}><View style={S.avatar}><Text style={S.initial}>{p.name.split(' ').map(x=>x[0]).slice(0,2).join('')}</Text></View><View style={{flex:1,minWidth:0,gap:4}}><Text style={S.name}>{p.name}</Text><Text style={S.small}>{p.married?'Married':p.proposal?.status==='engaged'?'Engaged':'Dating'} · Age {p.age} · {p.personality}</Text><Text style={S.small}>Personal priority: {p.priority}</Text></View></View>
+   <View style={S.meters}><Meter label="Closeness" n={p.closeness}/><Meter label="Compatibility" n={p.alignment}/><Meter label="Tension" n={p.tension} tint="#F6B3B0"/><Meter label="Trust" n={p.trust}/></View>
+   {p.conflict?<View style={S.event} testID="romance-conflict"><Text style={S.eyebrow}>RELATIONSHIP TURNING POINT</Text><Text style={S.name}>{p.conflict.title}</Text><Text style={S.small}>{p.conflict.prompt}</Text><Text style={S.small}>Unresolved until age {p.conflict.dueAge}, unless you respond.</Text></View>:null}
+   {p.proposal?.status==='not-yet'?<Text style={S.small}>Your partner asked for more time. Continue building a mutual relationship.</Text>:null}
+   {!blocked&&couple.map(c=><Action key={c.id} c={c} onAction={onAction}/>)}
+  </View>:!blocked&&couple.length?<View style={S.panel}><Text style={S.name}>A possible second chance</Text>{couple.map(c=><Action key={c.id} c={c} onAction={onAction}/>)}</View>:null}
+  {view.children.map(c=><View key={c.id} style={S.panel} testID={'parenting-'+c.id}><Pressable accessibilityRole="button" accessibilityState={{expanded:show===c.id}} onPress={()=>setShow(show===c.id?null:c.id)} style={S.row}><View style={{flex:1}}><Text style={S.name}>{c.name} · Age {c.age}</Text><Text style={S.small}>{c.personality} · Bond {c.bond}</Text></View><Text style={S.eyebrow}>{show===c.id?'−':'+'}</Text></Pressable>
+   {show===c.id?<><View style={S.meters}><Meter label="Care" n={c.profile?.care??50}/><Meter label="Resilience" n={c.profile?.resilience??50}/><Meter label="Independence" n={c.profile?.independence??Math.min(100,20+c.age*2)}/></View>{!blocked&&options.filter(x=>x.id.startsWith('romance:parent:'+c.id+':')).map(x=><Action key={x.id} c={x} onAction={onAction}/>)}</>:null}
+  </View>)}
+  {latest?<Animated.View testID="romance-latest" accessibilityLiveRegion="polite" style={[S.event,{transform:[{scale}]}]}><Text style={S.eyebrow}>LATEST FAMILY MEMORY · AGE {latest.age}</Text><Text style={S.name}>{latest.name}</Text><Text style={S.small}>{latest.description}</Text></Animated.View>:null}
+  {view.history.slice(1,4).map(h=><Text key={h.id} style={S.small}>Age {h.age} · {h.name} — {h.description}</Text>)}
+  {view.legacy.length?<View style={S.panel}><Text style={S.eyebrow}>PREVIOUS GENERATIONS</Text>{view.legacy.slice(0,3).map((h,i)=><Text key={i} style={S.small}>{h.ancestor}: {h.description}</Text>)}</View>:null}
+ </View>;
+}
+const S=StyleSheet.create({root:{padding:13,borderRadius:16,gap:10,backgroundColor:'#23353E',borderWidth:1,borderColor:'#6F888B'},eyebrow:{fontSize:10,fontWeight:'900',color:'#FFD5B5',flexShrink:1},title:{fontSize:20,fontWeight:'900',color:'#FAF4EC'},name:{fontSize:14,fontWeight:'800',color:'#FFF8F0',flexShrink:1},small:{fontSize:12,lineHeight:18,color:'#D6E4DF',flexShrink:1},row:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},avatar:{width:46,height:46,borderRadius:23,backgroundColor:'#776077',alignItems:'center',justifyContent:'center'},initial:{fontSize:18,fontWeight:'900',color:'#FFF8F0'},panel:{padding:11,gap:9,borderRadius:11,backgroundColor:'#324C50'},meters:{flexDirection:'row',flexWrap:'wrap',gap:8},meter:{flex:1,flexBasis:110,minWidth:0,gap:4},track:{height:7,backgroundColor:'#52666A',borderRadius:5,overflow:'hidden'},action:{minHeight:48,padding:10,gap:4,borderWidth:1,borderColor:'#829E96',borderRadius:9,backgroundColor:'#3D5A55'},event:{padding:11,gap:6,borderRadius:10,backgroundColor:'#544757'}});
