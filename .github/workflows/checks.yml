@@ -29,7 +29,16 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: lifely-playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      - run: npx playwright install --with-deps chromium
+      - name: Install Playwright chromium with Ubuntu dependencies
+        run: |
+          # The preinstalled Microsoft apt mirror on hosted runners is unrelated
+          # to Playwright and can return HTTP 403. Ignore only that mirror.
+          for repo_file in /etc/apt/sources.list.d/*; do
+            if [ -f "$repo_file" ] && grep -q 'packages.microsoft.com' "$repo_file"; then
+              sudo mv "$repo_file" "$repo_file.disabled"
+            fi
+          done
+          npx playwright install --with-deps chromium
         timeout-minutes: 4
       - run: npm run test:e2e
         timeout-minutes: 5
