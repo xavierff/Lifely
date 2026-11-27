@@ -234,7 +234,7 @@ export function ambitionAct(s,id,ctx){
 export function ambitionSummary(s,worth){
  const book=ambitionState(s),a=book.active;const available=specs.filter(d=>eligible(s,d));
  const recommended=available.slice().sort((x,y)=>{
-  const points=d=>(s.goal==='family'&&d.category==='relationships'?5:0)+
+  const points=d=>(['npcgoal','cross','clash','influence','circle','public','fracture'].includes(d.requires)?7:0)+(s.goal==='family'&&d.category==='relationships'?5:0)+
    (s.goal==='wealth'&&d.category==='money'?5:0)+
    (s.goal==='balance'&&d.category==='wellbeing'?5:0)+
    (d.category==='work'&&s.job?3:0)+
