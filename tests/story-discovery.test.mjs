@@ -45,7 +45,7 @@ test('1.30: neutral and rival actions do not count as constructive ambition mile
 test('1.30: seven new ambitions are distinct, contextual and track only specified action types',()=>{
  const ids=['npc-mentor','bridge-builder','fair-collaborator','trusted-citizen','institutional-steward','public-problem-solver','faction-mediator'];
  assert.ok(ids.every(id=>ambitionTypes.some(x=>x.id===id&&x.requires)));
- const s=life(130006);s.ambitions.active={counts:{}};
+ const s=E.act(life(130006),'ambition:begin:institutional-steward');
  for(const id of ['npcgoal:n:0','cross:respond:n:0','clash:n:0','influence:n:0','circle:n:0','circle:fracture:n:0','mandate:delivery:n:0','intergroup:n:0'])ambitionTrack(s,id);
  assert.deepEqual(s.ambitions.active.counts,{'npc-support':1,'cross-repair':1,'clash-cooperate':1,'influence-engage':1,'circle-support':1,'fracture-mediate':1,'public-support':2});
  ambitionTrack(s,'circle:succession:n:0');ambitionTrack(s,'mandate:reversal:n:2');assert.equal(s.ambitions.active.counts['circle-support'],1);assert.equal(s.ambitions.active.counts['public-support'],2);

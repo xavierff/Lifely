@@ -1304,11 +1304,11 @@ test('old version-2 saves without hobbies remain valid and descendant inherits t
  assert.ok(E.hobbyState(heir).hallOfFame.length<=12);
 });
 
-test('personal ambitions offer sixteen original long-term tracks and preserve older saves',()=>{
+test('personal ambitions offer twenty-three original long-term tracks and preserve older saves',()=>{
  let s=E.createLife({seed:20401});delete s.ambitions;
  assert.ok(E.validate(s));assert.equal(E.ambitionSummary(s).active,null);
- assert.equal(E.ambitionTypes.length,16);
- assert.equal(new Set(E.ambitionTypes.map(x=>x.id)).size,16);
+ assert.equal(E.ambitionTypes.length,23);
+ assert.equal(new Set(E.ambitionTypes.map(x=>x.id)).size,23);
  assert.equal(E.commands(s).some(c=>c.id.startsWith('ambition:begin:')),false);
  s.age=12;
  assert.ok(E.commands(s).find(c=>c.id==='ambition:begin:wellness'));
