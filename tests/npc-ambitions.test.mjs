@@ -169,10 +169,13 @@ test('alumni ambition changes an actual location and remains visible to other st
   collaborations:0,contests:0,lastInteractionAge:-1,partnerId:null,children:0,careerLevel:0,
   location:'hometown',history:[],schoolAge:12}],links:[],arcs:[],completed:[],news:[],lastStartedAge:null,used:{},archive:[]};
  npcAmbitionYear(s,{add:()=>{}});
+ // Two family goals launch in the first year. The alumni goal is introduced in
+ // the following year, preserving the intentional two-introductions/year cap.
+ s.age=30;npcAmbitionYear(s,{add:()=>{}});
  const a=s.npcAmbitions.active.find(x=>x.personId==='alumni-special');
  assert.ok(a);assert.equal(a.track,'adventure');
  a.progress=98;a.obstacles=0;
- update(s,33);
+ update(s,34);
  assert.equal(s.world.autonomy.alumni[0].location,'another city');
  assert.equal(s.npcAmbitions.completed.find(x=>x.id===a.id).ending,'achieved');
  assert.ok(s.world.autonomy.alumni[0].history.some(x=>x.kind==='ambition'));
