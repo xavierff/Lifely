@@ -8,7 +8,7 @@ const ageOK=x=>Number.isInteger(x)&&x>=0&&x<=110;
 const numeric=x=>typeof x==='number'&&Number.isFinite(x);
 const score=x=>numeric(x)&&x>=0&&x<=100;
 const hash=x=>{let h=2166136261;for(const c of String(x))h=Math.imul(h^c.charCodeAt(0),16777619)>>>0;return h;};
-const LIMIT_LINKS=6,LIMIT_DONE=24,LIMIT_NEWS=25,LIMIT_ANCESTORS=10,LIMIT_HISTORY=8;
+const LIMIT_LINKS=12,LIMIT_DONE=24,LIMIT_NEWS=25,LIMIT_ANCESTORS=10,LIMIT_HISTORY=8;
 const endStates=['coalition','negotiated','public-feud','fractured','independent','unanswered','dissolved'];
 const empty=()=>({version:1,serial:0,links:[],active:null,completed:[],news:[],
  ancestors:[],lastLinkAge:-100,lastOfferAge:-100});
@@ -33,7 +33,9 @@ function liveGroup(s,id){
 }
 const pairKey=(a,b)=>[a,b].sort().join('|');
 const sharedMembers=(a,b)=>a.members.filter(id=>b.members.includes(id)).length;
+const fracturePair=(a,b)=>a.institution?.parentId===b.id||b.institution?.parentId===a.id;
 const overlapType=(a,b)=>{
+ if(fracturePair(a,b))return 'contest';
  if(a.kind==='rival-family'||b.kind==='rival-family')return 'contest';
  if(a.kind==='professional'&&b.kind==='community'||a.kind==='community'&&b.kind==='professional')return 'joint-service';
  if(a.kind==='family'&&b.kind==='community'||a.kind==='community'&&b.kind==='family')return 'shared-neighborhood';
@@ -60,7 +62,7 @@ function announce(s,ctx,message){
 }
 function startLink(s,a,b,ctx){
  const m=ensure(s),id='org-link-'+a.id+'-'+b.id;
- const paired=sharedMembers(a,b)>0,contest=a.kind==='rival-family'||b.kind==='rival-family';
+ const paired=sharedMembers(a,b)>0,contest=a.kind==='rival-family'||b.kind==='rival-family'||fracturePair(a,b);
  const link={id,key:pairKey(a.id,b.id),aId:a.id,bId:b.id,
   aName:trim(a.name,100),bName:trim(b.name,100),
   theme:overlapType(a,b),status:'neutral',trust:cap(
@@ -88,7 +90,7 @@ function pairs(s){
  for(let i=0;i<groups.length;i++)for(let j=i+1;j<groups.length;j++){
   const a=groups[i],b=groups[j],key=pairKey(a.id,b.id);
   if((s.organizationNetwork?.links||[]).some(l=>l.key===key))continue;
-  options.push({a,b,key,priority:sharedMembers(a,b)*8+
+  options.push({a,b,key,priority:sharedMembers(a,b)*8+(fracturePair(a,b)?30:0)+
    (a.kind==='rival-family'||b.kind==='rival-family'?8:0)+
    (a.kind!==b.kind?4:0)+(a.standing+b.standing)/20});
  }

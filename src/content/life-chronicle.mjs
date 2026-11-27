@@ -135,6 +135,8 @@ export function chronicleView(s){
   category:x.kind==='professional'?'career':'relationship',
   turning:true,source:'memory',choice:'',netWorth:0,changes:[],bonds:[],future:[]
  }));
+ const institutions=(s.socialCircles?.groups||[]).flatMap(g=>(g.institution?.history||[]).filter(h=>['split','merger','defection','declining','recovered'].includes(h.kind)).map((h,i)=>({id:'institution-'+g.id+'-'+h.age+'-'+i,age:h.age,title:g.name+' — '+h.text,category:g.kind==='professional'?'career':'relationship',turning:true,source:'memory',choice:'',netWorth:0,changes:[],bonds:[],future:[]})));
+ const leadership=(s.socialCircles?.groups||[]).flatMap(g=>(g.governance?.results||[]).filter(r=>r.outcome==='new-leadership').map(r=>({id:'leadership-'+r.id,age:r.age,title:g.name+' — '+r.winnerName+' elected',category:g.kind==='professional'?'career':'relationship',turning:true,source:'memory',choice:'',netWorth:0,changes:[],bonds:[],future:[]})));
  const publicAlliances=(s.organizationNetwork?.completed||[]).filter(x=>
   ['coalition','public-feud','negotiated','fractured'].includes(x.ending)).map(x=>({
   id:'intergroup-'+x.id,age:x.endedAge,
@@ -170,7 +172,7 @@ export function chronicleView(s){
   category:t.issue==='skills-access'?'career':'relationship',
   turning:true,source:'memory',choice:'',netWorth:0,changes:[],bonds:[],future:[]
  }));
- const all=[...journal,...echoes,...fates,...social,...npcPlans,...competingFutures,...influence,...circleStories,...publicAlliances,...playablePublic,...aftermath,...civic,...entries.map(e=>({...e,source:'choice'}))]
+ const all=[...journal,...echoes,...fates,...social,...npcPlans,...competingFutures,...influence,...circleStories,...institutions,...leadership,...publicAlliances,...playablePublic,...aftermath,...civic,...entries.map(e=>({...e,source:'choice'}))]
   .sort((a,b)=>a.age-b.age||(a.source==='history'?-1:1));
  const timeline=all.slice(-90);
  // Include the birth marker even in long lives, without affecting chronology.
