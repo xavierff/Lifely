@@ -211,6 +211,9 @@ export function storyDirectorView(s){
  return {id:e.id,title:e.title,theme:e.theme,phase:e.phase,round:e.phase+1,total:3,
   lead:e.firstName,other:e.secondName,headline:theme.beats[e.phase],prompt:withActors(theme.scenes[e.phase],e),
   backstory:(e.previous?'An earlier story with these characters involved '+e.previous+'. ':theme.context+' ')+
+   ((s.npcAmbitions?.active||[]).find(x=>x.personId===e.firstId||x.personId===e.secondId)?
+    (()=>{const plan=(s.npcAmbitions?.active||[]).find(x=>x.personId===e.firstId||x.personId===e.secondId);
+     return plan.name+' is pursuing '+plan.goal.toLowerCase()+' with '+plan.progress+'% progress. ';})():'')+
    ((s.crossroads?.completed||[]).filter(x=>[e.firstId,e.secondId].some(id=>x.aId===id||x.bId===id)).at(-1)?
     (()=>{const c=(s.crossroads?.completed||[]).filter(x=>[e.firstId,e.secondId].some(id=>x.aId===id||x.bId===id)).at(-1);
      return 'Their wider social circle remembers '+c.aName+' and '+c.bName+' and an outcome of '+c.ending+'. ';})():'')+
