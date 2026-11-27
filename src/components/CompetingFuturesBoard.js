@@ -77,7 +77,7 @@ function Event({item,playerName,commands,onAction}){
 }
 export default function CompetingFuturesBoard({view,playerName='You',commands=[],onAction,compact=false,filterKinds=[]}){
  const relevant=filterKinds.length?view.active.filter(a=>filterKinds.includes(a.kind)):view.active;
- const rows=compact?relevant.filter(a=>a.ready).slice(0,1):relevant;
+ const rows=compact?relevant.filter(a=>a.ready||(a.status==='waiting'&&a.decisions.at(-1)?.age===view.age)).slice(0,1):relevant;
  if(compact&&!rows.length)return null;
  return <View testID={compact?'competing-futures-preview':'competing-futures-board'} style={S.root}>
   <View style={S.split}><View style={{flex:1,gap:3}}>

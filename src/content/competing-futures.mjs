@@ -341,7 +341,7 @@ export function competingFuturesView(s){
   id:a.id,kind:a.kind,title:a.title,personName:a.personName,role:a.role,
   startedAge:a.startedAge,endedAge:a.endedAge,
   ending:a.ending,finalLine:a.finalLine,decisions:a.decisions.length})),
- news:m.news.slice(-8).reverse(),ancestors:m.ancestors.slice().reverse(),count:m.completed.length};
+ news:m.news.slice(-8).reverse(),ancestors:m.ancestors.slice().reverse(),count:m.completed.length,age:s.age};
 }
 export function competingFuturesInheritance(next,old){
  const source=competingFuturesState(old),m=state();
