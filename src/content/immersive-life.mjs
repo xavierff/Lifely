@@ -2,10 +2,32 @@
 const keys=['health','happiness','knowledge','confidence','stress','kindness','social','creativity','reputation','performance'];
 const age=n=>Number.isInteger(n)&&n>=0&&n<=110,integer=Number.isSafeInteger;
 const hash=s=>{let h=2166136261;for(const c of String(s)){h=Math.imul(h^c.charCodeAt(0),16777619);}return h>>>0;};
-const skins=['#EAC4A7','#CF9E79','#B67D58','#8C573F','#F2D0B7','#754B38'],hairs=['#312923','#56392D','#282832','#8A593D','#5B4434','#A97542'],clothes=['#37685D','#4A597B','#7D4D63','#A47646','#426C76','#6A5978'];
+export const skins=['#EAC4A7','#CF9E79','#B67D58','#8C573F','#F2D0B7','#754B38'],hairs=['#312923','#56392D','#282832','#8A593D','#5B4434','#A97542'],clothes=['#37685D','#4A597B','#7D4D63','#A47646','#426C76','#6A5978'];
+export const appearanceOptions={skin:skins,hair:hairs,clothes,style:['Classic','Side swept','Full fringe']};
+export function validAppearance(a){return a===undefined||!!a&&a.version===1&&Object.keys(appearanceOptions).every(k=>Number.isInteger(a[k])&&a[k]>=0&&a[k]<appearanceOptions[k].length);}
+export function appearanceDefaults(s){const h=hash(s.lifeId||s.name||'life');return {version:1,skin:h%skins.length,hair:(h>>>4)%hairs.length,clothes:(h>>>9)%clothes.length,style:(h>>>14)%3};}
 export function portraitView(s){
- const h=hash(s.lifeId||s.name||'life'),a=s.age,t=s.stats||{};
- return {stage:a<3?'baby':a<13?'child':a<20?'teen':a<45?'adult':a<65?'mature':'elder',mood:!s.alive?'remembered':t.health<35?'tired':t.stress>=70?'worried':t.happiness>=75?'happy':'calm',skin:skins[h%skins.length],hair:a>=75?'#D9D7D1':a>=55?'#A5A3A2':hairs[(h>>>4)%hairs.length],clothes:clothes[(h>>>9)%clothes.length],style:(h>>>14)%3,age:a};
+ const look=validAppearance(s.appearance)&&s.appearance?s.appearance:appearanceDefaults(s),a=s.age,t=s.stats||{};
+ return {stage:a<3?'baby':a<13?'child':a<20?'teen':a<45?'adult':a<65?'mature':'elder',mood:!s.alive?'remembered':t.health<35?'tired':t.stress>=70?'worried':t.happiness>=75?'happy':'calm',skin:skins[look.skin],hair:a>=75?'#D9D7D1':a>=55?'#A5A3A2':hairs[look.hair],clothes:clothes[look.clothes],style:look.style,age:a};
+}
+export function npcPortraitView(p){
+ return portraitView({lifeId:'npc-'+p.id+'-'+p.name,age:p.age,alive:p.alive,stats:{health:70,happiness:p.world?.joy??p.bond,stress:Math.max(0,100-(p.world?.joy??p.bond))}});
+}
+// A transient UI event; derives only from successful changes in the same life.
+export function milestoneBetween(before,after){
+ if(!before||!after||before.lifeId!==after.lifeId)return null;
+ const achievements=(after.achievements||[]).filter(x=>!(before.achievements||[]).includes(x));
+ const challenges=(after.completedChallenges||[]).filter(x=>!(before.completedChallenges||[]).includes(x));
+ const ageMilestone=after.age>before.age&&[13,18,30,50,65,80,100].includes(after.age);
+ if(!after.alive)return null;
+ const titles=[...achievements.map(x=>'Achievement: '+x)];
+ if(challenges.length)titles.push(challenges.length+' new challenge'+(challenges.length===1?'':'s')+' completed');
+ if(ageMilestone)titles.push('Reached age '+after.age);
+ if(after.education>before.education)titles.push('Education milestone');
+ if(!before.people.some(p=>p.alive&&p.role==='partner'&&p.married)&&after.people.some(p=>p.alive&&p.role==='partner'&&p.married))titles.push('A marriage begins');
+ const children=after.people.filter(p=>p.alive&&p.role==='child'&&!before.people.some(q=>q.id===p.id&&q.role==='child'));
+ if(children.length)titles.push('Welcomed '+children.map(p=>p.name).join(', '));
+ return titles.length?{lifeId:after.lifeId,age:after.age,titles:titles.slice(0,4),extra:Math.max(0,titles.length-4)}:null;
 }
 export function yearBefore(s,worth){return {age:s.age,worth:worth(s),cash:s.cash,stats:{...s.stats},people:s.people.filter(p=>p.alive).map(p=>({id:p.id,name:p.name,bond:p.bond}))};}
 export function recordYear(s,before,worth,career){
