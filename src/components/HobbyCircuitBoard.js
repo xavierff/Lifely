@@ -42,7 +42,7 @@ export default function HobbyCircuitBoard({view,onChoose,soundEnabled=true}){
    <View style={S.competitor}><View style={S.rivalAvatar}><Text style={S.rivalInitials}>{view.opponent.split(' ').slice(0,2).map(n=>n[0]).join('')}</Text></View><Text numberOfLines={2} style={S.opponentName}>{view.opponent}</Text><Text style={S.tiny}>RATING {view.opponentRating}</Text></View>
   </View>
   <View style={S.split}><Text style={S.topline}>ROUND {view.round} OF {view.total}: {view.phase.toUpperCase()}</Text><Text style={S.topline}>MASTERY {view.mastery}/100</Text></View>
-  <View style={S.progress}>{[0,1,2].map((i)=><View key={i} style={[S.progressSegment,i<view.round&&S.progressDone]}/>)}</View>
+  <View accessibilityRole="progressbar" accessibilityLabel="Hobby rounds completed" accessibilityValue={{min:0,max:view.total,now:view.round-1}} style={S.progress}>{Array.from({length:view.total},(_,i)=><View key={i} style={[S.progressSegment,i<view.round-1&&S.progressDone,i===view.round-1&&{backgroundColor:P.gold}]}/>)}</View>
   <View style={S.meters}><Meter label="Focus" value={view.meters.focus}/><Meter label="Momentum" value={view.meters.momentum} color={P.gold}/></View>
   <Animated.View style={[S.cue,{transform:[{scale:anim}]}]}>
    <Text style={S.cueLabel}>READ THE SITUATION</Text>
