@@ -20,9 +20,9 @@ const issues={
 const RESULTS=['joint-adoption','a-priority','b-priority','partial-compromise',
  'gridlock','dissolved'];
 const fresh=()=>({version:1,serial:0,active:null,completed:[],used:[],
- news:[],ancestors:[],deliveries:[],lastStartAge:-100,lastOfferAge:-100});
+ news:[],ancestors:[],deliveries:[],reversals:[],lastStartAge:-100,lastOfferAge:-100});
 export const civicMandatesState=s=>s.civicMandates||fresh();
-const ensure=s=>{const m=s.civicMandates??=fresh();m.deliveries??=[];return m;};
+const ensure=s=>{const m=s.civicMandates??=fresh();m.deliveries??=[];m.reversals??=[];return m;};
 const group=(s,id)=>(s.socialCircles?.groups||[]).find(g=>g.id===id)||null;
 const link=(s,id)=>(s.organizationNetwork?.links||[]).find(l=>l.id===id)||null;
 function contact(s,id){
@@ -357,6 +357,92 @@ function tickDeliveries(s,ctx){
  }
 }
 
+// A failed delivery is remembered, not erased by a later reform.
+const reversalEndings=['reform-agreed','reconciled','alliance-withdrawn','unresolved','unavailable'];
+function reversalReps(s,x){
+ const r=reps(s,link(s,x.linkId));
+ return r&&r.a.id===x.groupAId&&r.b.id===x.groupBId?r:null;
+}
+function reversalOptions(x){
+ return [
+  {label:'Mediate a renewed agreement',detail:'Reduce hostility and rebuild trust',tag:'mediate'},
+  {label:'Support the challenger’s reform demands',detail:'Increase reform pressure but strain the opposing relationship',tag:'reform'},
+  {label:'Respect both organizations’ independence',detail:'Record a neutral response without changing resources',tag:'neutral'}
+ ];
+}
+function reversalNote(x,s,text){
+ x.history.push({age:s.age,text:short(text,220)});x.history=x.history.slice(-8);
+}
+function tickReversals(s,ctx){
+ const m=ensure(s);
+ for(const x of m.reversals.filter(x=>x.ending===null)){
+  if(s.age<=x.lastAge)continue;
+  const r=reversalReps(s,x);
+  if(!r){
+   x.ending='unavailable';x.endedAge=s.age;x.pending=false;
+   reversalNote(x,s,'The original organizations no longer have two available representatives.');
+   continue;
+  }
+  x.lastAge=s.age;
+  const challenger=x.side==='a'?r.a:r.b,opponent=x.side==='a'?r.b:r.a;
+  x.pressure=cap(x.pressure+Math.round((challenger.tension+opponent.tension)/20)+2);
+  x.trust=cap(x.trust+Math.round((r.l.trust-r.l.competition)/15));
+  if(s.age>=x.dueAge){
+   x.ending=x.trust>=65&&x.pressure<65?'reconciled':
+    x.trust>=40&&x.pressure>=55?'reform-agreed':
+    x.trust<35&&x.pressure>=65?'alliance-withdrawn':'unresolved';
+   x.pending=false;x.endedAge=s.age;
+   const delta=x.ending==='reconciled'?8:x.ending==='reform-agreed'?3:x.ending==='alliance-withdrawn'?-12:0;
+   r.l.trust=cap(r.l.trust+delta);
+   r.l.competition=cap(r.l.competition-delta);
+   challenger.history.push({age:s.age,kind:'relationship',title:'Public accountability',outcome:x.ending,description:short('Response to the failed public commitment: '+x.ending,240)});
+   challenger.history=challenger.history.slice(-8);
+   if(x.ending==='alliance-withdrawn')r.l.trust=Math.min(r.l.trust,25);
+   reversalNote(x,s,'The dispute concluded: '+x.ending.replaceAll('-',' ')+'.');
+   report(s,ctx,issues[x.issue].name+': '+x.ending.replaceAll('-',' ')+'.');
+  }else{
+   x.pending=true;
+   reversalNote(x,s,'The organizations reconsidered their positions.');
+  }
+ }
+ // Only real, recently concluded failures can trigger a dispute; one per delivery.
+ if(m.reversals.some(x=>x.ending===null))return;
+ const d=m.deliveries.find(d=>d.status==='completed'&&['partial','stalled'].includes(d.ending)&&
+  s.age>d.endedAge&&s.age-d.endedAge<=3&&s.age<=106&&
+  !m.reversals.some(x=>x.deliveryId===d.id)&&reversalReps(s,d));
+ if(!d)return;
+ const r=reversalReps(s,d),side=r.a.tension-r.a.cohesion>=r.b.tension-r.b.cohesion?'a':'b';
+ const x={id:'reversal-'+d.id,deliveryId:d.id,linkId:d.linkId,issue:d.issue,
+  groupAId:d.groupAId,groupBId:d.groupBId,side,
+  startedAge:s.age,lastAge:s.age,dueAge:s.age+3,endedAge:null,ending:null,
+  pressure:cap(55+(100-d.progress)/4),trust:cap(r.l.trust),pending:true,history:[],decisions:[]};
+ m.reversals.push(x);m.reversals=m.reversals.slice(-12);
+ reversalNote(x,s,(side==='a'?r.pa.name:r.pb.name)+' challenged the incomplete commitment.');
+ report(s,ctx,'Public accountability dispute: '+issues[x.issue].name+'.');
+}
+function reversalCommands(s){
+ return (civicMandatesState(s).reversals||[]).filter(x=>x.ending===null&&x.pending)
+ .flatMap(x=>reversalOptions(x).map((o,i)=>({id:'mandate:reversal:'+x.id+':'+i,
+ label:o.label,detail:o.detail,enabled:!blocked(s)&&s.actions>0&&!!reversalReps(s,x)})));
+}
+function actReversal(s,id,ctx){
+ const match=/^mandate:reversal:(reversal-delivery-mandate-g[0-9]+-[0-9]+):([012])$/.exec(id);
+ const x=ensure(s).reversals.find(x=>x.id===match?.[1]),r=x&&reversalReps(s,x);
+ if(!match||!x||x.ending!==null||!x.pending||!r||blocked(s))throw Error('This accountability dispute is unavailable.');
+ const i=Number(match[2]),o=reversalOptions(x)[i],challenger=x.side==='a'?r.pa:r.pb,opponent=x.side==='a'?r.pb:r.pa;
+ if(i===0){
+  x.trust=cap(x.trust+15);x.pressure=cap(x.pressure-12);
+  r.l.trust=cap(r.l.trust+5);r.l.competition=cap(r.l.competition-4);
+  touch(s,challenger.id,3,-2,o.label);touch(s,opponent.id,3,-2,o.label);
+ }else if(i===1){
+  x.pressure=cap(x.pressure+15);x.trust=cap(x.trust-5);
+  r.l.competition=cap(r.l.competition+5);
+  touch(s,challenger.id,5,-1,o.label);touch(s,opponent.id,-4,5,o.label);
+ }
+ x.pending=false;x.decisions.push({age:s.age,tag:o.tag});x.decisions=x.decisions.slice(-3);
+ reversalNote(x,s,o.label);report(s,ctx,'Accountability response: '+o.label+'.');
+ return x;
+}
 const blocked=s=>!s.alive||s.pending!==null||s.mini||
  s.world?.network?.conversation||s.world?.storyDirector?.active||
  s.fate?.active?.status==='playing'||s.careerCampaigns?.active||
@@ -376,7 +462,7 @@ function options(m){
  ];
 }
 export function civicMandateCommands(s){
- const m=civicMandatesState(s),o=m.active,choices=deliveryCommands(s);
+ const m=civicMandatesState(s),o=m.active,choices=[...deliveryCommands(s),...reversalCommands(s)];
  if(!o?.pending)return choices;
  const r=reps(s,link(s,o.linkId));
  return [...options(o).map(x=>({id:'mandate:'+o.id+':'+x.index,
@@ -384,6 +470,7 @@ export function civicMandateCommands(s){
   enabled:!blocked(s)&&s.actions>0&&!!r})),...choices];
 }
 export function civicMandateAct(s,id,ctx){
+ if(id.startsWith('mandate:reversal:'))return actReversal(s,id,ctx);
  if(id.startsWith('mandate:delivery:'))return actDelivery(s,id,ctx);
  const match=/^mandate:(mandate-g[0-9]+-[0-9]+):([012])$/.exec(id);
  if(!match||!civicMandateCommands({...s,actions:s.actions+1})
@@ -437,6 +524,7 @@ export function civicMandatesYear(s,ctx={}){
  const m=ensure(s),hadActive=!!m.active;
  if(m.active)ongoing(s,m.active,ctx);
  tickDeliveries(s,ctx);
+ tickReversals(s,ctx);
  if(!hadActive&&!m.active&&s.age-m.lastStartAge>=7&&s.age<=101){
   const c=source(s);
   if(c)launch(s,c,ctx);
@@ -462,6 +550,7 @@ export function civicMandatesView(s){
    representativeA:reps(s,link(s,d.linkId))?.pa.name||null,
    representativeB:reps(s,link(s,d.linkId))?.pb.name||null,
    options:d.status==='active'?deliveryOptions(d):[]})),
+  reversals:(m.reversals||[]).slice(-6).reverse().map(x=>{const r=reversalReps(s,x);return {...x,issueName:issues[x.issue].name,challenger:r?(x.side==='a'?r.pa.name:r.pb.name):null,opponent:r?(x.side==='a'?r.pb.name:r.pa.name):null};}),
   ancestors:m.ancestors.slice().reverse(),news:m.news.slice(-8).reverse()
  };
 }
@@ -536,6 +625,7 @@ export function validateCivicMandates(m){
   m.completed.every(x=>t(x)&&x.status==='completed')&&
   (m.deliveries===undefined||(Array.isArray(m.deliveries)&&m.deliveries.length<=12&&
    m.deliveries.every(delivery)&&new Set(m.deliveries.map(d=>d.id)).size===m.deliveries.length))&&
+  (m.reversals===undefined||(Array.isArray(m.reversals)&&m.reversals.length<=12&&new Set(m.reversals.map(x=>x.id)).size===m.reversals.length&&m.reversals.every(x=>x&&str(x.deliveryId,110)&&x.id==='reversal-'+x.deliveryId&&str(x.linkId,190)&&Object.hasOwn(issues,x.issue)&&str(x.groupAId,100)&&str(x.groupBId,100)&&x.groupAId!==x.groupBId&&['a','b'].includes(x.side)&&age(x.startedAge)&&age(x.lastAge)&&age(x.dueAge)&&x.dueAge===x.startedAge+3&&score(x.pressure)&&score(x.trust)&&typeof x.pending==='boolean'&&(x.ending===null?x.endedAge===null:reversalEndings.includes(x.ending)&&age(x.endedAge)&&!x.pending)&&Array.isArray(x.history)&&x.history.length<=8&&x.history.every(h=>h&&age(h.age)&&str(h.text,220))&&Array.isArray(x.decisions)&&x.decisions.length<=3&&x.decisions.every(d=>d&&age(d.age)&&['mediate','reform','neutral'].includes(d.tag)))))&&
   Array.isArray(m.used)&&m.used.length<=36&&m.used.every(x=>str(x,230))&&
   new Set(m.used).size===m.used.length&&
   Array.isArray(m.news)&&m.news.length<=25&&
