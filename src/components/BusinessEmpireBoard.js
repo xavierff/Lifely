@@ -1,0 +1,14 @@
+import React,{useState} from 'react';
+import {View,Text,Pressable,StyleSheet} from 'react-native';
+const fmt=n=>(n<0?'−':'')+'$'+Math.abs(n).toLocaleString('en-US');
+export default function BusinessEmpireBoard({view,commands,blocked,onAction}){
+ const [open,setOpen]=useState(false),choices=commands.filter(c=>c.id.startsWith('empire:'));
+ if(!choices.length&&!view.companies.length&&!view.history.length&&!view.legacy.length)return null;
+ return <View testID="empire-board" style={S.root}><Text style={S.eyebrow}>INDEPENDENT COMPANY PORTFOLIO</Text><Text style={S.title}>Business empire</Text>
+ <Text style={S.name}>{fmt(view.value)} portfolio · {view.companies.length}/4 companies</Text><Text style={S.small}>Last annual profit {fmt(view.lastProfit)} · Profitable years {view.yearsProfit} · Recoveries {view.comebacks}</Text>
+ {view.crisis?<View style={S.warning} testID="empire-crisis"><Text style={S.eyebrow}>LIQUIDITY CRISIS</Text><Text style={S.name}>Debt remains payable</Text><Text style={S.small}>Started age {view.crisis.startedAge} · Peak debt {fmt(view.crisis.peakDebt)}. New acquisitions paused.</Text></View>:null}
+ {view.companies.map(h=><View key={h.id} style={S.panel} testID={'empire-owned-'+h.id}><Text style={S.eyebrow}>{h.sector} · {h.distressed?'DISTRESSED':'OPERATING'}</Text><Text style={S.name}>{h.name} · {fmt(h.value)}</Text><Text style={S.small}>Annual result {fmt(h.lastProfit)} · Competitor {h.rival}</Text><Text style={S.small}>Quality {h.quality} · Demand {h.demand} · Competition {h.competition}</Text></View>)}
+ {!blocked&&choices.length?<><Pressable testID="empire-expand" accessibilityRole="button" accessibilityState={{expanded:open}} onPress={()=>setOpen(!open)} style={S.panel}><Text style={S.name}>{open?'Hide company decisions':'Manage acquisitions and companies'}</Text></Pressable>{open&&choices.map(c=><Pressable key={c.id} testID={c.id.replace(/:/g,'-')} accessibilityRole="button" accessibilityState={{disabled:!c.enabled}} disabled={!c.enabled} onPress={()=>onAction(c.id)} style={[S.panel,!c.enabled&&{opacity:.45}]}><Text style={S.name}>{c.label}</Text><Text style={S.small}>{c.detail}</Text></Pressable>)}</>:null}
+ {view.history.slice(0,3).map(h=><Text key={h.id} style={S.small}>Age {h.age} · {h.message}</Text>)}{view.legacy.map((h,i)=><Text key={i} style={S.small}>{h.ancestor}: {h.message}</Text>)}</View>;
+}
+const S=StyleSheet.create({root:{padding:13,gap:9,borderRadius:15,backgroundColor:'#263E4B',borderWidth:1,borderColor:'#728EA0'},title:{fontSize:21,fontWeight:'900',color:'#F0F7FF'},eyebrow:{fontSize:10,fontWeight:'900',color:'#D9D6AB'},name:{fontSize:14,fontWeight:'800',color:'#F1F7FA',flexShrink:1},small:{fontSize:12,lineHeight:18,color:'#CDDFE8',flexShrink:1},panel:{padding:11,minHeight:44,borderRadius:9,gap:5,backgroundColor:'#3D5865'},warning:{padding:11,borderRadius:9,gap:5,backgroundColor:'#75494B'}});
