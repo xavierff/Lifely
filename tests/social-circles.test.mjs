@@ -5,6 +5,7 @@ import {
  socialCirclesYear,socialCirclesState,socialCirclesView,socialCirclesInheritance,
  validateSocialCircles
 } from '../src/content/social-circles.mjs';
+import {organizationNetworkYear} from '../src/content/organization-relations.mjs';
 import {socialInfluenceYear} from '../src/content/social-influence.mjs';
 
 const noop=()=>{};
@@ -411,4 +412,12 @@ test('1.29: old saves, corrupted parent identities, and heir archives',()=>{
  const heir=E.createLife({seed:129008});socialCirclesInheritance(heir,s);
  assert.ok(heir.socialCircles.groups.every(x=>x.status==='dormant'&&!x.members.length&&!x.institution?.crisis));
  assert.ok(heir.socialCircles.groups.find(x=>x.id===child.id));assert.ok(E.validate(heir));
+});
+
+test('1.29: competing factions form a distinct contest link with real representatives',()=>{
+ const {s,g,child}=splitFixture(129009);
+ organizationNetworkYear(s,{add:noop});
+ const l=s.organizationNetwork.links.find(l=>[l.aId,l.bId].includes(g.id)&&[l.aId,l.bId].includes(child.id));
+ assert.ok(l);assert.equal(l.theme,'contest');assert.notEqual(l.leaderA,l.leaderB);
+ assert.ok(E.validate(s));
 });
