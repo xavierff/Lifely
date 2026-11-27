@@ -114,7 +114,14 @@ export function chronicleView(s){
   category:'relationship',turning:true,source:'memory',choice:'',netWorth:0,
   changes:[],bonds:[],future:[]
  }));
- const all=[...journal,...echoes,...fates,...social,...npcPlans,...entries.map(e=>({...e,source:'choice'}))]
+ const competingFutures=(s.competingFutures?.completed||[]).filter(x=>
+  ['alliance','partnership','rivals','compromise','diverged'].includes(x.ending)).map(x=>({
+   id:'competing-futures-'+x.id,age:x.endedAge,
+   title:x.personName+': '+x.title+' — '+x.ending,
+   category:x.kind==='business'?'business':'relationship',turning:true,source:'memory',
+   choice:'',netWorth:0,changes:[],bonds:[],future:[]
+ }));
+ const all=[...journal,...echoes,...fates,...social,...npcPlans,...competingFutures,...entries.map(e=>({...e,source:'choice'}))]
   .sort((a,b)=>a.age-b.age||(a.source==='history'?-1:1));
  const timeline=all.slice(-90);
  // Include the birth marker even in long lives, without affecting chronology.
