@@ -21,7 +21,7 @@ test('adult life exposes career adventures and new tactical hobbies',async({page
  await expect(board.getByTestId('outing-start-teen-crush')).toHaveCount(0);
  const hobbies=page.getByTestId('hobby-league-overview');await hobbies.getByTestId('hobby-tile-tabletennis').click();
  await hobbies.getByTestId('hobby-action-hobby-start-tabletennis-practice').click();
- await expect(page.getByTestId('hobby-circuit-board')).toContainText('Table tennis');
+ await expect(page.getByTestId('active-hobby')).toContainText('Table tennis');
  await page.getByTestId('hobby-choice-0').click();await page.getByTestId('hobby-choice-1').click();await page.getByTestId('hobby-choice-2').click();
  await expect(hobbies.getByTestId('hobby-last-result')).toBeVisible();
 });
