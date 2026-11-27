@@ -376,3 +376,42 @@ test('1.26: old saves migrate; corrupted follow-through records are rejected; he
  assert.ok(heir.civicMandates.ancestors.at(-1).note.includes('Delivery reviews'));
  assert.ok(E.validate(heir));
 });
+
+function disputedPromise(seed=127001){
+ const s=deliveredPromise(seed),d=s.civicMandates.deliveries[0];
+ Object.assign(d,{status:'completed',ending:'stalled',endedAge:s.age,pending:false,offerAge:null,progress:15});
+ s.age++;s.actions=3;civicMandatesYear(s,{add:silent});
+ assert.equal(s.civicMandates.reversals.length,1);
+ return s;
+}
+test('1.27: incomplete delivery triggers an NPC dispute only once',()=>{
+ const s=disputedPromise(),x=s.civicMandates.reversals[0];
+ assert.ok(x.pending);assert.equal(x.deliveryId,s.civicMandates.deliveries[0].id);
+ civicMandatesYear(s,{add:silent});assert.equal(s.civicMandates.reversals.length,1);
+ assert.ok(E.validate(s));
+});
+test('1.27: mediation and reform support create distinct real consequences',()=>{
+ const s=disputedPromise(127002),x=s.civicMandates.reversals[0],prefix='mandate:reversal:'+x.id+':';
+ const a=E.act(s,prefix+'0'),b=E.act(s,prefix+'1');
+ assert.equal(a.civicMandates.reversals[0].trust,Math.min(100,x.trust+15));
+ assert.ok(b.civicMandates.reversals[0].pressure>x.pressure);
+ assert.equal(a.cash,s.cash);assert.equal(b.cash,s.cash);
+ assert.equal(a.actions,s.actions-1);assert.ok(E.validate(a));assert.ok(E.validate(b));
+});
+test('1.27: neutral response preserves resources and NPC relations',()=>{
+ const s=disputedPromise(127003),x=s.civicMandates.reversals[0];
+ const n=E.act(s,'mandate:reversal:'+x.id+':2');
+ for(const k of ['people','stats','socialCircles','organizationNetwork','cash','rng'])assert.deepEqual(n[k],s[k]);
+ assert.equal(n.civicMandates.reversals[0].pending,false);assert.ok(E.validate(n));
+});
+test('1.27: disputes resolve autonomously and never rewrite original delivery',()=>{
+ const s=disputedPromise(127004),x=s.civicMandates.reversals[0];
+ for(let i=0;i<3;i++){s.age++;civicMandatesYear(s,{add:silent});}
+ assert.ok(x.ending);assert.equal(x.pending,false);assert.equal(s.civicMandates.deliveries[0].ending,'stalled');
+ assert.ok(E.validate(s));
+});
+test('1.27: compatible saves, invalid meters, and no inherited living disputes',()=>{
+ const s=disputedPromise(127005),old=structuredClone(s);delete old.civicMandates.reversals;assert.ok(E.validate(old));
+ const bad=structuredClone(s);bad.civicMandates.reversals[0].pressure=101;assert.equal(E.validate(bad),false);
+ const heir=E.createLife({seed:127006});civicMandatesInheritance(heir,s);assert.deepEqual(heir.civicMandates.reversals,[]);assert.ok(E.validate(heir));
+});
