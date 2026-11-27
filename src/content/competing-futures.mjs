@@ -274,6 +274,9 @@ export function competingFuturesYear(s,ctx={}){
   }
  }
  if(s.age>101||m.active.length>=MAX_ACTIVE)return;
+ // One invitation per calendar year, even if several real lives intersect.
+ // Avoid duplicate same-year launches when existing routines revisit this tick.
+ if(m.active.some(x=>x.startedAge===s.age))return;
  const candidate=candidates(s)[0];
  if(candidate)start(s,candidate,ctx);
 }
