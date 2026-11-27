@@ -82,6 +82,20 @@ function observe(s){
   impact(s,'story',x.id,clip(x.title||'A social story')+' — '+result,
    'community',value,x.firstId||null);
  }
+ // Multi-year public campaigns affect earned standing only through a
+ // meaningful player response. Autonomous organizations get no player reward.
+ for(const mandate of [
+  ...(s.civicMandates?.completed||[]),
+  ...(s.civicMandates?.active?[s.civicMandates.active]:[])
+ ]){
+  for(let i=0;i<(mandate.decisions||[]).length;i++){
+   const d=mandate.decisions[i],group=mandate.issue==='skills-access'?
+    'professional':mandate.issue==='family-support'?'family':'community';
+   impact(s,'mandate',mandate.id+':'+i,
+    mandate.groupAName+' and '+mandate.groupBName+' — '+d.label,
+    group,d.tag==='build-evidence'?3:d.tag==='advocate'?-2:0,mandate.leaderA);
+  }
+ }
  // Long-term choices affect earned social standing, but autonomous NPC
  // development and unanswered invitations create no free player rewards.
  for(const t of [...(s.publicAftermath?.threads||[]),...(s.publicAftermath?.archive||[])]){

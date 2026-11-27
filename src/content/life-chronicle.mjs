@@ -159,7 +159,18 @@ export function chronicleView(s){
    turning:h.kind==='ending',source:'memory',
    choice:'',netWorth:0,changes:[],bonds:[],future:[]
   })));
- const all=[...journal,...echoes,...fates,...social,...npcPlans,...competingFutures,...influence,...circleStories,...publicAlliances,...playablePublic,...aftermath,...entries.map(e=>({...e,source:'choice'}))]
+ const civic=(s.civicMandates?.completed||[]).map(t=>({
+  id:'civic-'+t.id,age:t.endedAge,
+  title:'Public mandate: '+({
+   'family-support':'Family care & neighborhood support',
+   'skills-access':'Apprenticeship & skills access',
+   'shared-space':'Shared neighborhood spaces',
+   'community-standards':'Community program standards'
+  }[t.issue]||t.issue)+' — '+t.groupAName+' & '+t.groupBName+' — '+t.ending,
+  category:t.issue==='skills-access'?'career':'relationship',
+  turning:true,source:'memory',choice:'',netWorth:0,changes:[],bonds:[],future:[]
+ }));
+ const all=[...journal,...echoes,...fates,...social,...npcPlans,...competingFutures,...influence,...circleStories,...publicAlliances,...playablePublic,...aftermath,...civic,...entries.map(e=>({...e,source:'choice'}))]
   .sort((a,b)=>a.age-b.age||(a.source==='history'?-1:1));
  const timeline=all.slice(-90);
  // Include the birth marker even in long lives, without affecting chronology.
