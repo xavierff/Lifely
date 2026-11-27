@@ -4,7 +4,7 @@ import {socialCirclesYear,socialCirclesInheritance} from '../src/content/social-
 const noop=()=>{};
 function life(seed=121101,type='family'){
  const s=E.createLife({seed,name:'Alex'});s.age=28;s.actions=3;
- for(const p of s.people){p.world.trust=72;p.world.rivalry=7;p.world.cash=13000;}
+ for(const p of s.people){p.world.trust=72;p.world.rivalry=7;p.world.cash=13000;p.world.ambition='Family life';}
  if(type==='professional'){
   s.job={id:0,level:0,experience:0};s.people[0].world.job=0;
  }else if(type==='community')s.people[0].world.ambition='Community service';

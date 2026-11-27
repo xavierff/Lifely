@@ -11,7 +11,7 @@ const noop=()=>{};
 function base(seed=121001,type='family'){
  const s=E.createLife({seed,name:'Alex'});s.age=28;s.actions=3;
  for(const p of s.people){
-  p.world.trust=72;p.world.rivalry=7;p.world.cash=13000;p.world.debt=0;
+  p.world.trust=72;p.world.rivalry=7;p.world.cash=13000;p.world.debt=0;p.world.ambition='Family life';
  }
  if(type==='professional'){
   s.job={id:0,level:0,experience:0};
