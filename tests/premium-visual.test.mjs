@@ -22,6 +22,13 @@ test('1.43: NPC portrait identity persists as relationships and ages change',()=
  const w=npcPortraitView(next);assert.equal(v.skin,w.skin);assert.equal(v.clothes,w.clothes);assert.equal(w.stage,'elder');assert.equal(w.mood,'happy');
  assert.equal(npcPortraitView({...p,alive:false}).mood,'remembered');
 });
+test('1.43: continuation as a child preserves their NPC cosmetic identity',()=>{
+ let s=fresh(143007);s.age=30;s.cash=50000;s=E.act(s,'date');s=E.act(s,'child');
+ const child=s.people.find(p=>p.role==='child');child.age=25;s.alive=false;s.pending=null;
+ const heir=E.legacy(s,child.id),before=npcPortraitView(child),after=portraitView(heir);
+ for(const key of ['skin','hair','clothes','style'])assert.equal(after[key],before[key]);
+ assert.ok(E.validate(heir));
+});
 test('1.43: milestones report only new events in the same life',()=>{
  const s=fresh(143004),n=structuredClone(s);n.age=18;n.achievements.push('New achievement');n.education=1;
  const m=milestoneBetween(s,n);assert.ok(m.titles.includes('Reached age 18'));assert.ok(m.titles.includes('Achievement: New achievement'));assert.ok(m.titles.includes('Education milestone'));

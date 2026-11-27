@@ -11,3 +11,12 @@ test('appearance persists and NPC portraits appear on a narrow screen',async({pa
  await page.getByTestId('advance-year').click();await expect(page.getByTestId('milestone-celebration')).toContainText('Reached age 18');await page.getByTestId('milestone-dismiss').click();await expect(page.getByTestId('milestone-celebration')).toHaveCount(0);
  await page.reload();await expect(page.getByTestId('milestone-celebration')).toHaveCount(0);
 });
+
+test('onboarding preview and selected appearance carry into the new life',async({page})=>{
+ await page.setViewportSize({width:320,height:740});await page.goto('/');
+ await page.getByLabel('Character name').fill('Lina');
+ const b=page.getByTestId('appearance-studio');await b.getByTestId('appearance-toggle').click();await b.getByTestId('appearance-clothes-3').click();
+ await page.getByRole('button',{name:'Begin my life'}).click();
+ await expect(page.getByTestId('character-portrait')).toBeVisible();
+ await expect.poll(async()=>page.evaluate(()=>JSON.parse(localStorage.getItem('lifely.save.v2'))?.appearance?.clothes)).toBe(3);
+});

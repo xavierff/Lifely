@@ -19,7 +19,7 @@ import {crossroadsState,crossroadsYear,crossroadsCommands,crossroadsAct,crossroa
 import {npcGoalTypes,npcAmbitionState,npcAmbitionYear,npcAmbitionCommands,npcAmbitionAct,npcAmbitionView,npcAmbitionInheritance,validateNpcAmbitions} from './content/npc-ambitions.mjs';
 import {competingFuturesState,competingFuturesYear,competingFuturesCommands,competingFuturesAct,competingFuturesView,competingFuturesInheritance,validateCompetingFutures} from './content/competing-futures.mjs';
 import {socialInfluenceState,socialInfluenceYear,socialInfluenceCommands,socialInfluenceAct,socialInfluenceView,socialInfluenceInheritance,validateSocialInfluence} from './content/social-influence.mjs';
-import {yearBefore,recordYear,yearRecapView,validateYearRecap,validAppearance} from './content/immersive-life.mjs';
+import {yearBefore,recordYear,yearRecapView,validateYearRecap,validAppearance,appearanceDefaults} from './content/immersive-life.mjs';
 import {justiceJourneyCommands,justiceJourneyAct,justiceJourneyYear,justiceJourneyVerdict,justiceJourneyRelease,justiceJourneyView,justiceJourneyInheritance,validateJusticeJourney} from './content/justice-journey.mjs';
 import {spotlightCommands,spotlightAct,spotlightYear,spotlightLeave,spotlightView,spotlightInheritance,validateSpotlight} from './content/spotlight-world.mjs';
 import {sportContractCommands,sportContractAct,sportContractLeave,sportContractView,sportContractInheritance,validateSportContracts} from './content/sport-contracts.mjs';
@@ -513,7 +513,7 @@ function makeEngine(){
     if(s.alive)throw Error("Finish this life before continuing.");
     let child=s.people.find(p=>p.id===id&&p.role==="child"&&p.alive);if(!child)throw Error("Select a living child.");
     let n=createLife({name:child.name,country:s.country,background:s.background,seed:s.rng,goal:s.goal});
-    n.lifeId=(s.lifeId||n.lifeId)+"-g"+(s.generation+1);inheritWorld(n,s,child);const estate=Math.max(0,worth(s));
+    n.lifeId=(s.lifeId||n.lifeId)+"-g"+(s.generation+1);n.appearance=appearanceDefaults({lifeId:'npc-'+child.id+'-'+child.name});inheritWorld(n,s,child);const estate=Math.max(0,worth(s));
     const preferredId=s.world?.dynasty?.heirId;
     const hasPreferred=s.people.some(p=>p.id===preferredId&&p.role==='child'&&p.alive);
     const earmarks=householdInheritanceFunds(s,id);const sharedEstate=Math.max(0,estate-earmarks.livingChildFunds);
