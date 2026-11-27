@@ -1,0 +1,18 @@
+import React,{useState} from 'react';
+import {View,Text,Pressable,StyleSheet} from 'react-native';
+export default function JusticeJourneyBoard({view,commands,blocked,onAction,professional=false}){
+ const [open,setOpen]=useState(false),options=commands.filter(c=>c.id.startsWith('justicejourney:')&&(!professional||c.id.startsWith('justicejourney:investigate:')||c.id.startsWith('justicejourney:answer:')));
+ if(professional&&!options.length&&!view.investigation)return null;
+ if(!professional&&!options.length&&!view.record&&!view.case&&!view.custody&&!view.history.length&&!view.legacy.length)return null;
+ const r=view.release;
+ return <View testID="justice-journey" style={S.root}><Text style={S.eyebrow}>FICTIONAL JUSTICE SYSTEM</Text><Text style={S.title}>{professional?'Investigation desk':view.custody?'Life in custody':view.case?'Preparing for court':'Justice & second chances'}</Text>
+ {!professional?<Text style={S.small}>Convictions {view.record} · Custody {view.custody} years · Recovery plans completed {view.recoveries}</Text>:null}
+ {view.case&&!professional?<Text style={S.small}>{view.case.counsel?'Counsel consulted':'Counsel available in Justice'} · {view.prep?'Preparation completed':'Case preparation available after counsel'}</Text>:null}
+ {view.custody>0&&!professional?<View style={S.panel}><Text style={S.name}>Custody programs</Text><Text style={S.small}>Education {view.programs.study} · Wellbeing {view.programs.wellbeing} · Restorative service {view.programs.service}</Text></View>:null}
+ {r&&!professional?<View style={S.panel} testID="reentry-plan"><Text style={S.eyebrow}>{r.completed?'REINTEGRATION COMPLETE':'REINTEGRATION MILESTONES'}</Text>{['training','support','service'].map(k=><Text key={k} style={S.name}>{r[k]?'✓':'○'} {k}</Text>)}<Text style={S.small}>Begin at age {r.age}; the conviction record is preserved.</Text></View>:null}
+ {view.investigation?<View style={S.panel} testID="investigation-file"><Text style={S.eyebrow}>CASE FILE</Text><Text style={S.name}>{view.investigation.title}</Text>{view.investigation.clues.map((c,i)=><Text key={i} style={S.small}>{i+1}. {c}</Text>)}<Text style={S.small}>Choose the conclusion best supported by the fictional evidence.</Text></View>:null}
+ {professional?<Text style={S.small}>{view.solved}/{view.attempted} reviews correctly concluded.</Text>:null}
+ {!blocked&&options.length?<><Pressable testID="justice-expand" accessibilityRole="button" accessibilityState={{expanded:open}} onPress={()=>setOpen(!open)} style={S.panel}><Text style={S.name}>{open?'Hide decisions':'Explore justice activities'}</Text></Pressable>{open&&options.map(c=><Pressable key={c.id} testID={c.id.replace(/:/g,'-')} accessibilityRole="button" disabled={!c.enabled} accessibilityState={{disabled:!c.enabled}} onPress={()=>onAction(c.id)} style={[S.panel,!c.enabled&&{opacity:.45}]}><Text style={S.name}>{c.label}</Text><Text style={S.small}>{c.detail}</Text></Pressable>)}</>:null}
+ {view.history.slice(0,3).map(h=><Text key={h.id} style={S.small}>Age {h.age} · {h.message}</Text>)}{!professional&&view.legacy.map((h,i)=><Text key={i} style={S.small}>{h.ancestor}: {h.message}</Text>)}</View>;
+}
+const S=StyleSheet.create({root:{padding:13,gap:9,borderRadius:15,backgroundColor:'#343F51',borderWidth:1,borderColor:'#8594B0'},title:{fontSize:21,fontWeight:'900',color:'#F2F6FF'},eyebrow:{fontSize:10,fontWeight:'900',color:'#DBD0A7'},name:{fontSize:14,fontWeight:'800',color:'#F2F6FF',flexShrink:1},small:{fontSize:12,lineHeight:18,color:'#D9E1EE',flexShrink:1},panel:{padding:11,minHeight:44,gap:5,borderRadius:9,backgroundColor:'#48576C'}});
