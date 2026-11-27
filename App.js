@@ -188,7 +188,7 @@ function Game(){
   <View style={S.careerMetrics}><View style={S.careerMetric}><Bar label="Quality" value={careerCampaign.quality}/></View><View style={S.careerMetric}><Bar label="Team" value={careerCampaign.team}/></View><View style={S.careerMetric}><Bar label="Audience" value={careerCampaign.reach}/></View><View style={S.careerMetric}><Bar label="Risk" value={careerCampaign.risk} stress/></View></View>
   <View style={S.careerProgress}><View style={[S.careerProgressFill,{width:(careerCampaign.round-1)/4*100+'%'}]}/></View>
   <View style={S.careerScene}><Text style={S.overline}>SCENE {careerCampaign.round} · {careerCampaign.phase.toUpperCase()}</Text><Text style={S.body}>{careerCampaign.prompt}</Text></View>
-   <CareerPlayfield view={careerCampaign.playfield} soundEnabled={soundEnabled} onPlay={i=>move(s=>E.campaignPlay(s,i))}/>
+   <CareerPlayfield view={careerCampaign.playfield} soundEnabled={soundEnabled} onPlan={id=>move(s=>E.campaignPlan(s,id))} onPlay={i=>move(s=>E.campaignPlay(s,i))}/>
    <Button compact label={soundEnabled?'Sound effects: On · tap to mute':'Sound effects: Off · tap to enable'} onPress={toggleSound}/>
    {careerCampaign.contact?<View style={S.careerContact} testID="career-npc"><Text style={S.overline}>COLLABORATOR / RIVAL</Text><Text style={S.h3}>{careerCampaign.contact.name}</Text><Text style={S.small}>{careerCampaign.contact.role}</Text>{careerCampaign.lastReaction?<Text style={S.body}>{careerCampaign.lastReaction.text}</Text>:<Text style={S.small}>This person will remember how you handle the project.</Text>}</View>:null}
   {careerCampaign.choices.map((option,i)=><Button key={i} label={option.label} detail={option.detail} primary={i===0} disabled={!option.enabled} onPress={()=>move(s=>E.campaignDecision(s,i))}/>)}
