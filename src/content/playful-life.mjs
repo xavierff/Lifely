@@ -61,6 +61,21 @@ export function outingView(a,s){
   personName:a.personName,personRole:a.personRole,prompt:step.cue,meters:{momentum:a.momentum,trust:a.trust,composure:a.composure,tension:a.tension,connection:a.connection},
   options:step.choices.map((o,index)=>({index,label:o.label,note:o.detail+' · '+o.stat+' · '+(o.risk>=8?'high risk':o.connection>=14?'connection':'preparation'),risk:o.risk})),last:a.last,history:a.choices.slice()};
 }
+const eras=['childhood','teen','adult','later'];
+const era=age=>age<13?'childhood':age<19?'teen':age<60?'adult':'later';
+function blankLedger(){return {total:0,distinct:[],eras:{childhood:0,teen:0,adult:0,later:0},connected:0,standout:0};}
+function countOuting(l,x){
+ if(x.type!=='outing'||x.outcome==='interrupted'||x.inheritedFrom||!spec(x.activityId))return;
+ l.total++;l.eras[era(x.endedAge)]++;
+ if(!l.distinct.includes(x.activityId))l.distinct.push(x.activityId);
+ if(x.connection>=62)l.connected++;
+ if(['rare-memory','standout'].includes(x.outcome))l.standout++;
+}
+function reconstruct(e){const l=blankLedger();for(const x of e.completed||[])countOuting(l,x);return l;}
+export function outingStats(s){
+ const e=s.everydayScenes||{},l=e.outingLedger||reconstruct(e);
+ return {...l,eras:{...l.eras},distinct:l.distinct.slice(),rare:(e.outingCollection||[]).length,eraCount:eras.filter(x=>l.eras[x]>0).length};
+}
 export function playOuting(s,e,index,ctx){
  const a=e.active,d=spec(a.activityId);
  if(index==='leave'){e.completed.push({...a,outcome:'interrupted',endedAge:s.age});e.completed=e.completed.slice(-45);e.active=null;return null;}
@@ -84,6 +99,7 @@ export function playOuting(s,e,index,ctx){
  if(peer){e.classmate=peer;peer.trust=cap(peer.trust+delta);peer.rivalry=cap(peer.rivalry+(delta<0?3:-2));peer.history??=[];peer.history.push({age:s.age,track:d.title,grade:rare?'breakthrough':grade==='mixed'?'complicated':'progress'});peer.history=peer.history.slice(-16);}
  ctx.change(s,d.stat,rare?5:grade==='mixed'?1:3);ctx.change(s,'happiness',grade==='mixed'?1:4);
  const result={...a,outcome:grade,endedAge:s.age,track:d.title,collectible:rare?d.rare:null,successful:a.score};
+ e.outingLedger??=reconstruct(e);countOuting(e.outingLedger,result);
  e.completed.push(result);e.completed=e.completed.slice(-45);e.active=null;
  if(result.collectible){e.outingCollection??=[];if(!e.outingCollection.some(x=>x.activityId===d.id))e.outingCollection.push({activityId:d.id,title:result.collectible,age:s.age});}
  if(p&&s.age<=108){e.callbacks.push({id:'callback-'+a.id,title:'The '+d.title+' memory',type:'bond',startedAge:s.age,dueAge:s.age+2,personId:p.id,classmateId:null,personName:p.name,grade:grade==='mixed'?'complicated':'progress',status:'scheduled'});e.callbacks=e.callbacks.slice(-24);}
@@ -92,7 +108,9 @@ export function playOuting(s,e,index,ctx){
 }
 export function validateOutingCollections(e){
  const valid=x=>x&&!!spec(x.activityId)&&x.title===spec(x.activityId).rare&&Number.isInteger(x.age)&&x.age>=6&&x.age<=105;
- return (e.outingCollection===undefined||Array.isArray(e.outingCollection)&&e.outingCollection.length<=outings.length&&e.outingCollection.every(valid)&&new Set(e.outingCollection.map(x=>x.activityId)).size===e.outingCollection.length)&&(e.outingLegacy===undefined||Array.isArray(e.outingLegacy)&&e.outingLegacy.length<=26&&e.outingLegacy.every(x=>valid(x)&&typeof x.ancestor==='string'&&Number.isInteger(x.generation)&&x.generation>=1));
+ const l=e.outingLedger,integer=n=>Number.isInteger(n)&&n>=0&&n<=110;
+ const ledgerOK=l===undefined||!!l&&integer(l.total)&&Array.isArray(l.distinct)&&l.distinct.length<=outings.length&&l.distinct.every(id=>!!spec(id))&&new Set(l.distinct).size===l.distinct.length&&l.distinct.length<=l.total&&!!l.eras&&eras.every(k=>integer(l.eras[k]))&&eras.reduce((n,k)=>n+l.eras[k],0)===l.total&&integer(l.connected)&&l.connected<=l.total&&integer(l.standout)&&l.standout<=l.total;
+ return ledgerOK&&(e.outingCollection===undefined||Array.isArray(e.outingCollection)&&e.outingCollection.length<=outings.length&&e.outingCollection.every(valid)&&new Set(e.outingCollection.map(x=>x.activityId)).size===e.outingCollection.length)&&(e.outingLegacy===undefined||Array.isArray(e.outingLegacy)&&e.outingLegacy.length<=26&&e.outingLegacy.every(x=>valid(x)&&typeof x.ancestor==='string'&&Number.isInteger(x.generation)&&x.generation>=1));
 }
 export function validateOuting(a){
  if(a?.type!=='outing')return true;

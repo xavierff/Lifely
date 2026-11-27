@@ -1,4 +1,4 @@
-import {outingCommands,beginOuting,outingView,playOuting} from './playful-life.mjs';
+import {outingCommands,beginOuting,outingView,playOuting,outingStats} from './playful-life.mjs';
 // Lifely original, deterministic everyday gameplay. All courtroom events are fictional.
 const clamp=n=>Math.max(0,Math.min(100,Math.round(n)));
 const tracks=[
@@ -228,7 +228,7 @@ export function everydayCallback(s,id,ctx){
  return cb;
 }
 export function everydayHistory(s){
- const e=everydayState(s);return {active:e.active,completed:(e.completed||[]).slice(-16).reverse(),callbacks:(e.callbacks||[]).slice(-12).reverse(),schoolResults:(e.schoolResults||[]).slice(-12).reverse(),classmate:e.classmate,classmates:(e.classmates||[]).slice(),outingCollection:(e.outingCollection||[]).slice().reverse(),outingLegacy:(e.outingLegacy||[]).slice().reverse()};
+ const e=everydayState(s);return {active:e.active,completed:(e.completed||[]).slice(-16).reverse(),callbacks:(e.callbacks||[]).slice(-12).reverse(),schoolResults:(e.schoolResults||[]).slice(-12).reverse(),classmate:e.classmate,classmates:(e.classmates||[]).slice(),outingCollection:(e.outingCollection||[]).slice().reverse(),outingLegacy:(e.outingLegacy||[]).slice().reverse(),outingStats:outingStats(s)};
 }
 export function inheritEveryday(next,previous){
  const e=previous.everydayScenes;if(!e)return next;

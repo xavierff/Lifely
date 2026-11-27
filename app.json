@@ -3,7 +3,7 @@
     "name": "Lifely",
     "slug": "lifely",
     "scheme": "lifely",
-    "version": "1.31.0",
+    "version": "1.32.0",
     "orientation": "default",
     "userInterfaceStyle": "dark",
     "plugins": [
@@ -18,11 +18,11 @@
     "ios": {
       "bundleIdentifier": "com.xavierff.lifely",
       "supportsTablet": true,
-      "buildNumber": "41"
+      "buildNumber": "42"
     },
     "android": {
       "package": "com.xavierff.lifely",
-      "versionCode": 41,
+      "versionCode": 42,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#101C1B"

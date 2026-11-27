@@ -1,3 +1,4 @@
+import {outingStats} from './content/playful-life.mjs';
 // Offline profile. A life is counted once using its immutable ID.
 export const ribbons=[
 {id:'redemption',name:'Second Chance',description:'Finish with a conviction, rehabilitation and high reputation.',test:s=>(s.record||0)>0&&(s.justice?.rehab||0)>=2&&s.stats.reputation>=65},
@@ -35,6 +36,17 @@ const worldRibbons=[
 {id:"sixpaths",name:"A Life Without Limits",description:"Try every one of the six connected paths.",test:s=>!!s.world?.entertainment?.releases&&!!s.world?.sports?.sport&&!!s.world?.politics?.party&&!!s.world?.royalty?.title&&(s.world?.travel?.stamps?.length||0)>0&&(s.world?.dynasty?.archives||0)>0}
 ];
 ribbons.unshift(...worldRibbons);
+const hobbyProfiles=s=>Object.values(s.hobbyCircuit?.disciplines||{});
+const experientialRibbons=[
+ {id:'life-scrapbook',name:'Scrapbook of a Lifetime',description:'Collect five rare memories and complete eight distinct outings.',test:s=>{const m=outingStats(s);return m.rare>=5&&m.distinct.length>=8;}},
+ {id:'four-eras',name:'Forever Curious',description:'Experience childhood, teen, adult and later-life adventures with two later-life outings.',test:s=>{const m=outingStats(s);return m.eraCount===4&&m.eras.later>=2;}},
+ {id:'hobby-legend',name:'Neighborhood Legend',description:'Win six hobby contests and earn four hobby trophies.',test:s=>hobbyProfiles(s).reduce((n,p)=>n+(p.wins||0),0)>=6&&hobbyProfiles(s).reduce((n,p)=>n+(p.trophies||0),0)>=4},
+ {id:'memory-maker',name:'The Memory Maker',description:'Complete at least six connection-rich experiences and reach 80 kindness.',test:s=>outingStats(s).connected>=6&&s.stats.kindness>=80},
+ {id:'many-passions',name:'A Life of Many Passions',description:'Reach at least 85 mastery in three different hobbies.',test:s=>hobbyProfiles(s).filter(p=>p.mastery>=85).length>=3}
+];
+// Major world, financial, criminal and specialist-career endings retain their
+// established priority; these precede more generic family and life outcomes.
+ribbons.splice(ribbons.findIndex(r=>r.id==='family'),0,...experientialRibbons);
 export function lifeEnding(s,w){return ribbons.find(r=>r.test(s,w))||ribbons[ribbons.length-1];}
 export function emptyProfile(){return {version:1,completed:{},achievements:[],challenges:[],ribbons:[],bestAge:0,bestWorth:0,bestGeneration:0};}
 export function validProfile(p){return !!p&&p.version===1&&p.completed&&typeof p.completed==='object'&&['achievements','challenges','ribbons'].every(k=>Array.isArray(p[k])&&p[k].every(x=>typeof x==='string'))&&['bestAge','bestWorth','bestGeneration'].every(k=>Number.isFinite(p[k])&&p[k]>=0)&&Object.values(p.completed).every(x=>x&&Number.isInteger(x.age)&&typeof x.ribbon==='string');}
