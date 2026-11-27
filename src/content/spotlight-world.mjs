@@ -14,7 +14,8 @@ const routes=[
 const spec=id=>routes.find(x=>x.id===id),peer=id=>roster.find(x=>x[0]===id);
 const empty=()=>({version:1,peers:[],tour:null,lastTour:null,awardSeen:0,tours:0,successfulStops:0,gross:0,fees:0,net:0,history:[],legacy:[],serial:0});
 const state=s=>s.spotlight||empty(),ent=s=>s.world?.entertainment;
-function ensure(s){const m=s.spotlight??=empty();if(!m.peers.length)m.peers=roster.map(([id,name,path],i)=>({id,name,path,fame:40+i*5,craft:52+i*5,respect:50,rivalry:20,projects:0,lastAction:null}));return m;}
+const initialPeers=()=>roster.map(([id,name,path],i)=>({id,name,path,fame:40+i*5,craft:52+i*5,respect:50,rivalry:20,projects:0,lastAction:null}));
+function ensure(s){const m=s.spotlight??=empty();if(!m.peers.length)m.peers=initialPeers();return m;}
 const ready=s=>s.alive&&s.age>=18&&s.pending===null&&!s.mini&&!s.world?.network?.conversation&&!s.everydayScenes?.active&&!s.careerCampaigns?.active&&!s.hobbyCircuit?.active&&!s.world?.storyDirector?.active&&s.fate?.active?.status!=='playing'&&s.familyStories?.active?.status!=='ready'&&s.workplace?.active?.status!=='ready'&&s.worldPulse?.active?.status!=='ready'&&!(s.justice?.years>0)&&!s.justice?.case;
 function log(s,kind,message,ctx){const m=ensure(s);m.history.push({id:++m.serial,age:s.age,kind,message:message.slice(0,200)});m.history=m.history.slice(-30);ctx.add(s,message,'career');}
 export function spotlightCommands(s,c){
@@ -74,7 +75,7 @@ export function spotlightYear(s,ctx){
  }
  if(m.tour&&(ent(s)?.path!=='Recording musician'||s.age>m.tour.dueAge)){m.tour=null;log(s,'cancelled','The remaining concert dates expired.',ctx);}
 }
-export function spotlightView(s){const m=state(s),t=m.tour,d=t?spec(t.route):null;return {...m,path:ent(s)?.path||null,peers:m.peers.filter(x=>x.path===ent(s)?.path),tour:t?{...t,name:d.name,next:d.stops[t.stage],capacity:d.capacity[t.stage]}:null,history:m.history.slice(-5).reverse(),legacy:m.legacy.slice(-4).reverse()};}
+export function spotlightView(s){const m=state(s),t=m.tour,d=t?spec(t.route):null;return {...m,path:ent(s)?.path||null,peers:(m.peers.length?m.peers:initialPeers()).filter(x=>x.path===ent(s)?.path),tour:t?{...t,name:d.name,next:d.stops[t.stage],capacity:d.capacity[t.stage]}:null,history:m.history.slice(-5).reverse(),legacy:m.legacy.slice(-4).reverse()};}
 export function spotlightInheritance(next,old){if(!old.spotlight)return;next.spotlight={...empty(),legacy:[...old.spotlight.legacy,...old.spotlight.history.filter(x=>['completed','collaboration','ceremony'].includes(x.kind)).slice(-6).map(x=>({...x,ancestor:old.name,generation:old.generation}))].slice(-18)};}
 export function validateSpotlight(m){
  if(m===undefined)return true;
