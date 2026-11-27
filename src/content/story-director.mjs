@@ -211,6 +211,14 @@ export function storyDirectorView(s){
  return {id:e.id,title:e.title,theme:e.theme,phase:e.phase,round:e.phase+1,total:3,
   lead:e.firstName,other:e.secondName,headline:theme.beats[e.phase],prompt:withActors(theme.scenes[e.phase],e),
   backstory:(e.previous?'An earlier story with these characters involved '+e.previous+'. ':theme.context+' ')+
+   ((s.civicMandates?.completed||[]).findLast(t=>
+    t.leaderA===e.firstId||t.leaderA===e.secondId||
+    t.leaderB===e.firstId||t.leaderB===e.secondId)?
+    (()=>{const t=(s.civicMandates?.completed||[]).findLast(t=>
+      t.leaderA===e.firstId||t.leaderA===e.secondId||
+      t.leaderB===e.firstId||t.leaderB===e.secondId);
+      return 'Their organizations previously disputed '+t.issue+
+       ' and the resolution was '+t.ending+'. ';})():'')+
    ((s.publicAftermath?.threads||[]).find(t=>
     t.aId===e.firstId||t.aId===e.secondId||t.bId===e.firstId||t.bId===e.secondId)?
     (()=>{const t=(s.publicAftermath?.threads||[]).find(t=>
