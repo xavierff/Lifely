@@ -80,8 +80,8 @@ export function careerPlayfieldAct(s,a,index,ctx){
   if(!success)a.risk=clamp(a.risk+[2,1,7][index]);
   p.customers=clamp(p.customers+([7,4,13][index])*(success?1:.5),0,100);
   p.loyalty=clamp(p.loyalty+([6,8,-4][index])+(success?2:-4)+(plan?.loyalty||0),0,100);
-  const orders=Math.max(0,Math.round((p.customers+p.loyalty+base)/18)*(success?2:1));
-  p.orders+=orders+(plan?.orders||0);p.trend.push(p.customers);p.trend=p.trend.slice(-8);
+  const orders=Math.max(0,Math.round((p.customers+p.loyalty+base)/18)*(success?2:1)+(plan?.orders||0));
+  p.orders+=orders;p.trend.push(p.customers);p.trend=p.trend.slice(-8);
   description=(success?'Sprint delivered. ':'Sprint missed its full target. ')+orders+' simulated orders added to the launch forecast.';
  }
  p.last={stage:a.stage,index,success,description};
