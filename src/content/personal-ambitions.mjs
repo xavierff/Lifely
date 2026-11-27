@@ -32,6 +32,20 @@ const specs=[
   steps:[['actions','volunteer',2,'Give back to your community twice'],['stat','social',75,'Reach 75 social'],['stat','kindness',80,'Reach 80 kindness']]},
  {id:'champion',name:'Chase a genuine championship',icon:'★',category:'hobbies',minAge:12,story:'Rivals are becoming better. So must you.',conclusion:'You earned this title through preparation and good decisions.',stat:'confidence',
   steps:[['delta','hobbyWins',2,'Win two hobby competitions'],['delta','hobbyTrophies',1,'Collect a new hobby trophy'],['hobbyMastery',65,1,'Reach 65 mastery in a hobby']]},
+ {id:'npc-mentor',name:'Help someone find their own future',icon:'✺',category:'relationships',minAge:18,requires:'npcgoal',story:'An independent dream deserves encouragement without control.',conclusion:'You made room for other people to pursue their own lives.',stat:'kindness',
+  steps:[['actions','npc-support',2,'Support two NPC ambition chapters'],['stat','kindness',65,'Reach 65 kindness'],['stat','social',55,'Reach 55 social confidence']]},
+ {id:'bridge-builder',name:'Rebuild a damaged connection',icon:'♡',category:'relationships',minAge:18,requires:'cross',story:'You cannot force friendship, but you can listen and build bridges.',conclusion:'You learned to support relationships without controlling their outcome.',stat:'social',
+  steps:[['actions','cross-repair',1,'Mediate or repair an NPC relationship'],['actions','visit',2,'Spend time with people twice'],['stat','kindness',70,'Reach 70 kindness']]},
+ {id:'fair-collaborator',name:'Compete with integrity',icon:'⚖',category:'work',minAge:18,requires:'clash',story:'Someone else wants a future that overlaps with yours. Find a fair way forward.',conclusion:'Your ambition did not have to come at another person’s expense.',stat:'confidence',
+  steps:[['actions','clash-cooperate',1,'Choose cooperation during competing ambitions'],['actions','learn',2,'Study independently twice'],['stat','knowledge',65,'Reach 65 knowledge']]},
+ {id:'trusted-citizen',name:'Earn trust through accountability',icon:'✳',category:'relationships',minAge:18,requires:'influence',story:'Reputation is what people remember about your actions, not just your title.',conclusion:'You took responsibility for the standing you earned.',stat:'reputation',
+  steps:[['actions','influence-engage',1,'Respond constructively to an influence opportunity'],['actions','volunteer',2,'Volunteer twice'],['stat','kindness',65,'Reach 65 kindness']]},
+ {id:'institutional-steward',name:'Care for a living institution',icon:'⌂',category:'relationships',minAge:18,requires:'circle',story:'A real organization has its own goals. Help without claiming ownership.',conclusion:'You contributed to an institution that has a future beyond your involvement.',stat:'kindness',
+  steps:[['actions','circle-support',1,'Support an existing organization’s project'],['actions','volunteer',2,'Give back twice'],['stat','social',65,'Reach 65 social confidence']]},
+ {id:'public-problem-solver',name:'Follow through on public promises',icon:'▤',category:'work',minAge:22,requires:'public',story:'A public promise is only the start. Work toward evidence and reconciliation.',conclusion:'You learned that public commitments require patience and accountability.',stat:'knowledge',
+  steps:[['actions','public-support',2,'Take two constructive public decisions'],['stat','knowledge',70,'Reach 70 knowledge'],['stat','kindness',65,'Reach 65 kindness']]},
+ {id:'faction-mediator',name:'Help an institution avoid fracture',icon:'◇',category:'relationships',minAge:18,requires:'fracture',story:'A group is struggling with its future. Let the members choose while you offer a bridge.',conclusion:'You chose patient mediation over an automatic victory.',stat:'social',
+  steps:[['actions','fracture-mediate',1,'Mediate an active institutional faction challenge'],['actions','visit',2,'Spend time with people twice'],['stat','kindness',70,'Reach 70 kindness']]},
  {id:'spotlight',name:'Make your creative voice heard',icon:'✿',category:'creativity',minAge:18,story:'An audience grows when you keep making something worth sharing.',conclusion:'People are coming back because your work means something to them.',stat:'creativity',
   steps:[['delta','projects',2,'Publish two creative projects'],['audience',1000,1,'Grow an audience to 1,000'],['stat','creativity',80,'Reach 80 creativity']]}
 ];
@@ -47,7 +61,22 @@ function metrics(s,worth){
   storyEpisodes:(s.world?.storyDirector?.completed||[]).length,jobLevel:s.job?.level||0,
   netWorth:worth(s),audience:s.audience||0};
 }
-function eligible(s,def){return s.age>=def.minAge&&s.age<=96&&(def.requires!=='job'||!!s.job)&&(def.requires!=='business'||!!s.business);}
+function eligible(s,def){
+ if(s.age<def.minAge||s.age>96)return false;
+ const ready=x=>x&&(x.status==='open'||x.status==='ready');
+ switch(def.requires){
+ case 'job':return !!s.job;
+ case 'business':return !!s.business;
+ case 'npcgoal':return !!s.npcAmbitions?.active?.some(ready);
+ case 'cross':return !!s.crossroads?.open?.some(ready);
+ case 'clash':return !!s.competingFutures?.active?.some(ready);
+ case 'influence':return ready(s.socialInfluence?.active);
+ case 'circle':return !!s.socialCircles?.invites?.some(ready);
+ case 'public':return !!(ready(s.organizationNetwork?.active)||s.publicAftermath?.threads?.some(x=>x.pending)||s.civicMandates?.active?.pending||s.civicMandates?.deliveries?.some(x=>x.pending)||s.civicMandates?.reversals?.some(x=>x.pending));
+ case 'fracture':return !!s.socialCircles?.groups?.some(g=>g.status==='active'&&g.institution?.crisis&&g.institution.crisis.response===null);
+ default:return true;
+ }
+}
 function actorFor(s){
  const close=(s.people||[]).filter(p=>p.alive&&p.age>=7&&p.bond>=40);
  return close.sort((a,b)=>b.bond-a.bond)[0]||null;
@@ -138,6 +167,15 @@ const actionKind=id=>{
  if(cmd==='work'||cmd==='careertrain')return 'work';
  if(cmd==='company'||(cmd==='business'&&detail==='improve'))return 'company';
  if(cmd==='dialogue'&&detail==='open')return 'dialogue';
+ if(id.endsWith(':0')){
+  if(cmd==='npcgoal')return 'npc-support';
+  if(cmd==='cross')return 'cross-repair';
+  if(cmd==='clash')return 'clash-cooperate';
+  if(cmd==='influence')return 'influence-engage';
+  if(cmd==='circle'&&detail==='fracture')return 'fracture-mediate';
+  if(cmd==='circle'&&detail!=='succession')return 'circle-support';
+  if(['intergroup','afterlife','mandate'].includes(cmd))return 'public-support';
+ }
  return null;
 };
 export function ambitionTrack(s,id){
@@ -196,7 +234,7 @@ export function ambitionAct(s,id,ctx){
 export function ambitionSummary(s,worth){
  const book=ambitionState(s),a=book.active;const available=specs.filter(d=>eligible(s,d));
  const recommended=available.slice().sort((x,y)=>{
-  const points=d=>(s.goal==='family'&&d.category==='relationships'?5:0)+
+  const points=d=>(['npcgoal','cross','clash','influence','circle','public','fracture'].includes(d.requires)?7:0)+(s.goal==='family'&&d.category==='relationships'?5:0)+
    (s.goal==='wealth'&&d.category==='money'?5:0)+
    (s.goal==='balance'&&d.category==='wellbeing'?5:0)+
    (d.category==='work'&&s.job?3:0)+

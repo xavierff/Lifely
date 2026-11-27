@@ -28,7 +28,7 @@ function Recommendation({item,onAction}){
  </Pressable>;
 }
 export default function StoryFocusBoard({view,onFocus,onAction,blocked}){
- const [expanded,setExpanded]=useState(false),[showHistory,setShowHistory]=useState(false);
+ const [expanded,setExpanded]=useState(false),[showHistory,setShowHistory]=useState(false),[showOpportunities,setShowOpportunities]=useState(false),[selectedStory,setSelectedStory]=useState(null);
  return <View testID="story-focus-board" style={S.board}>
   <View style={S.between}>
    <Text style={S.overline}>YOUR LIFE, NOT A MENU OF TASKS</Text>
@@ -56,6 +56,19 @@ export default function StoryFocusBoard({view,onFocus,onAction,blocked}){
   {view.suggested.length&&!blocked?<View testID="flow-next-actions" style={S.suggestions}>
    <Text style={S.overline}>GOOD NEXT MOVES</Text>
    {view.suggested.map(item=><Recommendation key={item.id} item={item} onAction={onAction}/>)}
+  </View>:null}
+  {!blocked&&view.opportunities?.length?<View style={S.history} testID="life-opportunities">
+   <Pressable testID="life-opportunities-toggle" accessibilityRole="button" accessibilityState={{expanded:showOpportunities}} onPress={()=>setShowOpportunities(!showOpportunities)} style={S.toggle}><Text style={S.toggleText}>{view.opportunities.length} optional living-world {view.opportunities.length===1?'story':'stories'} available</Text><Text style={S.toggleText}>{showOpportunities?'−':'+'}</Text></Pressable>
+   {showOpportunities&&view.opportunities.map(x=><View key={x.id} style={S.chapter}>
+    <Pressable accessibilityRole="button" accessibilityState={{expanded:selectedStory===x.id}} testID={'life-story-'+x.id.replace(/:/g,'-')} onPress={()=>setSelectedStory(selectedStory===x.id?null:x.id)} style={{gap:5}}>
+     <Text style={S.overline}>{x.category}</Text><Text style={S.subtitle}>{x.title}</Text>
+     {x.context?<Text style={S.muted}>{x.context}</Text>:null}
+     {x.resolutionAge!==null?<Text style={S.tag}>Planned resolution: age {x.resolutionAge}</Text>:null}
+     <Text style={S.toggleText}>{selectedStory===x.id?'Hide choices':'View '+x.choices.length+' choices'}</Text>
+    </Pressable>
+    {selectedStory===x.id?x.choices.map(c=><Pressable key={c.id} testID={'life-story-choice-'+c.id.replace(/:/g,'-')} accessibilityRole="button" onPress={()=>onAction(c.id)} style={S.action}><Text style={S.actionText}>{c.label}</Text><Text style={S.muted}>{c.detail}</Text></Pressable>):null}
+   </View>)}
+   <Text style={S.muted}>Optional stories use ordinary activities. Ignoring a story lets its characters continue independently.</Text>
   </View>:null}
   {view.latest?<View testID="flow-last-choice" style={S.last}>
    <Text style={S.overline}>WHAT YOU CHOSE LAST</Text>
