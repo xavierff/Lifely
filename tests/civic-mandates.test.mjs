@@ -268,3 +268,111 @@ test('the standard age-up still works with active civic mandates and old storyli
  assert.ok(E.validate(n));
  assert.ok(E.civicMandatesView(n).active);
 });
+
+
+function deliveredPromise(seed=126001){
+ const s=world(seed);
+ Object.assign(s.civicMandates.active,{
+  commonGround:90,resistance:10,evidence:90,supportA:90,supportB:90
+ });
+ years(s,8);
+ assert.equal(s.civicMandates.active,null);
+ const d=s.civicMandates.deliveries.at(-1);
+ assert.ok(d,'an adopted mandate should create an implementation record');
+ assert.equal(d.status,'active');
+ assert.equal(d.promisedOutcome,'joint-adoption');
+ assert.equal(d.startedAge,s.age);
+ return s;
+}
+test('1.26: adopting a civic policy is not the same as delivering it',()=>{
+ const s=deliveredPromise(126001),d=s.civicMandates.deliveries[0];
+ assert.equal(d.progress,10);
+ assert.equal(d.dueAge,d.startedAge+6);
+ assert.equal(d.history[0].kind,'promise');
+ assert.equal(E.civicMandatesView(s).deliveries[0].issueName,'Family care & neighborhood support');
+ assert.equal(E.civicMandateCommands(s).length,0);
+ assert.ok(E.validate(s));
+});
+test('1.26: actual organizations advance delivery over years with optional accountability review',()=>{
+ const s=deliveredPromise(126002);
+ const before={stats:JSON.stringify(s.stats),cash:s.cash,rng:s.rng};
+ years(s,2);
+ const d=s.civicMandates.deliveries[0];
+ assert.ok(d.progress>10);
+ assert.equal(d.pending,true);
+ assert.equal(E.civicMandateCommands(s).filter(x=>x.id.startsWith('mandate:delivery:')).length,3);
+ assert.equal(JSON.stringify(s.stats),before.stats);
+ assert.equal(s.cash,before.cash);
+ assert.equal(s.rng,before.rng);
+ assert.ok(E.validate(s));
+});
+test('1.26: real evidence reviews improve proof, relationships and player knowledge',()=>{
+ let s=deliveredPromise(126003);years(s,2);
+ const d=s.civicMandates.deliveries[0];
+ const proof=d.verification,trust=s.people[0].world.trust,
+  cash=s.cash,rng=s.rng,knowledge=s.stats.knowledge,oldActions=s.actions;
+ const id='mandate:delivery:'+d.id+':0';
+ assert.ok(E.commands(s).find(c=>c.id===id&&c.enabled));
+ s=E.act(s,id);
+ assert.equal(s.actions,oldActions-1);
+ assert.equal(s.civicMandates.deliveries[0].verification,Math.min(100,proof+12));
+ assert.ok(s.people[0].world.trust>=trust);
+ assert.equal(s.stats.knowledge,Math.min(100,knowledge+1));
+ assert.equal(s.cash,cash);assert.equal(s.rng,rng);
+ assert.equal(s.civicMandates.deliveries[0].pending,false);
+ assert.ok(E.validate(s));
+});
+test('1.26: pressure advances work but increases real organizational tensions',()=>{
+ let s=deliveredPromise(126004);years(s,2);
+ const d=s.civicMandates.deliveries[0],oldProgress=d.progress,
+  oldCoordination=d.coordination,oldCompetition=s.organizationNetwork.links[0].competition;
+ s=E.act(s,'mandate:delivery:'+d.id+':1');
+ assert.ok(s.civicMandates.deliveries[0].progress>oldProgress);
+ assert.ok(s.civicMandates.deliveries[0].coordination<oldCoordination);
+ assert.ok(s.organizationNetwork.links[0].competition>=oldCompetition);
+ assert.ok(E.validate(s));
+});
+test('1.26: standing aside changes no finances, real NPCs, groups, or shared links',()=>{
+ let s=deliveredPromise(126005);years(s,2);
+ const snapshot={people:JSON.stringify(s.people),groups:JSON.stringify(s.socialCircles.groups),
+  links:JSON.stringify(s.organizationNetwork.links),stats:JSON.stringify(s.stats),
+  cash:s.cash,rng:s.rng};
+ const d=s.civicMandates.deliveries[0];
+ s=E.act(s,'mandate:delivery:'+d.id+':2');
+ assert.equal(JSON.stringify(s.people),snapshot.people);
+ assert.equal(JSON.stringify(s.socialCircles.groups),snapshot.groups);
+ assert.equal(JSON.stringify(s.organizationNetwork.links),snapshot.links);
+ assert.equal(JSON.stringify(s.stats),snapshot.stats);
+ assert.equal(s.cash,snapshot.cash);assert.equal(s.rng,snapshot.rng);
+ assert.equal(s.civicMandates.deliveries[0].decisions[0].tag,'observe');
+ assert.ok(E.validate(s));
+});
+test('1.26: post-agreement delivery resolves on deadline without player intervention',()=>{
+ const s=deliveredPromise(126006);
+ years(s,6);
+ const d=s.civicMandates.deliveries[0];
+ assert.equal(d.status,'completed');
+ assert.ok(['delivered','partial','stalled'].includes(d.ending));
+ assert.equal(d.endedAge,d.dueAge);
+ assert.equal(d.pending,false);
+ assert.ok(s.civicMandates.news.some(n=>n.text.includes('Family care')));
+ assert.ok(E.validate(s));
+});
+test('1.26: old saves migrate; corrupted follow-through records are rejected; heirs receive only history',()=>{
+ const s=deliveredPromise(126007);
+ const old=structuredClone(s);delete old.civicMandates.deliveries;
+ assert.ok(E.validate(old),'1.25 saves without delivery records remain readable');
+ civicMandatesYear(old,{add:silent});
+ assert.deepEqual(old.civicMandates.deliveries,[]);
+ const invalid=structuredClone(s);
+ invalid.civicMandates.deliveries[0].progress=500;
+ assert.equal(E.validate(invalid),false);
+ const fake=structuredClone(s);
+ fake.civicMandates.deliveries[0].groupBId=fake.civicMandates.deliveries[0].groupAId;
+ assert.equal(E.validate(fake),false);
+ const heir=E.createLife({seed:126008,name:'Heir'});
+ civicMandatesInheritance(heir,s);
+ assert.equal(heir.civicMandates.deliveries.length,0);
+ assert.ok(heir.civicMandates.ancestors.at(-1).note.includes('Delivery reviews'));
+ assert.ok(E.validate(heir));
+});

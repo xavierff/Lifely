@@ -141,3 +141,48 @@ test('policy campaign widgets fit small iPhone-class viewports, and no activity 
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
  }
 });
+
+
+const deliveryLife=(seed=126101)=>{
+ const s=life(seed);
+ Object.assign(s.civicMandates.active,{commonGround:90,resistance:10,
+  evidence:90,supportA:90,supportB:90});
+ advance(s,10);
+ if(!s.civicMandates.deliveries[0]?.pending)throw Error('Delivery invitation fixture missing');
+ if(!E.validate(s))throw Error('Invalid delivery save fixture');
+ return s;
+};
+test('a completed mandate opens a later playable delivery review and persists the real evidence',async({page})=>{
+ const s=deliveryLife(126101),d=s.civicMandates.deliveries[0];
+ await restore(page,s);await page.getByRole('tab',{name:'World'}).click();
+ const board=page.getByTestId('civic-campaign-board');
+ const delivery=board.getByTestId('mandate-delivery-'+d.id);
+ await expect(delivery).toContainText('PROMISE VS DELIVERY');
+ await expect(delivery).toContainText('Delivered work');
+ await expect(delivery.getByTestId('mandate-delivery-invitation')).toBeVisible();
+ await delivery.getByTestId('mandate-delivery-choice-0').click();
+ const n=await saved(page);
+ expect(n.civicMandates.deliveries[0].verification).toBe(Math.min(100,d.verification+12));
+ expect(n.civicMandates.deliveries[0].decisions.at(-1).tag).toBe('review');
+ expect(n.civicMandates.deliveries[0].pending).toBe(false);
+ expect(n.cash).toBe(s.cash);
+ await page.reload();await page.getByRole('tab',{name:'World'}).click();
+ await expect(page.getByTestId('mandate-delivery-'+d.id)).toContainText('IMPLEMENTATION CHRONICLE');
+ expect(E.validate(n)).toBe(true);
+});
+test('optional neutral delivery reviews and tiny screens preserve gameplay and saved state',async({page})=>{
+ const s=deliveryLife(126102),d=s.civicMandates.deliveries[0];
+ await page.setViewportSize({width:320,height:700});
+ await restore(page,s);await page.getByRole('tab',{name:'World'}).click();
+ const delivery=page.getByTestId('mandate-delivery-'+d.id);
+ await expect(delivery.getByTestId('mandate-delivery-choice-2')).toBeVisible();
+ await delivery.getByTestId('mandate-delivery-choice-2').click();
+ const n=await saved(page);
+ expect(n.people).toEqual(s.people);
+ expect(n.socialCircles.groups).toEqual(s.socialCircles.groups);
+ expect(n.organizationNetwork.links).toEqual(s.organizationNetwork.links);
+ expect(n.cash).toBe(s.cash);
+ expect(n.stats).toEqual(s.stats);
+ expect(n.civicMandates.deliveries[0].decisions.at(-1).tag).toBe('observe');
+ expect(E.validate(n)).toBe(true);
+});
