@@ -2,6 +2,7 @@
 // A good tactical read dominates luck; rival ratings and real mastery make outcomes matter.
 const clamp=x=>Math.max(0,Math.min(100,Math.round(x)));
 const phases=['Opening','Adaptation','Final moment'];
+import {championshipView,championshipCommands,startChampionship,recordChampionship} from './hobby-championships.mjs';
 import {hobbyDifficulty,difficultyNames} from './adaptive-challenges.mjs';
 import {drillIds,drillRound} from './hobby-drills.mjs';
 const hobbyContent=[
@@ -112,13 +113,14 @@ export function hobbyCommands(s){
   return [
    {id:'hobby:start:'+t.id+':practice',label:'Practice '+t.name,detail:'3 playable decisions · build technique and master new tactics',enabled:ready},
    ...(drillIds.includes(t.id)?[{id:'hobby:start:'+t.id+':drill',label:'Play '+t.name+' skill drill',detail:'Three objective interactive puzzles · practice mastery',enabled:ready}]:[]),
-   ...(s.age>=t.minAge+1?[{id:'hobby:start:'+t.id+':contest',label:'Enter '+t.name+' contest',detail:'3 rounds vs evolving rivals · '+leagues[league(p?.mastery||0)]+' division',enabled:ready}]:[])
+   ...(s.age>=t.minAge+1?[{id:'hobby:start:'+t.id+':contest',label:'Enter '+t.name+' contest',detail:'3 rounds vs evolving rivals · '+leagues[league(p?.mastery||0)]+' division',enabled:ready}]:[]),
+   ...championshipCommands(s,t,p,ready)
   ];
  });
 }
 export function beginHobby(s,id,ctx){
  if(!hobbyCommands({...s,actions:s.actions+1}).some(c=>c.id===id&&c.enabled))throw Error('Hobby challenge is unavailable.');
- const [,start,discipline,requestedMode]=id.split(':');const drill=requestedMode==='drill',mode=drill?'practice':requestedMode;
+ const [,start,discipline,requestedMode]=id.split(':');const drill=requestedMode==='drill',mode=drill?'practice':['qualifier','championship'].includes(requestedMode)?'contest':requestedMode;
  if(start!=='start'||!['practice','contest'].includes(mode))throw Error('Invalid hobby action.');
  const h=ensure(s),p=profile(s,discipline,ctx);
  if(h.year!==s.age){h.year=s.age;h.playedThisAge=0;}
@@ -130,6 +132,7 @@ export function beginHobby(s,id,ctx){
   opponentId:opponent.id,opponentName:mode==='contest'?opponent.name:'Practice partner',
   opponentRating:mode==='contest'?clamp(Math.max(opponent.rating+league(p.mastery)*3,p.mastery*.55+hobbyDifficulty(p)*13)):clamp(Math.round((opponent.rating+p.mastery)/3)),
   score:0,focus:50,momentum:50,choices:[],last:null,observer:null};
+ startChampionship(s,p,session,requestedMode);
  const candidates=[...(s.people||[]).filter(x=>x.alive&&x.age>=6).map(x=>({id:'person-'+x.id,name:x.name})),
   ...(s.world?.autonomy?.alumni||[]).map(x=>({id:x.id,name:x.name}))];
  if(candidates.length)session.observer=candidates[Math.floor(ctx.rng(s)*candidates.length)];
@@ -141,7 +144,7 @@ export function hobbyView(s){
  const type=hobbyContent.find(x=>x.id===a.hobbyId),p=h.disciplines[a.hobbyId],round=roundFor(a);
  const difficulty=clamp(36+a.opponentRating*.39+(a.stage*3)-p.mastery*.32);
  return {id:a.id,title:type.name,glyph:type.glyph,mode:a.mode,round:a.stage+1,total:3,phase:phases[a.stage],
-  prompt:round.cue,difficultyName:difficultyNames[a.difficulty??0],drill:a.drill?{kind:a.hobbyId,visual:round.visual,piece:round.piece}:null,opponent:a.opponentName,opponentRating:a.opponentRating,
+  prompt:round.cue,difficultyName:difficultyNames[a.difficulty??0],competition:a.competition||null,drill:a.drill?{kind:a.hobbyId,visual:round.visual,piece:round.piece}:null,opponent:a.opponentName,opponentRating:a.opponentRating,
   observer:a.observer?.name||null,league:leagues[league(p.mastery)],mastery:p.mastery,
   meters:{focus:a.focus,momentum:a.momentum,opponent:a.opponentRating},score:a.score,
   risk:difficulty,options:round.options.map(([label,note],index)=>({index,label,note})),
@@ -183,11 +186,13 @@ function finishHobby(s,ctx){
  if(contest&&won&&type.id==='openmic'&&s.world?.entertainment)s.world.entertainment.fame=clamp(s.world.entertainment.fame+2);
  if(contest&&won&&type.id==='gamejam'&&s.business)s.business.quality=clamp((s.business.quality||50)+2);
  const status=contest?(won?'won':'lost'):'practiced';
+ const championshipOutcome=recordChampionship(s,p,a,'completed',ctx);
  const summary={id:a.id,age:s.age,hobbyId:a.hobbyId,hobbyName:p.name,mode:a.mode,status,
-  score:a.score,opponent:a.opponentName,mastery:p.mastery,league:tier,reward,perfect,trophy:newTrophy,
+  ...(a.competition?{competition:a.competition,championshipOutcome}:{}),score:a.score,opponent:a.opponentName,mastery:p.mastery,league:tier,reward,perfect,trophy:newTrophy,
   lessons:a.choices.map(x=>({phase:x.stage,cue:x.cue,correct:x.correct,lesson:x.lesson}))};
  p.lastResult=summary;p.history.push(summary);p.history=p.history.slice(-16);
  h.recent.push(summary);h.recent=h.recent.slice(-40);
+ if(championshipOutcome==='champion')h.hallOfFame.push({age:s.age,hobbyId:p.id,title:a.competition.division+' '+p.name+' championship',opponent:a.opponentName});
  if(newTrophy)h.hallOfFame.push({age:s.age,hobbyId:p.id,title:tier+' '+p.name+' title',opponent:a.opponentName});
  h.hallOfFame=h.hallOfFame.slice(-35);
  const statement=(contest?status+' the '+tier+' competition against '+a.opponentName:'trained in the '+p.name+' circuit')+
@@ -200,6 +205,7 @@ export function hobbyChoose(s,index,ctx){
  const h=ensure(s),a=h.active;if(!s.alive||!a)throw Error('No active hobby challenge.');
  if(index==='leave'){
   const p=h.disciplines[a.hobbyId];
+  recordChampionship(s,p,a,'abandoned',ctx);
   p.history.push({id:a.id,age:s.age,hobbyId:a.hobbyId,hobbyName:p.name,mode:a.mode,status:'abandoned',score:a.score,mastery:p.mastery});
   p.history=p.history.slice(-16);h.active=null;ctx.add(s,'Ended the '+p.name+' session early.','activity');return null;
  }
@@ -243,7 +249,7 @@ export function hobbySummary(s){
  return {types:hobbyTypes,playedThisAge:h.year===s.age?h.playedThisAge||0:0,
   profiles:hobbyTypes.map(t=>{
    const p=h.disciplines?.[t.id];return {...t,mastery:p?.mastery||0,level:league(p?.mastery||0),
-    league:leagues[league(p?.mastery||0)],difficultyName:difficultyNames[hobbyDifficulty(p)],practice:p?.practice||0,contests:p?.contests||0,wins:p?.wins||0,
+    league:leagues[league(p?.mastery||0)],difficultyName:difficultyNames[hobbyDifficulty(p)],championship:championshipView(s,p),practice:p?.practice||0,contests:p?.contests||0,wins:p?.wins||0,
     losses:p?.losses||0,trophies:p?.trophies||0,points:p?.points||0,streak:p?.streak||0,
     rivals:(p?.rivals||[]).map(x=>({...x})),lastResult:p?.lastResult||null};
   }),history:(h.recent||[]).slice(-15).reverse(),hallOfFame:(h.hallOfFame||[]).slice(-10).reverse(),news:(h.news||[]).slice(-10).reverse()};
