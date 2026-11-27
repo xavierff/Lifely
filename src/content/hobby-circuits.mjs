@@ -2,6 +2,7 @@
 // A good tactical read dominates luck; rival ratings and real mastery make outcomes matter.
 const clamp=x=>Math.max(0,Math.min(100,Math.round(x)));
 const phases=['Opening','Adaptation','Final moment'];
+import {drillIds,drillRound} from './hobby-drills.mjs';
 const hobbyContent=[
  {id:'chess',name:'Chess & strategy',glyph:'♟',minAge:7,stat:'knowledge',benefit:'knowledge',theme:'The local chess club has a new challenger.',
   moments:[
@@ -94,6 +95,7 @@ function profile(s,id,ctx){
  h.disciplines[id]=p;return p;
 }
 const roundFor=(session)=>{
+ if(session.drill)return drillRound(session);
  const d=hobbyContent.find(x=>x.id===session.hobbyId);
  const index=(session.pattern+session.stage*2)%d.moments.length;
  return d.moments[index];
@@ -108,13 +110,14 @@ export function hobbyCommands(s){
   const p=h.disciplines?.[t.id],once=p?.lastAge===s.age,ready=s.actions>0&&count<2&&!once;
   return [
    {id:'hobby:start:'+t.id+':practice',label:'Practice '+t.name,detail:'3 playable decisions · build technique and master new tactics',enabled:ready},
+   ...(drillIds.includes(t.id)?[{id:'hobby:start:'+t.id+':drill',label:'Play '+t.name+' skill drill',detail:'Three objective interactive puzzles · practice mastery',enabled:ready}]:[]),
    ...(s.age>=t.minAge+1?[{id:'hobby:start:'+t.id+':contest',label:'Enter '+t.name+' contest',detail:'3 rounds vs evolving rivals · '+leagues[league(p?.mastery||0)]+' division',enabled:ready}]:[])
   ];
  });
 }
 export function beginHobby(s,id,ctx){
  if(!hobbyCommands({...s,actions:s.actions+1}).some(c=>c.id===id&&c.enabled))throw Error('Hobby challenge is unavailable.');
- const [,start,discipline,mode]=id.split(':');
+ const [,start,discipline,requestedMode]=id.split(':');const drill=requestedMode==='drill',mode=drill?'practice':requestedMode;
  if(start!=='start'||!['practice','contest'].includes(mode))throw Error('Invalid hobby action.');
  const h=ensure(s),p=profile(s,discipline,ctx);
  if(h.year!==s.age){h.year=s.age;h.playedThisAge=0;}
@@ -122,7 +125,7 @@ export function beginHobby(s,id,ctx){
  h.playedThisAge++;
  p.lastAge=s.age;
  const session={id:'hobby-'+discipline+'-'+s.age+'-'+(p.contests+p.practice+1),hobbyId:discipline,
-  mode,startedAge:s.age,stage:0,pattern:Math.floor(ctx.rng(s)*3),
+  mode,...(drill?{drill:true}:{}),startedAge:s.age,stage:0,pattern:Math.floor(ctx.rng(s)*3),
   opponentId:opponent.id,opponentName:mode==='contest'?opponent.name:'Practice partner',
   opponentRating:mode==='contest'?clamp(opponent.rating+league(p.mastery)*3):clamp(Math.round((opponent.rating+p.mastery)/3)),
   score:0,focus:50,momentum:50,choices:[],last:null,observer:null};
@@ -137,7 +140,7 @@ export function hobbyView(s){
  const type=hobbyContent.find(x=>x.id===a.hobbyId),p=h.disciplines[a.hobbyId],round=roundFor(a);
  const difficulty=clamp(36+a.opponentRating*.39+(a.stage*3)-p.mastery*.32);
  return {id:a.id,title:type.name,glyph:type.glyph,mode:a.mode,round:a.stage+1,total:3,phase:phases[a.stage],
-  prompt:round.cue,opponent:a.opponentName,opponentRating:a.opponentRating,
+  prompt:round.cue,drill:a.drill?{kind:a.hobbyId,visual:round.visual}:null,opponent:a.opponentName,opponentRating:a.opponentRating,
   observer:a.observer?.name||null,league:leagues[league(p.mastery)],mastery:p.mastery,
   meters:{focus:a.focus,momentum:a.momentum,opponent:a.opponentRating},score:a.score,
   risk:difficulty,options:round.options.map(([label,note],index)=>({index,label,note})),
@@ -206,11 +209,11 @@ export function hobbyChoose(s,index,ctx){
  // Narrow random swing: correct strategy dominates; experienced opponents still challenge veterans.
  const performance=38+mastery*.4+related*.25-opponent*.26+(correct?32:-16)+a.momentum*.09+
   (ctx.rng(s)-.5)*15-(a.stage*2);
- const success=performance>=54;
+ const success=a.drill?correct:performance>=54;
  a.score+=success?1:0;
  a.focus=clamp(a.focus+(correct?10:-11)+(success?4:-6));
  a.momentum=clamp(a.momentum+(success?9:-10));
- const reaction=success?'You read the situation and gained the advantage.':
+ const reaction=a.drill?(correct?'Correct. You solved the skill drill.':'Not quite. Review the solution below.'):success?'You read the situation and gained the advantage.':
   correct?'The decision was sound, but the opponent still made it difficult.':'The rival exploited your tactical mistake.';
  const record={stage:a.stage,index,cue:moment.cue,correct,success,lesson:moment.lesson,reaction};
  a.choices.push(record);a.last=record;a.stage++;
