@@ -29,7 +29,7 @@ function removeJob(s,q,c,ctx,reason){
  if(q.job?.companyId!==c.id)return;
  if(s.job?.companyId===c.id){s.job=null;ctx.add(s,reason,'career');}q.job=null;
 }
-function close(s,q,c,year,ctx,reason){c.status='closed';c.staff=[];c.cash=0;c.capital=0;c.lastProfit=0;removeJob(s,q,c,ctx,c.name+' closed; your position ended.');news(s,q,year,c,c.name+' '+reason+'.',ctx);}
+function close(s,q,c,year,ctx,reason){for(const e of c.staff){const p=person(s,e.personId);if(p?.world?.job===e.jobId){p.world.job=null;p.world.level=0;}}c.status='closed';c.staff=[];c.cash=0;c.capital=0;c.lastProfit=0;removeJob(s,q,c,ctx,c.name+' closed; your position ended.');news(s,q,year,c,c.name+' '+reason+'.',ctx);}
 function founder(s,q,ctx,roll,year){
  if(q.companies.length>=MAX)return;
  const cost=ctx.country(s).cost;
@@ -77,6 +77,8 @@ export function economyYear(s,ctx){
  }
  founder(s,q,ctx,roll,year);
 }
+export function syncEconomyJob(s){const q=state(s);if(q?.job&&s.job?.companyId!==q.job.companyId)q.job=null;}
+export function economyCompetition(s,sector){return (state(s)?.companies||[]).filter(c=>active(c)&&c.sector===sector&&!c.playerOwned).length;}
 export function companySalary(s,careers,country){const q=state(s),c=company(s,q?.job?.companyId);return q?.job&&active(c||{})&&s.job?.companyId===c.id?money(careers[s.job.id].salary*country(s).salary*(1+s.job.level*.18)):null;}
 export function economyWorth(s){return (state(s)?.companies||[]).filter(c=>active(c)&&c.playerOwned).reduce((n,c)=>n+quote(c),0);}
 export function economyCommands(s,ctx){
@@ -111,12 +113,12 @@ export function inheritEconomy(next,old,heir){
  for(const c of q.companies)c.staff=c.staff.filter(e=>e.personId!==heir.id&&kept.has(e.personId));
 }
 export function economyView(s,ctx){
- const q=state(s)||fresh();return {year:clock(s),cycle:q.cycle,worth:economyWorth(s),employer:company(s,q.job?.companyId)?.name||null,companies:q.companies.map(c=>({...c,owner:c.playerOwned?'You':person(s,c.ownerId)?.name||'Former owner',value:quote(c),vacancies:vacancy(c)-(q.job?.companyId===c.id?1:0),staff:c.staff.map(e=>({...e,name:person(s,e.personId)?.name||'Former employee',title:ctx.careers[e.jobId]?.title||'Employee'}))})),news:q.news.slice(-8).reverse()};
+ const q=state(s)||fresh();return {year:clock(s),cycle:q.cycle,worth:economyWorth(s),employer:company(s,q.job?.companyId)?.name||null,companies:q.companies.map(c=>({...c,owner:c.playerOwned?'You':person(s,c.ownerId)?.name||'Former owner',value:quote(c),vacancies:Math.max(0,vacancy(c)-(q.job?.companyId===c.id?1:0)),staff:c.staff.map(e=>({...e,name:person(s,e.personId)?.name||'Former employee',title:ctx.careers[e.jobId]?.title||'Employee'}))})),news:q.news.slice(-8).reverse()};
 }
 export function validateEconomy(s,careers){
  const q=state(s);if(q===undefined)return true;
  const finite=n=>Number.isFinite(n)&&n>=0,integer=n=>Number.isSafeInteger(n)&&n>=0;
  if(!q||q.version!==1||!Number.isSafeInteger(q.offset)||clock(s)<0||!(q.lastYear===null||integer(q.lastYear))||!integer(q.serial)||!['stable','recession','expansion'].includes(q.cycle)||!Array.isArray(q.companies)||q.companies.length>MAX||!Array.isArray(q.news)||q.news.length>40)return false;
  const ids=new Set(),staff=new Set();for(const c of q.companies){if(!c||!id(c.id)||c.id>q.serial||ids.has(c.id)||typeof c.name!=='string'||!sectorOf(c.sector)||!['active','closed'].includes(c.status)||typeof c.playerOwned!=='boolean'||(c.playerOwned&&c.ownerId!==null)||(!c.playerOwned&&active(c)&&(!id(c.ownerId)||!person(s,c.ownerId)))||![c.cash,c.capital,c.lastPayroll].every(finite)||!Number.isFinite(c.lastProfit)||!integer(c.startedYear)||!integer(c.transfers)||!integer(c.capacity)||c.capacity<2||c.capacity>MAX_STAFF||!finite(c.demand)||c.demand>100||!finite(c.reputation)||c.reputation>100||!(c.partnershipYear===null||integer(c.partnershipYear))||!Array.isArray(c.staff)||c.staff.length>c.capacity)return false;ids.add(c.id);for(const e of c.staff){if(!e||!id(e.personId)||!person(s,e.personId)||staff.has(e.personId)||!careers[e.jobId])return false;staff.add(e.personId);}}
- return (q.job===null||q.job&&ids.has(q.job.companyId))&&q.news.every(n=>n&&integer(n.year)&&ids.has(n.companyId)&&typeof n.text==='string');
+ return (q.job===null||q.job&&q.companies.some(c=>active(c)&&c.id===q.job.companyId)&&s.job?.companyId===q.job.companyId)&&q.news.every(n=>n&&integer(n.year)&&ids.has(n.companyId)&&typeof n.text==='string');
 }
