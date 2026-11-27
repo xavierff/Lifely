@@ -82,7 +82,20 @@ function observe(s){
   impact(s,'story',x.id,clip(x.title||'A social story')+' — '+result,
    'community',value,x.firstId||null);
  }
- for(const a of s.world?.autonomy?.completed||[]){
+ // Institutions earn social influence only when the player made a meaningful
+ // decision. Their autonomous projects do not grant free reputation.
+ for(const x of s.socialCircles?.completed||[]){
+  if(!x.id||x.endedAge===null||x.endedAge===undefined)continue;
+  const participated=(x.decisions||[]).some(d=>d.tag==='collaborate'||d.tag==='challenge');
+  const group=x.kind==='community'?'community':
+   x.kind==='professional'?'professional':'family';
+  const value={alliance:7,negotiated:4,rivalry:-8,unresolved:-3,
+   independent:0,dissolved:0,interrupted:0,unanswered:0}[x.ending]??0;
+  impact(s,'circle',x.id,
+   x.personName+' and '+x.kind+' circle — '+x.ending,
+   group,participated?value:0,x.personId);
+ }
+  for(const a of s.world?.autonomy?.completed||[]){
   if(!a.id||a.endedAge===null||a.endedAge===undefined)continue;
   const h=(a.history||[]).filter(x=>x.success).length;
   const value=a.outcome==='lasting'?Math.min(8,3+h*2):a.outcome==='faded'?-4:0;
