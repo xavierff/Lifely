@@ -41,7 +41,7 @@ function reps(s,l){
  if(!a||!b||a.id===b.id||a.status!=='active'||b.status!=='active')return null;
  let pa=contact(s,a.leaderId);
  let pb=contact(s,b.leaderId);
- if(pa?.id===pb?.id){
+ if(pa&&pb&&pa.id===pb.id){
   // Two real organizations can share an officeholder. In that case a
   // different living actual member represents one side of the debate.
   const otherB=b.members.map(id=>contact(s,id)).find(x=>x&&x.id!==pa.id);

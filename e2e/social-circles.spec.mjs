@@ -154,3 +154,21 @@ test('leadership challenge is playable on a narrow screen and persists the endor
  expect(saved.socialCircles.groups[0].governance.election.response).toBe('challenger');
  expect(saved.cash).toBe(s.cash);expect(saved.actions).toBe(2);expect(E.validate(saved)).toBe(true);
 });
+
+test('institutional faction challenge has a playable response and reload-safe history',async({page})=>{
+ let s=life(129101);
+ for(let i=0;i<2;i++){s=E.act(s,'friend');const p=s.people.at(-1);p.role='sibling';p.age=30;}
+ for(const p of s.people){p.world.trust=10;p.world.rivalry=90;}
+ advance(s,1);const g=s.socialCircles.groups[0];
+ Object.assign(g.institution,{strain:85});Object.assign(g,{cohesion:10,tension:90,standing:30});
+ advance(s,1);expect(g.institution.crisis).toBeTruthy();expect(E.validate(s)).toBe(true);
+ await page.setViewportSize({width:320,height:740});await restore(page,s);await page.getByRole('tab',{name:'World'}).click();
+ const card=page.getByTestId('fracture-'+g.id);
+ await expect(card).toContainText('INSTITUTIONAL FACTION CHALLENGE');
+ await card.getByTestId('fracture-choice-0').click();await expect(card).toContainText('Response recorded: mediate');
+ await page.reload();await page.getByRole('tab',{name:'World'}).click();
+ await expect(page.getByTestId('fracture-'+g.id)).toContainText('Response recorded: mediate');
+ const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('lifely.save.v2')));
+ expect(saved.socialCircles.groups[0].institution.strain).toBeLessThan(g.institution.strain);
+ expect(saved.actions).toBe(2);expect(saved.cash).toBe(s.cash);expect(E.validate(saved)).toBe(true);
+});

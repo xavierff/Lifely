@@ -5,6 +5,7 @@ import {
  socialCirclesYear,socialCirclesState,socialCirclesView,socialCirclesInheritance,
  validateSocialCircles
 } from '../src/content/social-circles.mjs';
+import {organizationNetworkYear} from '../src/content/organization-relations.mjs';
 import {socialInfluenceYear} from '../src/content/social-influence.mjs';
 
 const noop=()=>{};
@@ -333,4 +334,90 @@ test('1.28: invalid candidates fail validation and descendants inherit no active
  const heir=E.createLife({seed:128006});socialCirclesInheritance(heir,s);
  assert.equal(heir.socialCircles.groups[0].governance.election,null);
  assert.deepEqual(heir.socialCircles.groups[0].members,[]);assert.ok(E.validate(heir));
+});
+
+function fractureFixture(seed=129001,extraMembers=2){
+ let s=base(seed);
+ for(let i=0;i<extraMembers;i++){
+  s=E.act(s,'friend');const p=s.people.at(-1);p.role='sibling';p.age=30;
+ }
+ for(const p of s.people){p.world.trust=10;p.world.rivalry=90;}
+ years(s,1);
+ const g=s.socialCircles.groups[0];g.institution.strain=85;g.cohesion=10;g.tension=90;g.standing=30;
+ years(s,1);
+ assert.ok(g.institution.crisis);assert.ok(E.validate(s));
+ return s;
+}
+function splitFixture(seed=129002,extraMembers=2){
+ const s=fractureFixture(seed,extraMembers);years(s,2);
+ const g=s.socialCircles.groups[0],child=s.socialCircles.groups.find(x=>x.institution?.parentId===g.id);
+ assert.ok(child,'expected actual breakaway');assert.ok(E.validate(s));return {s,g,child};
+}
+test('1.29: severe internal pressure creates an optional faction challenge',()=>{
+ const s=fractureFixture(),g=s.socialCircles.groups[0],id='circle:fracture:'+g.institution.crisis.id+':';
+ const a=E.act(s,id+'0'),b=E.act(s,id+'1'),n=E.act(s,id+'2');
+ assert.ok(a.socialCircles.groups[0].institution.strain<g.institution.strain);
+ assert.ok(b.socialCircles.groups[0].institution.strain>g.institution.strain);
+ assert.equal(n.socialCircles.groups[0].institution.strain,g.institution.strain);
+ assert.deepEqual(n.people,s.people);assert.deepEqual(n.stats,s.stats);
+ assert.equal(a.actions,s.actions-1);assert.equal(n.cash,s.cash);assert.ok(E.validate(a));assert.ok(E.validate(b));assert.ok(E.validate(n));
+});
+test('1.29: autonomous split preserves original IDs, roster uniqueness and actual membership',()=>{
+ const {s,g,child}=splitFixture();
+ assert.equal(g.kind,child.kind);assert.notEqual(g.id,child.id);
+ assert.equal(g.members.length,2);assert.equal(child.members.length,2);
+ assert.equal(new Set([...g.members,...child.members]).size,4);
+ assert.ok([...g.members,...child.members].every(id=>s.people.some(p=>'person-'+p.id===id&&p.alive)));
+ const before=child.members.slice();years(s,1);
+ assert.deepEqual(child.members,before);assert.ok(g.members.every(id=>!before.includes(id)));assert.ok(E.validate(s));
+ assert.ok(E.chronicleView(s).timeline.some(x=>x.title.includes('formed a separate reform organization')));
+});
+test('1.29: reform mediation can avoid fracture and restore cohesion',()=>{
+ let s=fractureFixture(129003),g=s.socialCircles.groups[0];s=E.act(s,'circle:fracture:'+g.institution.crisis.id+':0');
+ g=s.socialCircles.groups[0];g.institution.strain=35;
+ for(const p of s.people){p.world.trust=95;p.world.rivalry=0;}
+ g.cohesion=95;g.tension=5;years(s,2);
+ assert.equal(s.socialCircles.groups.length,1);assert.equal(g.institution.crisis,null);assert.ok(g.institution.history.some(h=>h.kind==='reform'));assert.ok(E.validate(s));
+});
+test('1.29: members can defect without creating new people or duplicating membership',()=>{
+ const {s,g,child}=splitFixture(129004,3);
+ s.age+=3;s.actions=3;
+ for(const x of [g,child]){x.governance??={lastReview:s.age,termStart:s.age,election:null,results:[],policy:'continuity'};x.governance.lastReview=s.age;x.governance.election=null;}
+ g.tension=100;g.cohesion=5;child.tension=0;child.cohesion=100;
+ const oldMembers=g.members.slice(),before=child.members.slice();
+ socialCirclesYear(s,{add:noop});
+ assert.equal(g.members.length,oldMembers.length-1);assert.equal(child.members.length,before.length+1);
+ assert.ok(child.members.some(id=>oldMembers.includes(id)));assert.ok(g.members.every(id=>!child.members.includes(id)));
+ assert.ok(E.validate(s));
+});
+test('1.29: reunited organizations retain the former group identity as an archive',()=>{
+ const {s,g,child}=splitFixture(129005);
+ s.age+=3;s.actions=3;
+ for(const p of s.people){p.world.trust=100;p.world.rivalry=0;}
+ for(const x of [g,child]){
+  x.tension=0;x.cohesion=100;
+  x.governance??={lastReview:s.age,termStart:s.age,election:null,results:[],policy:'continuity'};
+  x.governance.election=null;x.governance.lastReview=s.age;
+ }
+ socialCirclesYear(s,{add:noop});
+ assert.equal(child.institution.mergedInto,g.id);assert.equal(child.status,'dormant');assert.equal(child.leaderId,null);
+ assert.equal(child.members.length,0);assert.equal(g.members.length,4);
+ years(s,1);assert.equal(child.status,'dormant');assert.ok(E.validate(s));
+});
+test('1.29: old saves, corrupted parent identities, and heir archives',()=>{
+ const {s,g,child}=splitFixture(129006);
+ const bad=structuredClone(s);bad.socialCircles.groups.find(x=>x.id===child.id).institution.parentId='missing';assert.equal(E.validate(bad),false);
+ const duplicated=structuredClone(s);duplicated.socialCircles.groups.find(x=>x.id===child.id).members.push(g.members[0]);assert.equal(E.validate(duplicated),false);
+ const old=base(129007);delete old.socialCircles.groups[0].institution;assert.ok(E.validate(old));
+ const heir=E.createLife({seed:129008});socialCirclesInheritance(heir,s);
+ assert.ok(heir.socialCircles.groups.every(x=>x.status==='dormant'&&!x.members.length&&!x.institution?.crisis));
+ assert.ok(heir.socialCircles.groups.find(x=>x.id===child.id));assert.ok(E.validate(heir));
+});
+
+test('1.29: competing factions form a distinct contest link with real representatives',()=>{
+ const {s,g,child}=splitFixture(129009);
+ organizationNetworkYear(s,{add:noop});
+ const l=s.organizationNetwork.links.find(l=>[l.aId,l.bId].includes(g.id)&&[l.aId,l.bId].includes(child.id));
+ assert.ok(l);assert.equal(l.theme,'contest');assert.notEqual(l.leaderA,l.leaderB);
+ assert.ok(E.validate(s));
 });

@@ -27,6 +27,16 @@ function SuccessionCard({item,commands,onAction}){
   {e.response?<Text style={S.waiting}>Response recorded: {e.response}</Text>:choices.map(c=><Pressable key={c.id} testID={'succession-choice-'+c.id.split(':').at(-1)} accessibilityRole="button" accessibilityState={{disabled:!c.enabled}} disabled={!c.enabled} onPress={()=>onAction(c.id)} style={[S.option,!c.enabled&&S.disabled]}><Text style={S.optionTitle}>{c.label}</Text><Text style={S.small}>{c.detail}</Text></Pressable>)}
  </View>;
 }
+function FractureCard({item,commands,onAction}){
+ const c=item.institution.crisis,choices=commands.filter(x=>x.id.startsWith('circle:fracture:'+c.id+':'));
+ return <View testID={'fracture-'+item.id} style={S.invite}>
+  <Text style={S.overline}>INSTITUTIONAL FACTION CHALLENGE</Text>
+  <Text style={S.groupTitle}>{item.name}</Text>
+  <Text style={S.description}>Members may establish a separate organization at age {c.dueAge}. The original group and its history survive.</Text>
+  <Meter title="Fracture pressure" value={item.institution.strain} danger/>
+  {c.response?<Text style={S.waiting}>Response recorded: {c.response}</Text>:choices.map(x=><Pressable key={x.id} testID={'fracture-choice-'+x.id.split(':').at(-1)} accessibilityRole="button" accessibilityState={{disabled:!x.enabled}} disabled={!x.enabled} onPress={()=>onAction(x.id)} style={[S.option,!x.enabled&&S.disabled]}><Text style={S.optionTitle}>{x.label}</Text><Text style={S.small}>{x.detail}</Text></Pressable>)}
+ </View>;
+}
 function GroupCard({item,compact=false}){
  return <View testID={'circle-group-'+item.id} style={S.card}>
   <View style={S.split}><Text style={S.overline}>{kinds[item.kind]}</Text>
@@ -57,6 +67,7 @@ function GroupCard({item,compact=false}){
    <Text style={S.small}>{item.status==='dormant'?'Paused until real members return':
     'Group members work on this even when you do nothing'} · {item.completedProjects} past projects</Text>
   </View>
+  {item.institution?<View style={S.project}><Text style={S.overline}>INSTITUTIONAL HEALTH</Text><Text style={S.description}>{item.institution.mergedInto?'Reunited with parent institution':item.institution.parentId?'Independent reform circle':item.institution.condition.toUpperCase()}</Text><Meter title="Internal strain" value={item.institution.strain} danger/>{!compact&&item.institution.history.slice(-3).reverse().map((h,i)=><Text key={i} style={S.small}>Age {h.age}: {h.text}</Text>)}</View>:null}
   {!compact&&item.governance?.results?.length?<View style={S.history}><Text style={S.overline}>LEADERSHIP HISTORY</Text>{item.governance.results.slice(-3).reverse().map(r=><Text key={r.id} style={S.description}>Age {r.age}: {r.winnerName||'No winner'} · {r.outcome.replaceAll('-',' ')} · Challenger {r.votesForChallenger}/{r.totalVotes}</Text>)}</View>:null}
   {!compact&&item.history?.length?<View style={S.history}>
    <Text style={S.overline}>HISTORY THAT DOESN'T DISAPPEAR</Text>
@@ -108,13 +119,15 @@ export default function SocialCirclesBoard({view,commands=[],onAction,compact=fa
  const recent=view.completed.find(x=>x.endedAge===view.age&&
   (!filterKinds.length||filterKinds.includes(x.kind)));
  const succession=groups.filter(g=>g.succession&&(!compact||g.succession.response===null));
- if(compact&&!invites.length&&!recent&&!succession.length)return null;
+ const fractures=groups.filter(g=>g.status==='active'&&g.institution?.crisis&&(!compact||g.institution.crisis.response===null));
+ if(compact&&!invites.length&&!recent&&!succession.length&&!fractures.length)return null;
  return <View testID={compact?'social-circles-preview':'social-circles-board'} style={S.root}>
   <View style={S.split}><View style={{flex:1,gap:4}}>
    <Text style={S.overline}>A WORLD THAT ORGANIZES ITSELF</Text>
    <Text style={S.title}>{compact?'A circle wants your attention':'Organizations & rival households'}</Text>
   </View><Text style={S.counter}>{groups.length} GROUPS</Text></View>
   <Text style={S.description}>Living organizations depend on real NPC members. They pursue multi-year projects, disagree, reconcile and sometimes outlive the generation that formed them.</Text>
+  {fractures.map(g=><FractureCard key={g.id} item={g} commands={commands} onAction={onAction}/>)}
   {succession.map(g=><SuccessionCard key={g.id} item={g} commands={commands} onAction={onAction}/>)}
   {invites.map(x=><InviteCard key={x.id} item={x} commands={commands} onAction={onAction}/>)}
   {compact&&recent&&!invites.length?<View testID="circle-recent-result" style={S.card}>

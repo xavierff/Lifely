@@ -14,7 +14,7 @@ const missions={
  community:['Improve local services','Build trust across neighbors','Protect a shared local space'],
  'rival-family':['Defend competing family interests','Reconsider an old feud','Establish safe boundaries']
 };
-const MAX_GROUPS=4,MAX_INVITES=1,MAX_COMPLETED=28,MAX_NEWS=24,MAX_ANCESTORS=10;
+const MAX_GROUPS=8,MAX_INVITES=1,MAX_COMPLETED=28,MAX_NEWS=24,MAX_ANCESTORS=10;
 const fresh=()=>({version:1,serial:0,groups:[],invites:[],completed:[],
  news:[],ancestors:[],lastGroupAge:-100,lastOfferAge:-100});
 export const socialCirclesState=s=>s.socialCircles||fresh();
@@ -54,8 +54,8 @@ function belongs(s,type,p,anchorId){
   (p.raw.children||0)>0&&p.rivalry>=42;
  return false;
 }
-function candidate(s,type,anchorId){
- const found=actors(s).filter(p=>belongs(s,type,p,anchorId));
+function candidate(s,type,anchorId,excluded=new Set()){
+ const found=actors(s).filter(p=>!excluded.has(p.id)&&belongs(s,type,p,anchorId));
  if(type==='rival-family'){
   const chosen=found.sort((a,b)=>b.rivalry-a.rivalry);
   return chosen.slice(0,1);
@@ -133,7 +133,7 @@ function selectGroup(s){
  ];
  for(const [kind,people] of prospects){
   if(!people.length)continue;
-  if(m.groups.some(g=>g.kind===kind))continue;
+  if(m.groups.some(g=>g.kind===kind&&!g.institution?.parentId))continue;
   return {kind,people};
  }
  return null;
@@ -141,7 +141,17 @@ function selectGroup(s){
 function renewGroup(s,g){
  const old=g.members||[];
  // A rival household may not silently be replaced by an unrelated household.
- const available=candidate(s,g.kind,g.anchorId);
+ const inst=g.institution;
+ const reserved=new Set((socialCirclesState(s).groups||[]).filter(x=>x.institution?.parentId===g.id&&!x.institution.mergedInto).flatMap(x=>x.members));
+ const available=inst?.mergedInto?[]:inst?.parentId?
+  old.map(id=>actor(s,id)).filter(p=>p&&belongs(s,g.kind,p,g.anchorId)):
+  candidate(s,g.kind,g.anchorId,reserved);
+ if(inst?.parentId||inst?.mergedInto){
+  g.members=available.map(p=>p.id);
+  if(g.members.length<2){g.leaderId=null;g.members=[];g.status='dormant';return;}
+  if(!g.members.includes(g.leaderId))g.leaderId=available.sort((a,b)=>b.trust-a.trust||a.id.localeCompare(b.id))[0].id;
+  g.status='active';return;
+ }
  if(g.kind==='rival-family'&&!actor(s,g.anchorId)){
   g.members=[];g.leaderId=null;g.status='dormant';return;
  }
@@ -273,10 +283,107 @@ function successionAct(s,id,ctx){
  news(s,ctx,'You responded to the leadership contest in '+g.name+'.');
  return e;
 }
+// A primary institution may found a separate, real-member breakaway. The
+// original identity and all historical references remain intact after merger.
+const institution=g=>g.institution??={parentId:null,mergedInto:null,condition:'stable',strain:0,lastReview:g.lastAge,crisis:null,history:[]};
+function institutionalRecord(s,g,kind,description,ctx){
+ const i=institution(g),text=line(description,200);
+ i.history.push({age:s.age,kind,text});i.history=i.history.slice(-10);
+ g.history.push({age:s.age,kind:'relationship',title:'Institutional '+kind,outcome:kind,description:text});g.history=g.history.slice(-8);
+ news(s,ctx,g.name+': '+text);
+}
+function splitInstitution(s,g,ctx){
+ const m=ensure(s),i=institution(g);
+ if(g.members.length<4||i.parentId||m.groups.length>=MAX_GROUPS||m.groups.some(x=>x.institution?.parentId===g.id&&!x.institution.mergedInto))return false;
+ const dissatisfied=g.members.filter(id=>id!==g.leaderId).map(id=>actor(s,id)).filter(Boolean)
+  .sort((a,b)=>b.rivalry-a.rivalry||a.trust-b.trust||a.id.localeCompare(b.id)).slice(0,2);
+ if(dissatisfied.length!==2)return false;
+ const ids=dissatisfied.map(p=>p.id),child=createGroup(s,g.kind,dissatisfied,ctx);
+ child.name=line(g.name+' · Reform Circle',100);child.institution={parentId:g.id,mergedInto:null,condition:'stable',strain:20,lastReview:s.age,crisis:null,history:[]};
+ g.members=g.members.filter(id=>!ids.includes(id));g.standing=cap(g.standing-12);
+ g.tension=cap(g.tension-10);i.strain=cap(i.strain-25);i.condition='strained';
+ child.standing=cap(g.standing-8);child.tension=cap(g.tension+8);
+ institutionalRecord(s,g,'split',dissatisfied.map(p=>p.name).join(' and ')+' formed a separate reform organization.',ctx);
+ institutionalRecord(s,child,'founded','A breakaway from '+g.name+' with existing members only.',ctx);
+ return true;
+}
+function tickInstitutions(s,ctx){
+ const m=ensure(s);
+ for(const g of [...m.groups]){
+  if(g.status!=='active'||g.institution?.mergedInto||g.kind==='rival-family')continue;
+  const i=institution(g);if(s.age<=i.lastReview)continue;
+  i.lastReview=s.age;
+  i.strain=cap(i.strain+Math.round((g.tension-g.cohesion)/9)+(g.standing<35?3:-2));
+  const prior=i.condition;
+  i.condition=i.strain>=75?'declining':i.strain>=45?'strained':'stable';
+  if(i.condition!==prior)institutionalRecord(s,g,i.condition==='stable'?'recovered':i.condition,
+   i.condition==='stable'?'The institution recovered through stronger cohesion.':'Internal pressure left the institution '+i.condition+'.',ctx);
+  if(i.condition==='declining')g.standing=cap(g.standing-2);
+  if(i.crisis&&s.age>=i.crisis.dueAge){
+   const c=i.crisis;i.crisis=null;
+   if(i.strain>=65&&splitInstitution(s,g,ctx))continue;
+   institutionalRecord(s,g,'reform',i.strain>=65?'The faction challenge ended without enough members for a split.':'The faction accepted a renewed internal agreement.',ctx);
+   i.strain=cap(i.strain-12);continue;
+  }
+  if(!i.crisis&&!i.parentId&&g.members.length>=4&&i.strain>=65&&s.age<=104&&
+   !m.groups.some(x=>x.institution?.parentId===g.id&&!x.institution.mergedInto)&&
+   !i.history.some(h=>['split','reform'].includes(h.kind)&&s.age-h.age<5)){
+   i.crisis={id:'fracture-'+g.id+'-'+s.age,startedAge:s.age,dueAge:s.age+2,response:null};
+   institutionalRecord(s,g,'faction','Dissatisfied members organized a two-year reform challenge.',ctx);
+  }
+ }
+ // Defection and reunion are limited to a parent and its actual breakaway.
+ // No unrelated NPC is moved across an incompatible organization.
+ for(const child of m.groups.filter(g=>g.institution?.parentId&&!g.institution.mergedInto)){
+  const i=child.institution,parent=m.groups.find(g=>g.id===i.parentId);
+  if(!parent||parent.status!=='active'||child.status!=='active'||s.age-child.originAge<3)continue;
+  const pi=institution(parent);
+  if(child.governance?.election||parent.governance?.election||pi.crisis)continue;
+  const last=i.history.at(-1)?.age??child.originAge;
+  if(s.age-last<3)continue;
+  if(parent.cohesion>=65&&child.cohesion>=65&&parent.tension<=30&&child.tension<=30&&
+   new Set([...parent.members,...child.members]).size<=5){
+   parent.members=[...new Set([...parent.members,...child.members])];
+   child.members=[];child.leaderId=null;child.status='dormant';child.project.status='paused';i.mergedInto=parent.id;
+   institutionalRecord(s,parent,'merger','The reform circle rejoined after years of cooperation.',ctx);
+   institutionalRecord(s,child,'merged','The institution joined '+parent.name+'; its own history remains.',ctx);
+   continue;
+  }
+  const from=parent.tension>child.tension+15?parent:child.tension>parent.tension+15?child:null;
+  const to=from===parent?child:parent;
+  if(!from||from.members.length<=2||to.members.length>=5)continue;
+  const member=from.members.filter(id=>id!==from.leaderId).map(id=>actor(s,id)).filter(Boolean)
+   .sort((a,b)=>b.rivalry-a.rivalry||a.id.localeCompare(b.id))[0];
+  if(!member||member.rivalry<45)continue;
+  from.members=from.members.filter(id=>id!==member.id);to.members.push(member.id);
+  institutionalRecord(s,from,'defection',member.name+' left for '+to.name+'.',ctx);
+  institutionalRecord(s,to,'defection',member.name+' joined from '+from.name+'.',ctx);
+ }
+}
+function fractureCommands(s){
+ return socialCirclesState(s).groups.flatMap(g=>{
+  const c=g.institution?.crisis;if(!c||c.response!==null||g.status!=='active')return [];
+  return [{label:'Mediate between institutional factions',detail:'Reduce fracture pressure and help members find common ground'},
+   {label:'Support the reform faction',detail:'Raise pressure for a new organization'},
+   {label:'Allow members to decide independently',detail:'Neutral response; no relationship or resource effects'}].map((o,i)=>({
+    ...o,id:'circle:fracture:'+c.id+':'+i,enabled:!blocked(s)&&s.actions>0}));
+ });
+}
+function fractureAct(s,id,ctx){
+ const g=ensure(s).groups.find(g=>g.institution?.crisis&&id.startsWith('circle:fracture:'+g.institution.crisis.id+':'));
+ if(!g||!fractureCommands({...s,actions:s.actions+1}).some(c=>c.id===id&&c.enabled))throw Error('Institutional crisis unavailable.');
+ const i=g.institution,n=Number(id.split(':').at(-1));
+ i.crisis.response=['mediate','reform','neutral'][n];
+ if(n===0){i.strain=cap(i.strain-20);g.tension=cap(g.tension-8);}
+ if(n===1){i.strain=cap(i.strain+15);g.tension=cap(g.tension+5);}
+ news(s,ctx,'You responded to the reform challenge in '+g.name+'.');
+ return i.crisis;
+}
 function evolveGroup(s,g,ctx){
  if(s.age<=g.lastAge)return;
  renewGroup(s,g);
  if(g.status==='dormant'){
+  if(g.institution?.crisis){g.institution.crisis=null;institutionalRecord(s,g,'reform','The faction challenge ended because its living membership was no longer available.',ctx);}
   if(g.governance?.election)tickGovernance(s,g,ctx);
   g.standing=cap(g.standing-1);
   if(g.project)g.project.status='paused';
@@ -410,6 +517,7 @@ export function socialCirclesYear(s,ctx={}){
  if(!s.alive||s.age<18)return;
  const m=ensure(s);
  for(const g of m.groups)evolveGroup(s,g,ctx);
+ tickInstitutions(s,ctx);
  for(const o of [...m.invites]){
   if(!actor(s,o.personId)){
    finish(s,o,ctx,'interrupted');continue;
@@ -431,7 +539,7 @@ export function socialCirclesYear(s,ctx={}){
 }
 export function socialCirclesCommands(s){
  const m=socialCirclesState(s);
- return [...successionCommands(s),...m.invites.flatMap(o=>{
+ return [...fractureCommands(s),...successionCommands(s),...m.invites.flatMap(o=>{
   if(!['open','ready'].includes(o.status))return [];
   const group=m.groups.find(g=>g.id===o.groupId),p=actor(s,o.personId);
   return options(o).map(x=>({
@@ -442,6 +550,7 @@ export function socialCirclesCommands(s){
  })];
 }
 export function socialCirclesAct(s,id,ctx){
+ if(id.startsWith('circle:fracture:'))return fractureAct(s,id,ctx);
  if(id.startsWith('circle:succession:'))return successionAct(s,id,ctx);
  const parsed=/^circle:(circle-offer-g[0-9]+-[0-9]+):([012])$/.exec(id);
  if(!parsed||!socialCirclesCommands({...s,actions:s.actions+1})
@@ -501,6 +610,7 @@ export function socialCirclesInheritance(next,old){
  m.serial=source.serial;
  m.groups=source.groups.map(g=>({
   ...g,members:[],leaderId:null,status:'dormant',lastAge:next.age,
+  institution:g.institution?{...g.institution,crisis:null,strain:0,condition:'stable',lastReview:next.age,history:g.institution.history.slice(-10)}:undefined,
   governance:g.governance?{lastReview:next.age,termStart:next.age,election:null,results:g.governance.results.slice(-6),policy:'continuity'}:undefined,
   project:{id:g.id+'-project-heir-'+next.generation,mission:
    missions[g.kind][hash(g.id+':heir')%3],startedAge:next.age,
@@ -527,6 +637,7 @@ export function validateSocialCircles(m){
   age(p.dueAge)&&num(p.progress)&&p.progress>=0&&p.progress<=100&&
   projectStatus.includes(p.status);
  const validGovernance=g=>{const v=g.governance;if(v===undefined)return true;const e=v?.election;return !!v&&age(v.lastReview)&&age(v.termStart)&&['continuity','renewal'].includes(v.policy)&&Array.isArray(v.results)&&v.results.length<=6&&v.results.every(r=>r&&age(r.age)&&str(r.id,120)&&['retained','new-leadership','interrupted'].includes(r.outcome)&&(r.winnerName===null||str(r.winnerName,70))&&Number.isInteger(r.totalVotes)&&r.totalVotes>=0&&r.totalVotes<=5&&Number.isInteger(r.votesForChallenger)&&r.votesForChallenger>=0&&r.votesForChallenger<=r.totalVotes)&&(e===null||!!e&&str(e.id,120)&&str(e.incumbent,100)&&str(e.challenger,100)&&e.incumbent!==e.challenger&&age(e.startedAge)&&age(e.dueAge)&&e.dueAge===e.startedAge+2&&[0,8].includes(e.incumbentSupport)&&[0,8].includes(e.challengerSupport)&&(e.response===null||electionTags.includes(e.response)));};
+ const validInstitution=g=>{const i=g.institution;if(i===undefined)return true;const c=i?.crisis;return !!i&&(i.parentId===null||str(i.parentId,90))&&(i.mergedInto===null||i.mergedInto===i.parentId)&&(!i.mergedInto||g.status==='dormant')&&['stable','strained','declining'].includes(i.condition)&&num(i.strain)&&i.strain>=0&&i.strain<=100&&age(i.lastReview)&&Array.isArray(i.history)&&i.history.length<=10&&i.history.every(h=>h&&age(h.age)&&['faction','split','founded','reform','declining','strained','recovered','merger','merged','defection'].includes(h.kind)&&str(h.text,200))&&(c===null||!!c&&str(c.id,120)&&age(c.startedAge)&&age(c.dueAge)&&c.dueAge===c.startedAge+2&&(c.response===null||['mediate','reform','neutral'].includes(c.response)));};
  const group=g=>g&&str(g.id,90)&&kinds.includes(g.kind)&&str(g.name,100)&&
   Number.isInteger(g.originGeneration)&&g.originGeneration>=1&&age(g.originAge)&&
   (g.anchorId===null||str(g.anchorId,100))&&
@@ -539,7 +650,7 @@ export function validateSocialCircles(m){
   Number.isInteger(g.projectNumber)&&g.projectNumber>=1&&g.projectNumber<=120&&
   project(g.project)&&Number.isInteger(g.completedProjects)&&
   g.completedProjects>=0&&g.completedProjects<=99&&
-  Array.isArray(g.history)&&g.history.length<=8&&g.history.every(note)&&validGovernance(g);
+  Array.isArray(g.history)&&g.history.length<=8&&g.history.every(note)&&validGovernance(g)&&validInstitution(g);
  const decision=x=>x&&age(x.age)&&tags.includes(x.tag)&&str(x.label,110)&&
   ['trustDelta','rivalryDelta','standingDelta','tensionDelta','progressDelta','statDelta']
   .every(k=>num(x[k])&&Math.abs(x[k])<=100)&&
@@ -558,7 +669,9 @@ export function validateSocialCircles(m){
  return !!m&&m.version===1&&Number.isInteger(m.serial)&&m.serial>=0&&
   Array.isArray(m.groups)&&m.groups.length<=MAX_GROUPS&&m.groups.every(group)&&
   new Set(m.groups.map(g=>g.id)).size===m.groups.length&&
-  new Set(m.groups.map(g=>g.kind)).size===m.groups.length&&
+  new Set(m.groups.filter(g=>!g.institution?.parentId).map(g=>g.kind)).size===m.groups.filter(g=>!g.institution?.parentId).length&&
+  m.groups.every(g=>!g.institution?.parentId||m.groups.some(p=>p.id===g.institution.parentId&&p.id!==g.id&&p.kind===g.kind&&!p.institution?.parentId&&g.members.every(id=>!p.members.includes(id))))&&
+  new Set(m.groups.filter(g=>g.institution?.parentId&&!g.institution.mergedInto).map(g=>g.institution.parentId)).size===m.groups.filter(g=>g.institution?.parentId&&!g.institution.mergedInto).length&&
   Array.isArray(m.invites)&&m.invites.length<=MAX_INVITES&&
   m.invites.every(o=>offer(o)&&o.status!=='completed'&&m.groups.some(g=>g.id===o.groupId))&&
   Array.isArray(m.completed)&&m.completed.length<=MAX_COMPLETED&&
