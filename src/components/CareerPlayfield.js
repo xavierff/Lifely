@@ -6,10 +6,17 @@ import {ElectionBoard,MedicalBoard} from './CivicClinicBoards';
 const C={ink:'#F6F8EE',muted:'#C0D6CD',lime:'#D0FB93',gold:'#FFE0A2',border:'#4C7065',panel:'#102926'};
 const cash=n=>'$'+Math.round(n||0).toLocaleString('en-US');
 function Metric({name,value,accent}){return <View style={S.metric}><Text style={S.metricLabel}>{name}</Text><Text style={[S.metricValue,accent&&{color:C.lime}]}>{value}</Text></View>}
+function PlayHistory({v}){
+ const history=v.playHistory||[];
+ return <View testID="playfield-history" style={S.phaseHeader}><Text style={S.kicker}>PROJECT ACTION LOG</Text><View style={S.historyRow}>{Array.from({length:4},(_,stage)=><View key={stage} style={S.historyPhase}><Text style={S.small}>P{stage+1}</Text><View style={S.historyRow}>{[0,1].map(i=>{const x=history.filter(h=>h.stage===stage)[i];return <View key={i} accessibilityLabel={'Phase '+(stage+1)+' action '+(i+1)+': '+(x?x.success?'success':'setback':'not played')} style={[S.historyDot,x&&{backgroundColor:x.success?'#487952':'#875B55'}]}><Text style={S.historyText}>{x?x.success?'✓':'×':'·'}</Text></View>})}</View></View>)}</View></View>;
+}
+function DirectTiles({v,onPlay,labels,prefix}){
+ return <View style={S.directRow}>{v.options.map((o,i)=><Pressable key={i} testID={prefix+'-'+i} accessibilityRole="button" accessibilityLabel={'Direct control: '+o.label} accessibilityState={{disabled:v.remaining===0}} disabled={v.remaining===0} onPress={()=>onPlay(i)} style={({pressed})=>[S.directTile,v.remaining===0&&S.disabled,pressed&&S.pressed]}><Text style={S.directGlyph}>{o.icon}</Text><Text style={S.directLabel}>{labels[i]}</Text>{Number.isInteger(o.chance)?<Text style={S.small}>{o.chance}% chance</Text>:null}</Pressable>)}</View>;
+}
 function Choice({item,i,disabled,onPlay,testPrefix}){
  return <Pressable testID={testPrefix+'-action-'+i} accessibilityRole="button" accessibilityLabel={item.label+', '+item.note} accessibilityState={{disabled}} disabled={disabled}
   onPress={()=>onPlay(i)} style={({pressed})=>[S.choice,disabled&&S.disabled,pressed&&S.pressed]}>
-  <Text style={S.choiceIcon}>{item.icon}</Text><View style={{flex:1,gap:2}}><Text style={S.choiceTitle}>{item.label}</Text><Text style={S.choiceNote}>{item.note}</Text></View>
+  <Text style={S.choiceIcon}>{item.icon}</Text><View style={{flex:1,gap:2}}><Text style={S.choiceTitle}>{item.label}</Text><Text style={S.choiceNote}>{item.note}{Number.isInteger(item.chance)?' · '+item.chance+'% success chance':''}</Text></View>
  </Pressable>;
 }
 function Pitch({v,onPlay}){
@@ -22,7 +29,7 @@ function Pitch({v,onPlay}){
    <Text style={S.pitchTitle}>OPPONENT'S HALF</Text>
    <View style={S.pitchCenterLine}/>
    <View style={S.lanes}>{lanes.map((lane,i)=><Pressable key={lane} accessibilityRole="button" accessibilityLabel={v.options[i].label+', '+(v.weakLane===i?'scouted weakness':'guarded lane')} accessibilityState={{disabled:v.remaining===0}} disabled={v.remaining===0} onPress={()=>onPlay(i)} style={({pressed})=>[S.lane,i===v.weakLane&&S.laneWeak,pressed&&S.lanePressed]}>
-    <Text style={S.laneTop}>{lane}</Text><Text style={S.laneMarker}>{v.weakLane===i?'◎':'●'}</Text><Text style={S.laneArrow}>{v.options[i].icon}</Text><Text style={S.laneBottom}>{v.weakLane===i?'SPACE':'MARKED'}</Text>
+    <Text style={S.laneTop}>{lane}</Text><Text style={S.laneMarker}>{v.weakLane===i?'◎':'●'}</Text><Text style={S.laneArrow}>{v.options[i].icon}</Text><Text style={S.laneBottom}>{v.weakLane===i?'SPACE':'MARKED'}</Text><Text style={S.laneBottom}>{v.options[i].chance}%</Text>
    </Pressable>)}</View>
    <Text style={S.pitchTitle}>YOUR ATTACK</Text>
   </View>
@@ -42,7 +49,7 @@ function FilmSet({v,onPlay}){
   </View>
   <View style={S.metricRow}><Metric name="Usable takes" value={String(v.usable)} accent/><Metric name="Retakes" value={String(v.retakes)}/><Metric name="Total takes" value={String(v.takes)}/></View>
   <Text style={S.kicker}>STORYBOARD COVERAGE</Text>
-  <View style={S.storyboard}>{v.scenes.map((name,i)=><View key={name} style={[S.storyTile,v.coverage[i]>0&&S.storyTileDone]}><Text style={S.storySymbol}>{v.options[i].icon}</Text><Text style={S.storyTitle}>{name}</Text><Text style={S.storyCount}>{v.coverage[i]} usable</Text></View>)}</View>
+  <View style={S.storyboard}>{v.scenes.map((name,i)=><Pressable key={name} testID={'film-camera-'+i} accessibilityRole="button" accessibilityLabel={'Film camera: '+name} accessibilityState={{disabled:v.remaining===0}} disabled={v.remaining===0} onPress={()=>onPlay(i)} style={({pressed})=>[S.storyTile,v.coverage[i]>0&&S.storyTileDone,v.remaining===0&&S.disabled,pressed&&S.pressed]}><Text style={S.storySymbol}>{v.options[i].icon}</Text><Text style={S.storyTitle}>{name}</Text><Text style={S.storyCount}>{v.coverage[i]} usable · {v.options[i].chance}%</Text></Pressable>)}</View><Text style={S.small}>Tap a camera setup to shoot a take.</Text>
   <Text style={S.hint}>{v.hint}</Text>
   {v.options.map((o,i)=><Choice key={i} item={o} i={i} disabled={v.remaining===0} onPlay={onPlay} testPrefix="film"/>)}
  </View>;
@@ -58,7 +65,7 @@ function BusinessDesk({v,onPlay}){
    <View style={S.rowBetween}><Text style={S.small}>Demand baseline: {v.baseDemand}/100</Text><Text style={S.small}>{v.trend.length} snapshots</Text></View>
   </View>
   <View style={S.metricRow}><Metric name="Estimated launch sales" value={cash(v.forecast)}/><Metric name="Available personal cash" value={cash(v.actualCash)}/></View>
-  <Text style={S.hint}>{v.hint}</Text>
+  <Text style={S.kicker}>OPERATING PRIORITIES · TAP TO ACT</Text><DirectTiles v={v} onPlay={onPlay} labels={['Product','Team','Audience']} prefix="business-control"/><Text style={S.hint}>{v.hint}</Text>
   {v.options.map((o,i)=><Choice key={i} item={o} i={i} disabled={v.remaining===0} onPlay={onPlay} testPrefix="business"/>)}
  </View>;
 }
@@ -90,12 +97,13 @@ export default function CareerPlayfield({view,onPlay,soundEnabled=true}){
  return <View style={S.container}>
   <View style={S.phaseHeader}><Text style={S.kicker}>PROJECT PROGRESS · PHASE {view.stage+1}/4</Text><View accessibilityRole="progressbar" accessibilityLabel="Project phases completed" accessibilityValue={{min:0,max:4,now:view.stage}} style={S.phaseTrack}>{[0,1,2,3].map(i=><View key={i} style={[S.phaseSegment,i<view.stage&&S.phaseDone,i===view.stage&&S.phaseCurrent]}/>)}</View><Text style={S.small}>{view.remaining===0?'Ready for the next story decision':view.remaining+' interactions remaining in this phase'}</Text></View>
   {view.type==='sports'?<Pitch v={view} onPlay={interact}/>:view.type==='film'?<FilmSet v={view} onPlay={interact}/>:view.type==='business'?<BusinessDesk v={view} onPlay={interact}/>:view.type==='election'?<ElectionBoard v={view} onPlay={interact}/>:view.type==='medical'?<MedicalBoard v={view} onPlay={interact}/>:null}
-  <View style={S.status}><Text style={S.statusText}>{view.played} / {view.maxPerStage} interactions this phase</Text><Text style={S.statusText}>{view.remaining===0?'PHASE READY':'PLAY TO IMPROVE YOUR RESULT'}</Text></View>
+  <PlayHistory v={view}/><View style={S.status}><Text style={S.statusText}>{view.played} / {view.maxPerStage} interactions this phase</Text><Text style={S.statusText}>{view.remaining===0?'PHASE READY':'PLAY TO IMPROVE YOUR RESULT'}</Text></View>
   {view.last?<Animated.View testID="playfield-feedback" accessibilityLiveRegion="polite" style={[S.feedback,{transform:[{scale:pulse}]}]}><Text style={S.feedbackTitle}>{view.last.success?'✓ SUCCESSFUL ACTION':'↻ ANOTHER APPROACH NEEDED'}</Text><Text style={S.feedbackBody}>{view.last.description}</Text>{view.last.reaction?<Text style={S.reactionText}>{view.last.reaction.person}: {view.last.reaction.text.replace(view.last.reaction.person+' ','')}</Text>:null}</Animated.View>:null}
   {view.remaining===0?<Text style={S.done}>Now make the story decision below to move to the next phase.</Text>:null}
  </View>;
 }
 const S=StyleSheet.create({
+ historyRow:{flexDirection:'row',gap:4,flexWrap:'wrap'},historyPhase:{flex:1,minWidth:54,gap:4},historyDot:{width:22,height:24,borderRadius:5,backgroundColor:'#3D5750',alignItems:'center',justifyContent:'center'},historyText:{fontSize:14,fontWeight:'900',color:C.ink},directRow:{flexDirection:'row',gap:5},directTile:{flex:1,minWidth:0,minHeight:76,padding:6,gap:4,alignItems:'center',justifyContent:'center',borderRadius:9,backgroundColor:'#31544A',borderWidth:1,borderColor:C.border},directGlyph:{fontSize:22,color:C.gold},directLabel:{fontSize:11,fontWeight:'800',color:C.ink,textAlign:'center'},
  phaseHeader:{padding:10,gap:6,borderRadius:11,backgroundColor:'#213E34'},phaseTrack:{flexDirection:'row',gap:5},phaseSegment:{flex:1,height:8,borderRadius:4,backgroundColor:'#49675F'},phaseDone:{backgroundColor:C.lime},phaseCurrent:{backgroundColor:C.gold},container:{gap:9,marginVertical:3},board:{padding:12,borderRadius:17,backgroundColor:C.panel,borderWidth:1,borderColor:C.border,gap:11},
  rowBetween:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:5},
  kicker:{color:C.gold,fontSize:10,letterSpacing:1,fontWeight:'800',flexShrink:1},
