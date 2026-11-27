@@ -390,7 +390,7 @@ export function playableEventsInheritance(next,old){
  ].includes(x.ending)).slice(-3);
  m.ancestors=[...previous.ancestors,{
   generation:old.generation,name:brief(old.name,32),
-  note:brief(important.length?important.map(x=>x.title+': '+x.ending).join('; '):
+  note:brief(important.length?important.map(x=>publicEventModes[x.mode].title+': '+x.ending).join('; '):
    'Past generations held public events without automatically passing on personal power.',230)
  }].slice(-LIMIT_ANCESTORS);
  next.playableEvents=m;

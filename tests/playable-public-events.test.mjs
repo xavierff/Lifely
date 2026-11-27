@@ -72,7 +72,7 @@ test('public-event modes derive from existing organizations and never fabricate 
  assert.deepEqual(offer.modes.map(x=>x.mode),['negotiation','festival','election']);
  const work=fixture(123004,'professional');
  assert.deepEqual(playableEventView(work).offers[0].modes.map(x=>x.mode),
-  ['negotiation','competition','election']);
+  ['negotiation','festival','competition','election']);
  const rivalry=fixture(123005,'rival-family');
  assert.deepEqual(playableEventView(rivalry).offers[0].modes.map(x=>x.mode),
   ['negotiation','festival','competition','election']);
@@ -288,7 +288,7 @@ test('public-event memories can cross generations but cannot mint heirs or trans
  assert.equal(next.playableEvents.active,null);
  assert.equal(next.playableEvents.completed.length,0);
  assert.equal(next.playableEvents.seen.length,0);
- assert.match(next.playableEvents.ancestors[0].note,/leadership election: new-leader/);
+ assert.match(next.playableEvents.ancestors[0].note,/Leadership election: new-leader/);
  assert.equal(next.cash,wealth);
  assert.equal(JSON.stringify(next.people),people);
  assert.equal(next.organizationNetwork.links[0].leaderA,null);
