@@ -35,7 +35,7 @@ export default function HobbyCircuitBoard({view,onChoose,soundEnabled=true}){
  if(!view)return null;
  const decide=i=>{if(soundEnabled)tap.seekTo(0).then(()=>tap.play()).catch(()=>{});onChoose(i);};
  return <View testID="hobby-circuit-board" style={S.board}>
-  <View style={S.split}><Text style={S.topline}>{view.mode==='contest'?'LIVE CONTEST':'TRAINING SESSION'}</Text><Text style={S.topline}>{view.league.toUpperCase()} CIRCUIT</Text></View>
+  <View style={S.split}><Text style={S.topline}>{view.mode==='contest'?'LIVE CONTEST':'TRAINING SESSION'}</Text><Text style={S.topline}>{view.league.toUpperCase()} CIRCUIT · {view.difficultyName}</Text></View>
   <View style={S.arena}>
    <View style={S.competitor}><Text style={S.heroGlyph}>{view.glyph}</Text><Text style={S.competitorLabel}>YOUR SCORE</Text><Text style={S.bigScore}>{view.score}<Text style={S.scoreSmall}> / {view.round-1}</Text></Text></View>
    <View style={S.versus}><Text style={S.versusText}>VS</Text><Text style={S.tiny}>{view.mode==='practice'?'LEARN':'COMPETE'}</Text></View>
@@ -49,7 +49,7 @@ export default function HobbyCircuitBoard({view,onChoose,soundEnabled=true}){
    <Text style={S.cueText}>{view.prompt}</Text>
    <Text style={S.small}>{view.hint}</Text>
   </Animated.View>
-  {view.drill?<View testID="hobby-skill-drill" style={S.cue}><Text style={S.cueLabel}>SKILL DRILL · SOLVE THE PUZZLE</Text>{view.drill.kind==='chess'?<View style={{gap:2}}>{Array.from({length:8},(_,r)=><View key={r} style={{flexDirection:'row'}}>{Array.from({length:8},(_,c)=>{const square='abcdefgh'[c]+(8-r),idx=view.drill.visual.indexOf(square);return <Pressable key={square} accessibilityRole={idx>0?'button':undefined} accessibilityLabel={square+(idx>0?', choose destination':'')} disabled={idx<1} onPress={()=>decide(idx-1)} style={{flex:1,aspectRatio:1,backgroundColor:(r+c)%2?'#587D69':'#B4CEB0',alignItems:'center',justifyContent:'center'}}><Text style={{color:'#142A23',fontWeight:'900'}}>{idx===0?({'d4':'♜','c1':'♝','e4':'♞'}[square]||'♟'):idx>0?String(idx):''}</Text></Pressable>})}</View>)}</View>:<View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>{view.drill.visual.map((x,i)=><View key={i} style={{padding:9,backgroundColor:'#34534F',borderRadius:6}}><Text style={S.small}>{x}</Text></View>)}</View>}<Text style={S.small}>Each answer is objectively graded. Solve all three for practice mastery.</Text></View>:null}{view.options.map(item=><Option item={item} onPress={decide} key={item.index}/>)} 
+  {view.drill?<View testID="hobby-skill-drill" style={S.cue}><Text style={S.cueLabel}>SKILL DRILL · SOLVE THE PUZZLE</Text>{view.drill.kind==='chess'?<View style={{gap:2}}>{Array.from({length:8},(_,r)=><View key={r} style={{flexDirection:'row'}}>{Array.from({length:8},(_,c)=>{const square='abcdefgh'[c]+(8-r),idx=view.drill.visual.indexOf(square);return <Pressable key={square} accessibilityRole={idx>0?'button':undefined} accessibilityLabel={square+(idx>0?', choose destination':'')} disabled={idx<1} onPress={()=>decide(idx-1)} style={{flex:1,aspectRatio:1,backgroundColor:(r+c)%2?'#587D69':'#B4CEB0',alignItems:'center',justifyContent:'center'}}><Text style={{color:'#142A23',fontWeight:'900'}}>{idx===0?(view.drill.piece||{'d4':'♜','c1':'♝','e4':'♞'}[square]||'♟'):idx>0?String(idx):''}</Text></Pressable>})}</View>)}</View>:<View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>{view.drill.visual.map((x,i)=><View key={i} style={{padding:9,backgroundColor:'#34534F',borderRadius:6}}><Text style={S.small}>{x}</Text></View>)}</View>}<Text style={S.small}>Each answer is objectively graded. Solve all three for practice mastery.</Text></View>:null}{view.options.map(item=><Option item={item} onPress={decide} key={item.index}/>)} 
   {view.last?<View testID="hobby-round-feedback" accessibilityLiveRegion="polite" style={S.feedback}>
     <Text style={S.cueLabel}>{view.last.success?'YOU GAINED GROUND':'AN OPPORTUNITY TO LEARN'}</Text>
     <Text style={S.small}>{view.last.reaction}</Text>
@@ -73,7 +73,7 @@ export function HobbyLeagueOverview({summary,commands,onAction}){
   </Pressable>)}</View>
   {active?<View testID="hobby-profile" style={S.details}>
    <View style={S.split}><Text style={S.topline}>{active.glyph} {active.name.toUpperCase()}</Text><Text style={S.topline}>{active.league.toUpperCase()}</Text></View>
-   <Meter label="Mastery" value={active.mastery}/>
+   <Meter label="Mastery" value={active.mastery}/><Text style={S.small}>Next challenge difficulty: {active.difficultyName}</Text>
    <View style={S.stats}>
     <View style={S.statBox}><Text style={S.statValue}>{active.wins}</Text><Text style={S.tiny}>WINS</Text></View>
     <View style={S.statBox}><Text style={S.statValue}>{active.trophies}</Text><Text style={S.tiny}>TROPHIES</Text></View>
