@@ -51,7 +51,7 @@ export function celebrityCommands(s,c){
  if(!m.offer&&!m.sponsor){
   for(const b of sponsors)put('offer:request:'+b.id,'Request '+b.name+' sponsorship','Fame '+b.fame+' · public trust '+b.trust+' · two-year agreement',e.fame>=b.fame&&m.trust>=b.trust&&m.lastOffer!==s.age);
  }else if(m.offer){
-  put('offer:accept','Accept '+brand(m.offer.brand).name+' agreement',fmt(m.offer.fee)+' per fulfilled year · two years',m.offer.path===e.path&&s.age<=m.offer.dueAge);
+  put('offer:accept','Accept '+brand(m.offer.brand).name+' agreement',fmt(m.offer.fee)+' per fulfilled year · two years',m.offer.path===e.path&&s.age<=m.offer.dueAge&&s.age<=108);
   put('offer:counter','Counter with higher compensation','Higher fee, stricter fame target; the brand may refuse',!m.offer.countered&&s.age<=m.offer.dueAge);
   put('offer:decline','Decline the sponsorship','No payment or penalty');
  }else if(m.sponsor){
@@ -99,6 +99,12 @@ export function celebrityAct(s,id,ctx,c){
   else{m.publicity=null;m.trust=cap(m.trust+({account:15,work:9,silence:5}[verb]));e.fame=cap(e.fame+({account:2,work:5,silence:-3}[verb]));ctx.change(s,'stress',verb==='silence'?-8:-2);log(s,'response','Responded to the public controversy through '+verb+'.',ctx);}
  }
  m.peakFame=Math.max(m.peakFame,e.fame);
+}
+export function celebrityLeave(s,ctx){
+ const m=s.celebrity;if(!m)return;
+ if(m.project){m.project=null;log(s,'abandoned','Left the unfinished production.',ctx);}
+ if(m.sponsor){m.sponsor=null;m.failed++;log(s,'terminated','Sponsorship ended upon leaving the career.',ctx);}
+ m.offer=null;m.publicity=null;
 }
 export function celebrityYear(s,ctx,c){
  const m=s.celebrity;if(!m)return 0;
