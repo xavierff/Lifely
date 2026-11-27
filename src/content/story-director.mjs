@@ -211,6 +211,13 @@ export function storyDirectorView(s){
  return {id:e.id,title:e.title,theme:e.theme,phase:e.phase,round:e.phase+1,total:3,
   lead:e.firstName,other:e.secondName,headline:theme.beats[e.phase],prompt:withActors(theme.scenes[e.phase],e),
   backstory:(e.previous?'An earlier story with these characters involved '+e.previous+'. ':theme.context+' ')+
+   ((s.playableEvents?.completed||[]).findLast(x=>
+    x.leaderA===e.firstId||x.leaderA===e.secondId||
+    x.leaderB===e.firstId||x.leaderB===e.secondId)?
+    (()=>{const old=(s.playableEvents?.completed||[]).findLast(x=>
+      x.leaderA===e.firstId||x.leaderA===e.secondId||
+      x.leaderB===e.firstId||x.leaderB===e.secondId);
+     return 'A public '+old.mode+' previously ended '+old.ending+'. ';})():'')+
    ((s.organizationNetwork?.completed||[]).findLast(x=>
     x.initialA===e.firstId||x.initialA===e.secondId||
     x.initialB===e.firstId||x.initialB===e.secondId)?
