@@ -211,6 +211,12 @@ export function storyDirectorView(s){
  return {id:e.id,title:e.title,theme:e.theme,phase:e.phase,round:e.phase+1,total:3,
   lead:e.firstName,other:e.secondName,headline:theme.beats[e.phase],prompt:withActors(theme.scenes[e.phase],e),
   backstory:(e.previous?'An earlier story with these characters involved '+e.previous+'. ':theme.context+' ')+
+   ((s.publicAftermath?.threads||[]).find(t=>
+    t.aId===e.firstId||t.aId===e.secondId||t.bId===e.firstId||t.bId===e.secondId)?
+    (()=>{const t=(s.publicAftermath?.threads||[]).find(t=>
+      t.aId===e.firstId||t.aId===e.secondId||t.bId===e.firstId||t.bId===e.secondId);
+     return 'An old '+t.mode+' involving '+t.aName+' and '+t.bName+
+      ' evolved into '+t.kind+' and remains unresolved. ';})():'')+
    ((s.playableEvents?.completed||[]).findLast(x=>
     x.leaderA===e.firstId||x.leaderA===e.secondId||
     x.leaderB===e.firstId||x.leaderB===e.secondId)?
