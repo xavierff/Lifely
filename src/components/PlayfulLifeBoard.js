@@ -1,7 +1,7 @@
 import React,{useState,useEffect,useRef} from 'react';
 import {View,Text,Pressable,StyleSheet,Animated,AccessibilityInfo} from 'react-native';
 import {useAudioPlayer} from 'expo-audio';
-export default function PlayfulLifeBoard({age,history=[],classmates=[],collection=[],legacy=[],commands=[],blocked,onAction,soundEnabled=true}){
+export default function PlayfulLifeBoard({age,history=[],classmates=[],collection=[],legacy=[],stats=null,commands=[],blocked,onAction,soundEnabled=true}){
  const [expanded,setExpanded]=useState(false),[reduceMotion,setReduceMotion]=useState(false);
  const win=useAudioPlayer(require('../../assets/sfx/success.wav')),scale=useRef(new Animated.Value(1)).current,previous=useRef(undefined);
  useEffect(()=>{AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(()=>{});const sub=AccessibilityInfo.addEventListener?.('reduceMotionChanged',setReduceMotion);return()=>sub?.remove?.();},[]);
@@ -14,6 +14,7 @@ export default function PlayfulLifeBoard({age,history=[],classmates=[],collectio
   <Text style={S.desc}>Three decisions, meaningful tradeoffs and different endings. One outing per year.</Text>
   {latest?<Animated.View style={[S.result,{transform:[{scale}]}]} testID="outing-latest-result" accessibilityLiveRegion="polite"><Text style={S.eyebrow}>{latest.collectible?'RARE MEMORY':'LAST EXPERIENCE'}</Text><Text style={S.name}>{latest.collectible||latest.track}</Text><Text style={S.desc}>{latest.track} · Age {latest.endedAge} · {latest.outcome.replaceAll('-',' ')}</Text></Animated.View>:null}
   {age<=18&&classmates.length?<View style={S.result}><Text style={S.eyebrow}>YOUR SCHOOL CIRCLE</Text><Text style={S.desc}>Connection {Math.round(classmates.reduce((n,p)=>n+p.trust,0)/classmates.length)}/100 · Rivalry {Math.round(classmates.reduce((n,p)=>n+p.rivalry,0)/classmates.length)}/100</Text>{classmates.map(p=><Text key={p.id} style={S.desc}>{p.name} · Trust {p.trust} · Rivalry {p.rivalry}</Text>)}</View>:null}
+  {stats&&stats.total>0?<View style={S.result} testID="outing-life-progress"><Text style={S.eyebrow}>YOUR LIFETIME ADVENTURES</Text><Text style={S.name}>{stats.total} completed · {stats.distinct.length}/13 distinct</Text><Text style={S.desc}>{stats.eraCount}/4 life stages · {stats.connected} connection-rich · {stats.standout} standout</Text><Text style={S.desc}>Childhood {stats.eras.childhood} · Teens {stats.eras.teen} · Adult {stats.eras.adult} · Later life {stats.eras.later}</Text></View>:null}
   {collection.length?<View testID="outing-collection" style={S.result}><Text style={S.eyebrow}>RARE MEMORIES · {collection.length}/13</Text>{collection.slice(0,5).map(x=><Text key={x.activityId} style={S.desc}>{x.title} · Age {x.age}</Text>)}</View>:null}
   {legacy.length?<View style={S.result}><Text style={S.eyebrow}>MEMORIES FROM EARLIER LIVES</Text>{legacy.slice(0,3).map((x,i)=><Text key={i} style={S.desc}>{x.ancestor} · {x.title}</Text>)}</View>:null}
   {!blocked&&choices.length?<><Pressable testID="outing-expand" accessibilityRole="button" accessibilityState={{expanded}} onPress={()=>setExpanded(!expanded)} style={S.button}><Text style={S.name}>{expanded?'Hide experiences':'Explore '+choices.length+' experiences'}</Text></Pressable>
