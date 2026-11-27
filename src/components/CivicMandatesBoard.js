@@ -78,6 +78,49 @@ function Active({m,commands,onAction,compact}){
   </View>:null}
  </View>;
 }
+
+function Delivery({d,commands,onAction,compact}){
+ const options=commands.filter(c=>c.id.startsWith('mandate:delivery:'+d.id+':'));
+ return <View testID={'mandate-delivery-'+d.id} style={S.card}>
+  <View style={S.split}><Text style={S.overline}>PROMISE VS DELIVERY</Text>
+   <Text style={S.overline}>{d.status==='active'?'YEAR '+(d.lastAge-d.startedAge)+' / 6':d.ending.toUpperCase()}</Text></View>
+  <Text style={S.heading}>{d.issueName}</Text>
+  <Text style={S.desc}>{d.groupAName} & {d.groupBName}</Text>
+  <Text style={S.small}>Campaign result: {d.promisedOutcome.replaceAll('-',' ')}. What is implemented afterward must be earned and verified, not assumed.</Text>
+  <View style={S.meters}>
+   <Gauge name="Delivered work" n={d.progress}/>
+   <Gauge name="Evidence verified" n={d.verification}/>
+   <Gauge name="Coordination" n={d.coordination} warning={d.coordination<30}/>
+  </View>
+  {d.status==='active'?<Text style={S.small}>
+   Implementation review at age {d.nextAge} · Deadline age {d.dueAge}.
+   Current representatives: {d.representativeA||'unavailable'} and {d.representativeB||'unavailable'}.
+  </Text>:<Text testID="mandate-delivery-result" style={S.desc}>
+   Final delivery assessment: {d.ending.replaceAll('-',' ')} at age {d.endedAge}.
+  </Text>}
+  {d.unavailableSince!==null&&d.status==='active'?
+   <Text style={S.caution}>Paused: original groups no longer have available living representatives.</Text>:null}
+  {d.pending?<View testID="mandate-delivery-invitation" style={S.invite}>
+   <Text style={S.overline}>OPTIONAL ACCOUNTABILITY REVIEW</Text>
+   {options.map(o=><Pressable key={o.id}
+    testID={'mandate-delivery-choice-'+o.id.split(':').at(-1)}
+    accessibilityRole="button" accessibilityLabel={o.label+', '+o.detail}
+    accessibilityState={{disabled:!o.enabled}} disabled={!o.enabled}
+    onPress={()=>onAction(o.id)} style={({pressed})=>[
+     S.choice,!o.enabled&&S.disabled,pressed&&{opacity:.78}]}>
+     <Text style={S.choiceText}>{o.label}</Text><Text style={S.small}>{o.detail}</Text>
+   </Pressable>)}
+  </View>:null}
+  {!compact&&d.history?.length?<View style={S.campaign}>
+   <Text style={S.overline}>IMPLEMENTATION CHRONICLE</Text>
+   {d.history.slice(-5).reverse().map((h,i)=><View key={h.age+'-'+i} style={S.history}>
+    <Text style={S.small}>AGE {h.age} · {h.kind.toUpperCase()}</Text>
+    <Text style={S.desc}>{h.text}</Text>
+   </View>)}
+  </View>:null}
+ </View>;
+}
+
 function Result({r}){
  return <View style={S.history}>
   <View style={S.split}><Text style={S.personName}>{r.issueName}</Text>
@@ -90,7 +133,9 @@ export default function CivicMandatesBoard({view,commands=[],onAction,compact=fa
  const active=view.active&&(!onlyProfessional||view.active.issue==='skills-access')?view.active:null;
  const recent=view.completed?.find(x=>x.endedAge===view.age&&
   (!onlyProfessional||x.issue==='skills-access'));
- if(compact&&!(active?.pending||active?.decisions.at(-1)?.age===view.age||recent))return null;
+ const deliveries=(view.deliveries||[]).filter(x=>!onlyProfessional||x.issue==='skills-access');
+ const deliveryNotice=deliveries.some(x=>x.pending||x.endedAge===view.age);
+ if(compact&&!(active?.pending||active?.decisions.at(-1)?.age===view.age||recent||deliveryNotice))return null;
  return <View testID={compact?'civic-campaign-preview':'civic-campaign-board'} style={S.root}>
   <View style={S.split}><View style={{flex:1,gap:3}}>
    <Text style={S.overline}>ORGANIZATIONS WITH THEIR OWN PRIORITIES</Text>
@@ -99,6 +144,8 @@ export default function CivicMandatesBoard({view,commands=[],onAction,compact=fa
   <Text style={S.desc}>Real family councils, professional networks, community groups and rivals pursue public policies over several years. No fictitious voters or invisible public spending.</Text>
   {active&&(!compact||active.pending||active.decisions.at(-1)?.age===view.age)?
    <Active m={active} commands={commands} onAction={onAction} compact={compact}/>:null}
+  {deliveries.filter(d=>!compact||d.pending||d.endedAge===view.age).slice(0,compact?1:3).map(d=><Delivery
+   key={d.id} d={d} commands={commands} onAction={onAction} compact={compact}/>)}
   {compact&&!active&&recent?<View testID="civic-recent-result" style={S.card}>
    <Text style={S.overline}>LATEST CIVIC OUTCOME</Text>
    <Result r={recent}/>
