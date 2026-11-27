@@ -82,6 +82,20 @@ function observe(s){
   impact(s,'story',x.id,clip(x.title||'A social story')+' — '+result,
    'community',value,x.firstId||null);
  }
+ // Public intergroup choices influence the player only when the player acted.
+ // Autonomous fair results alone never create reputation for an observer.
+ for(const x of s.organizationNetwork?.completed||[]){
+  if(!x.id||x.endedAge===null||x.endedAge===undefined)continue;
+  const participated=(x.decisions||[]).some(d=>d.tag!=='independent');
+  const kinds=[x.aId,x.bId].map(id=>
+   (s.socialCircles?.groups||[]).find(g=>g.id===id)?.kind);
+  const group=kinds.includes('community')?'community':
+   kinds.includes('professional')?'professional':'family';
+  const delta={coalition:7,negotiated:4,'public-feud':-9,fractured:-5,
+   independent:0,unanswered:0,dissolved:0}[x.ending]??0;
+  impact(s,'intergroup',x.id,
+   x.aName+' and '+x.bName+' — '+x.ending,group,participated?delta:0,x.initialA);
+ }
  // Institutions earn social influence only when the player made a meaningful
  // decision. Their autonomous projects do not grant free reputation.
  for(const x of s.socialCircles?.completed||[]){
