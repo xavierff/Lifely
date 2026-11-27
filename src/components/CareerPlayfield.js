@@ -88,6 +88,7 @@ export default function CareerPlayfield({view,onPlay,soundEnabled=true}){
  }
  if(!view)return null;
  return <View style={S.container}>
+  <View style={S.phaseHeader}><Text style={S.kicker}>PROJECT PROGRESS · PHASE {view.stage+1}/4</Text><View accessibilityRole="progressbar" accessibilityLabel="Project phases completed" accessibilityValue={{min:0,max:4,now:view.stage}} style={S.phaseTrack}>{[0,1,2,3].map(i=><View key={i} style={[S.phaseSegment,i<view.stage&&S.phaseDone,i===view.stage&&S.phaseCurrent]}/>)}</View><Text style={S.small}>{view.remaining===0?'Ready for the next story decision':view.remaining+' interactions remaining in this phase'}</Text></View>
   {view.type==='sports'?<Pitch v={view} onPlay={interact}/>:view.type==='film'?<FilmSet v={view} onPlay={interact}/>:view.type==='business'?<BusinessDesk v={view} onPlay={interact}/>:view.type==='election'?<ElectionBoard v={view} onPlay={interact}/>:view.type==='medical'?<MedicalBoard v={view} onPlay={interact}/>:null}
   <View style={S.status}><Text style={S.statusText}>{view.played} / {view.maxPerStage} interactions this phase</Text><Text style={S.statusText}>{view.remaining===0?'PHASE READY':'PLAY TO IMPROVE YOUR RESULT'}</Text></View>
   {view.last?<Animated.View testID="playfield-feedback" accessibilityLiveRegion="polite" style={[S.feedback,{transform:[{scale:pulse}]}]}><Text style={S.feedbackTitle}>{view.last.success?'✓ SUCCESSFUL ACTION':'↻ ANOTHER APPROACH NEEDED'}</Text><Text style={S.feedbackBody}>{view.last.description}</Text>{view.last.reaction?<Text style={S.reactionText}>{view.last.reaction.person}: {view.last.reaction.text.replace(view.last.reaction.person+' ','')}</Text>:null}</Animated.View>:null}
@@ -95,7 +96,7 @@ export default function CareerPlayfield({view,onPlay,soundEnabled=true}){
  </View>;
 }
 const S=StyleSheet.create({
- container:{gap:9,marginVertical:3},board:{padding:12,borderRadius:17,backgroundColor:C.panel,borderWidth:1,borderColor:C.border,gap:11},
+ phaseHeader:{padding:10,gap:6,borderRadius:11,backgroundColor:'#213E34'},phaseTrack:{flexDirection:'row',gap:5},phaseSegment:{flex:1,height:8,borderRadius:4,backgroundColor:'#49675F'},phaseDone:{backgroundColor:C.lime},phaseCurrent:{backgroundColor:C.gold},container:{gap:9,marginVertical:3},board:{padding:12,borderRadius:17,backgroundColor:C.panel,borderWidth:1,borderColor:C.border,gap:11},
  rowBetween:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:5},
  kicker:{color:C.gold,fontSize:10,letterSpacing:1,fontWeight:'800',flexShrink:1},
  scoreboard:{backgroundColor:'#0B1B1C',borderRadius:12,padding:12,flexDirection:'row',alignItems:'center',justifyContent:'space-evenly'},

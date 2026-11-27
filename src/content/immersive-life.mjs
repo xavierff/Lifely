@@ -13,7 +13,7 @@ export function recordYear(s,before,worth,career){
  const changes=keys.map(key=>({key,delta:s.stats[key]-before.stats[key]})).filter(x=>x.delta).sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta)||a.key.localeCompare(b.key)).slice(0,4);
  const relationships=before.people.map(p=>({name:p.name.slice(0,100),delta:(now.get(p.id)?.bond??p.bond)-p.bond,ended:now.get(p.id)?.alive===false})).filter(x=>x.delta||x.ended).sort((a,b)=>Number(b.ended)-Number(a.ended)||Math.abs(b.delta)-Math.abs(a.delta)).slice(0,2);
  const events=s.history.filter(x=>x.age===s.age&&x.kind!=='finance'&&x.kind!=='achievement').slice(-4).map(x=>({kind:String(x.kind||'story').slice(0,30),text:String(x.text).slice(0,200)}));
- const row={age:s.age,from:before.age,worth:worth(s),worthDelta:worth(s)-before.worth,cashDelta:s.cash-before.cash,annualBalance:integer(s.annual?.balance)?s.annual.balance:null,changes,relationships,newPeople:s.people.filter(p=>p.alive&&!ids.has(p.id)).length,events,career:career||null,alive:s.alive};
+ const row={age:s.age,from:before.age,worth:worth(s),worthDelta:Math.round(worth(s)-before.worth),cashDelta:Math.round(s.cash-before.cash),annualBalance:integer(s.annual?.balance)?s.annual.balance:null,changes,relationships,newPeople:s.people.filter(p=>p.alive&&!ids.has(p.id)).length,events,career:career||null,alive:s.alive};
  s.yearRecap={version:1,years:[...(s.yearRecap?.years||[]).filter(x=>x.age<row.age),row].slice(-12)};return s;
 }
 export function yearRecapView(s){return {years:(s.yearRecap?.years||[]).slice().reverse(),portrait:portraitView(s)};}
