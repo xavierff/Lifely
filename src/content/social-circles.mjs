@@ -180,10 +180,104 @@ function tickProject(s,g,ctx){
  g.projectNumber=Math.min(120,g.projectNumber+1);
  g.project=projectFor(s,g,g.projectNumber);
 }
+// Institutional elections are internal to real member lists. No invented voters.
+const electionTags=['incumbent','challenger','neutral'];
+function governance(g){return g.governance??={lastReview:g.lastAge,termStart:g.lastAge,election:null,results:[],policy:'continuity'};}
+function candidateScore(p){return cap((p.trust+(100-p.rivalry))/2);}
+function eligibleElection(s,g,e){
+ return g.status==='active'&&g.leaderId===e.incumbent&&
+ [e.incumbent,e.challenger].every(id=>g.members.includes(id)&&actor(s,id));
+}
+function electionOptions(s,e){
+ return [
+ {label:'Endorse '+(actor(s,e.incumbent)?.name||'the incumbent'),detail:'Support continuity; the real members still decide'},
+ {label:'Endorse '+(actor(s,e.challenger)?.name||'the challenger'),detail:'Support a new direction; expect a contested transition'},
+ {label:'Stay out of the leadership contest',detail:'Record neutrality; no resources or relationships change'}
+ ];
+}
+function closeElection(s,g,e,ctx,reason=null){
+ const gov=governance(g);
+ const ballots=[];
+ if(!reason){
+  const incumbent=actor(s,e.incumbent),challenger=actor(s,e.challenger);
+  for(const id of g.members){
+   const member=actor(s,id);if(!member)continue;
+   let pick=id===e.incumbent?e.incumbent:id===e.challenger?e.challenger:
+    candidateScore(incumbent)+e.incumbentSupport+((hash(id+e.id)%13)-6)>=
+    candidateScore(challenger)+e.challengerSupport?e.incumbent:e.challenger;
+   ballots.push({voter:id,candidate:pick});
+  }
+ }
+ const votes=ballots.filter(b=>b.candidate===e.challenger).length;
+ const winner=reason?null:votes>ballots.length-votes?e.challenger:e.incumbent;
+ const outcome=reason|| (winner===e.challenger?'new-leadership':'retained');
+ if(winner){
+  g.leaderId=winner;gov.termStart=s.age;
+  gov.policy=winner===e.challenger?'renewal':'continuity';
+  // Change real project priorities, never create cash or a new project.
+  if(winner===e.challenger&&g.project?.status==='active'){
+   const alternatives=missions[g.kind].filter(x=>x!==g.project.mission);
+   g.project.mission=alternatives[hash(e.id)%alternatives.length];
+   g.project.progress=cap(g.project.progress-10);
+   g.tension=cap(g.tension+4);
+  }
+ }
+ gov.results.push({age:s.age,id:e.id,outcome,winnerName:winner?line(actor(s,winner)?.name||'Former leader',70):null,
+  votesForChallenger:votes,totalVotes:ballots.length});
+ gov.results=gov.results.slice(-6);gov.election=null;gov.lastReview=s.age;
+ g.history.push({age:s.age,kind:'relationship',title:'Leadership succession',outcome,
+  description:winner?line(actor(s,winner).name+' won the internal member ballot.',240):'Leadership contest ended because the original candidates became unavailable.'});
+ g.history=g.history.slice(-8);
+ news(s,ctx,g.name+': '+(winner?actor(s,winner).name+' became the elected representative.':'the leadership contest ended without a vote.'));
+}
+function tickGovernance(s,g,ctx){
+ const gov=governance(g);
+ if(gov.election){
+  const e=gov.election;
+  if(!eligibleElection(s,g,e)){closeElection(s,g,e,ctx,'interrupted');return;}
+  if(s.age>=e.dueAge){closeElection(s,g,e,ctx);return;}
+  return;
+ }
+ if(g.status!=='active'||g.members.length<2||s.age>107||
+  s.age-gov.lastReview<5||s.age-gov.termStart<5)return;
+ const incumbent=actor(s,g.leaderId);
+ const challenger=g.members.filter(id=>id!==g.leaderId).map(id=>actor(s,id)).filter(Boolean)
+  .sort((a,b)=>candidateScore(b)-candidateScore(a)||a.id.localeCompare(b.id))[0];
+ if(!incumbent||!challenger)return;
+ // An independent succession challenge requires meaningful relative ambition
+ // or existing institutional tension, not a periodic compulsory player task.
+ if(candidateScore(challenger)+10<candidateScore(incumbent)&&g.tension<45){gov.lastReview=s.age;return;}
+ gov.election={id:'succession-'+g.id+'-'+s.age,incumbent:incumbent.id,challenger:challenger.id,
+  startedAge:s.age,dueAge:s.age+2,incumbentSupport:0,challengerSupport:0,response:null};
+ news(s,ctx,challenger.name+' challenged '+incumbent.name+' for leadership of '+g.name+'.');
+}
+function successionCommands(s){
+ return socialCirclesState(s).groups.flatMap(g=>{
+  const e=g.governance?.election;
+  if(!e||e.response!==null||!eligibleElection(s,g,e))return [];
+  return electionOptions(s,e).map((o,i)=>({id:'circle:succession:'+e.id+':'+i,
+   label:o.label,detail:o.detail,enabled:!blocked(s)&&s.actions>0}));
+ });
+}
+function successionAct(s,id,ctx){
+ const g=ensure(s).groups.find(g=>g.governance?.election&&id.startsWith('circle:succession:'+g.governance.election.id+':'));
+ const e=g?.governance?.election,i=Number(id.split(':').at(-1));
+ if(!e||![0,1,2].includes(i)||!successionCommands({...s,actions:s.actions+1}).some(c=>c.id===id&&c.enabled))throw Error('Leadership contest is unavailable.');
+ if(i===0)e.incumbentSupport=8;
+ if(i===1)e.challengerSupport=8;
+ e.response=electionTags[i];
+ if(i<2){
+  const favored=i===0?e.incumbent:e.challenger,other=i===0?e.challenger:e.incumbent;
+  touch(s,favored,3,-1,'Leadership endorsement');touch(s,other,-2,3,'Leadership endorsement');
+ }
+ news(s,ctx,'You responded to the leadership contest in '+g.name+'.');
+ return e;
+}
 function evolveGroup(s,g,ctx){
  if(s.age<=g.lastAge)return;
  renewGroup(s,g);
  if(g.status==='dormant'){
+  if(g.governance?.election)tickGovernance(s,g,ctx);
   g.standing=cap(g.standing-1);
   if(g.project)g.project.status='paused';
   g.lastAge=s.age;
@@ -200,6 +294,7 @@ function evolveGroup(s,g,ctx){
  g.tension=cap(g.tension*.6+scores.tension*.4);
  g.years=Math.min(110,g.years+1);g.lastAge=s.age;
  tickProject(s,g,ctx);
+ tickGovernance(s,g,ctx);
 }
 function contact(s,g){
  const candidates=(g.members||[]).map(id=>actor(s,id)).filter(Boolean);
@@ -336,7 +431,7 @@ export function socialCirclesYear(s,ctx={}){
 }
 export function socialCirclesCommands(s){
  const m=socialCirclesState(s);
- return m.invites.flatMap(o=>{
+ return [...successionCommands(s),...m.invites.flatMap(o=>{
   if(!['open','ready'].includes(o.status))return [];
   const group=m.groups.find(g=>g.id===o.groupId),p=actor(s,o.personId);
   return options(o).map(x=>({
@@ -344,9 +439,10 @@ export function socialCirclesCommands(s){
    detail:x.detail+' · '+o.personName,
    enabled:!blocked(s)&&s.actions>0&&!!group&&!!p&&group.status==='active'
   }));
- });
+ })];
 }
 export function socialCirclesAct(s,id,ctx){
+ if(id.startsWith('circle:succession:'))return successionAct(s,id,ctx);
  const parsed=/^circle:(circle-offer-g[0-9]+-[0-9]+):([012])$/.exec(id);
  if(!parsed||!socialCirclesCommands({...s,actions:s.actions+1})
   .some(x=>x.id===id&&x.enabled))
@@ -380,6 +476,7 @@ export function socialCirclesView(s){
    representative:g.leaderId?actor(s,g.leaderId)?.name||null:null,
    memberNames:g.members.map(id=>actor(s,id)?.name).filter(Boolean),
    project:g.project?{...g.project}:null,
+   succession:g.governance?.election?{...g.governance.election,incumbentName:actor(s,g.governance.election.incumbent)?.name||null,challengerName:actor(s,g.governance.election.challenger)?.name||null}:null,
    history:g.history.slice(-5).reverse()
   })),
   invites:m.invites.map(o=>({
@@ -404,6 +501,7 @@ export function socialCirclesInheritance(next,old){
  m.serial=source.serial;
  m.groups=source.groups.map(g=>({
   ...g,members:[],leaderId:null,status:'dormant',lastAge:next.age,
+  governance:g.governance?{lastReview:next.age,termStart:next.age,election:null,results:g.governance.results.slice(-6),policy:'continuity'}:undefined,
   project:{id:g.id+'-project-heir-'+next.generation,mission:
    missions[g.kind][hash(g.id+':heir')%3],startedAge:next.age,
    dueAge:Math.min(110,next.age+4),progress:0,status:'paused'},
@@ -428,6 +526,7 @@ export function validateSocialCircles(m){
  const project=p=>p&&str(p.id,120)&&str(p.mission,80)&&age(p.startedAge)&&
   age(p.dueAge)&&num(p.progress)&&p.progress>=0&&p.progress<=100&&
   projectStatus.includes(p.status);
+ const validGovernance=g=>{const v=g.governance;if(v===undefined)return true;const e=v?.election;return !!v&&age(v.lastReview)&&age(v.termStart)&&['continuity','renewal'].includes(v.policy)&&Array.isArray(v.results)&&v.results.length<=6&&v.results.every(r=>r&&age(r.age)&&str(r.id,120)&&['retained','new-leadership','interrupted'].includes(r.outcome)&&(r.winnerName===null||str(r.winnerName,70))&&Number.isInteger(r.totalVotes)&&r.totalVotes>=0&&r.totalVotes<=5&&Number.isInteger(r.votesForChallenger)&&r.votesForChallenger>=0&&r.votesForChallenger<=r.totalVotes)&&(e===null||!!e&&str(e.id,120)&&str(e.incumbent,100)&&str(e.challenger,100)&&e.incumbent!==e.challenger&&age(e.startedAge)&&age(e.dueAge)&&e.dueAge===e.startedAge+2&&[0,8].includes(e.incumbentSupport)&&[0,8].includes(e.challengerSupport)&&(e.response===null||electionTags.includes(e.response)));};
  const group=g=>g&&str(g.id,90)&&kinds.includes(g.kind)&&str(g.name,100)&&
   Number.isInteger(g.originGeneration)&&g.originGeneration>=1&&age(g.originAge)&&
   (g.anchorId===null||str(g.anchorId,100))&&
@@ -440,7 +539,7 @@ export function validateSocialCircles(m){
   Number.isInteger(g.projectNumber)&&g.projectNumber>=1&&g.projectNumber<=120&&
   project(g.project)&&Number.isInteger(g.completedProjects)&&
   g.completedProjects>=0&&g.completedProjects<=99&&
-  Array.isArray(g.history)&&g.history.length<=8&&g.history.every(note);
+  Array.isArray(g.history)&&g.history.length<=8&&g.history.every(note)&&validGovernance(g);
  const decision=x=>x&&age(x.age)&&tags.includes(x.tag)&&str(x.label,110)&&
   ['trustDelta','rivalryDelta','standingDelta','tensionDelta','progressDelta','statDelta']
   .every(k=>num(x[k])&&Math.abs(x[k])<=100)&&

@@ -133,3 +133,24 @@ test('group board scales to 320, 375 and 430px and choices disable when activiti
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
  }
 });
+
+test('leadership challenge is playable on a narrow screen and persists the endorsement',async({page})=>{
+ const s=life(128101),g=s.socialCircles.groups[0];
+ const incumbent=s.people.find(p=>'person-'+p.id===g.leaderId);
+ const challenger=s.people.find(p=>p.id!==incumbent.id);
+ incumbent.world.trust=40;incumbent.world.rivalry=50;
+ challenger.world.trust=90;challenger.world.rivalry=5;
+ advance(s,6);
+ expect(g.governance.election).toBeTruthy();
+ await page.setViewportSize({width:320,height:740});
+ await restore(page,s);await page.getByRole('tab',{name:'World'}).click();
+ const card=page.getByTestId('succession-'+g.id);
+ await expect(card).toContainText('INTERNAL LEADERSHIP CONTEST');
+ await card.getByTestId('succession-choice-1').click();
+ await expect(card).toContainText('Response recorded: challenger');
+ await page.reload();await page.getByRole('tab',{name:'World'}).click();
+ await expect(page.getByTestId('succession-'+g.id)).toContainText('Response recorded: challenger');
+ const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('lifely.save.v2')));
+ expect(saved.socialCircles.groups[0].governance.election.response).toBe('challenger');
+ expect(saved.cash).toBe(s.cash);expect(saved.actions).toBe(2);expect(E.validate(saved)).toBe(true);
+});
