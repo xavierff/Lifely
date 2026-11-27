@@ -162,7 +162,8 @@ test('a completed mandate opens a later playable delivery review and persists th
  await expect(delivery.getByTestId('mandate-delivery-invitation')).toBeVisible();
  await delivery.getByTestId('mandate-delivery-choice-0').click();
  const n=await saved(page);
- expect(n.civicMandates.deliveries[0].verification).toBeGreaterThan(d.verification);
+ expect(n.civicMandates.deliveries[0].verification).toBe(Math.min(100,d.verification+12));
+ expect(n.civicMandates.deliveries[0].decisions.at(-1).tag).toBe('review');
  expect(n.civicMandates.deliveries[0].pending).toBe(false);
  expect(n.cash).toBe(s.cash);
  await page.reload();await page.getByRole('tab',{name:'World'}).click();
