@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import E from '../src/engine.mjs';
 import {npcFamilyYear,npcFamilyInvites,validateNpcFamilies} from '../src/content/dynamic-npc-families.mjs';
 import {socialLifeYear} from '../src/content/autonomous-social-life.mjs';
-const ready=()=>{let s=E.createLife({seed:15301});s.age=30;s.cash=100000;s.actions=3;s=E.act(s,'friend');s=E.act(s,'friend');for(const p of s.people.filter(p=>p.role==='friend')){p.age=30;p.bond=80;p.world.cash=10000;p.world.debt=0;}return s;};
+const ready=()=>{let s=E.createLife({seed:15301});s.age=30;s.cash=100000;s.actions=3;s=E.act(s,'friend');s=E.act(s,'friend');s.actions=3;for(const p of s.people.filter(p=>p.role==='friend')){p.age=30;p.bond=80;p.world.cash=10000;p.world.debt=0;}return s;};
 const ctx=(over={})=>({country:s=>E.countries[s.country],careers:E.careers,add:()=>{},npcNews:()=>{},person:(s,role,age)=>({id:s.nextId++,name:'Relative '+s.nextId,role,age,bond:35,alive:true,memories:[],world:{...structuredClone(s.people.find(p=>p.role==='friend').world),cash:0,debt:0,job:null}}),roll:(id,tag)=>tag==='marriage'||tag==='child'?0:.9,...over});
 const married=()=>{const s=ready();npcFamilyYear(s,ctx());return s;};
 test('real adult friends marry autonomously, no player cash or activity or RNG changes',()=>{const s=ready(),before=[s.cash,s.actions,s.rng];npcFamilyYear(s,ctx());const u=s.npcFamilies.unions[0];assert.equal(u.status,'married');assert.deepEqual(u.adults,s.people.filter(p=>p.role==='friend').map(p=>p.id));assert.deepEqual([s.cash,s.actions,s.rng],before);assert.equal(s.npcFamilies.generated.length,0);assert.ok(E.validate(s));npcFamilyYear(s,ctx());assert.equal(s.npcFamilies.unions.length,1);});
