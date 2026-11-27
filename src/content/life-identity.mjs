@@ -9,7 +9,7 @@ const ensure=s=>(s.identity??=fresh(s));
 const traitFor=id=>{
  if(['rest','exercise','clinic'].includes(id)||id.startsWith('petcare:')||id.endsWith(':park'))return 'balance';
  if(id==='volunteer'||id.startsWith('support:')||id.endsWith(':community')||id.startsWith('world:dynasty:mentor:'))return 'care';
- if(id==='friend'||id.startsWith('visit:')||id==='date'||id==='marry'||id.startsWith('lifestyle:host:')||id.endsWith(':cafe')||id.startsWith('dialogue:open:')||id.startsWith('scene:start:bond:'))return 'connection';
+ if(id.startsWith('socialinvite:accept:')||id==='friend'||id.startsWith('visit:')||id==='date'||id==='marry'||id.startsWith('lifestyle:host:')||id.endsWith(':cafe')||id.startsWith('dialogue:open:')||id.startsWith('scene:start:bond:'))return 'connection';
  if(id==='learn'||id.startsWith('world:travel:visit:')||id.startsWith('scene:start:exam:')||id.startsWith('city:visit:')&&id.endsWith(':festival'))return 'curiosity';
  if(id==='create'||id.startsWith('lifestyle:decorate:')||id.endsWith(':arts')||/^hobby:start:(openmic|cooking|dance|gamejam|photography|craftdesign):/.test(id))return 'creativity';
  if(id==='work'||id==='careertrain'||id==='side'||id.startsWith('skill:')||id.startsWith('campaign:start:')||id.startsWith('profession:')||id.startsWith('job:'))return 'ambition';
