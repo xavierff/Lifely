@@ -102,7 +102,13 @@ export function chronicleView(s){
   category:'relationship',turning:true,source:'memory',choice:'',netWorth:0,
   changes:[],bonds:[],future:[]
  }));
- const all=[...journal,...echoes,...fates,...entries.map(e=>({...e,source:'choice'}))]
+ const social=(s.crossroads?.completed||[]).filter(x=>['alliance','reconciled','estranged','rivals'].includes(x.ending)).map(x=>({
+  id:'crossroads-'+x.id,age:x.endedAge,
+  title:x.aName+' & '+x.bName+': '+x.title+' — '+x.ending,
+  category:'relationship',turning:true,source:'memory',choice:'',netWorth:0,
+  changes:[],bonds:[],future:[]
+ }));
+ const all=[...journal,...echoes,...fates,...social,...entries.map(e=>({...e,source:'choice'}))]
   .sort((a,b)=>a.age-b.age||(a.source==='history'?-1:1));
  const timeline=all.slice(-90);
  // Include the birth marker even in long lives, without affecting chronology.
