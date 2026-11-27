@@ -1,3 +1,4 @@
+import {outingCommands,beginOuting,outingView,playOuting} from './playful-life.mjs';
 // Lifely original, deterministic everyday gameplay. All courtroom events are fictional.
 const clamp=n=>Math.max(0,Math.min(100,Math.round(n)));
 const tracks=[
@@ -68,7 +69,7 @@ const human=(s,id)=>s.people.find(p=>p.alive&&p.id===id);
 const memory=(p,age,text)=>{p.memories??=[];p.memories.push({age,text});p.memories=p.memories.slice(-20);};
 export function everydayCommands(s){
  if(!s.alive||s.pending!==null||s.mini||s.world?.network?.conversation||s.careerCampaigns?.active||s.everydayScenes?.active||(s.justice?.years||0)>0)return [];
- const e=everydayState(s),active=s.actions>0,out=[];
+ const e=everydayState(s),active=s.actions>0,out=outingCommands(s,e);
  if(s.age>=7)for(const p of s.people.filter(x=>x.alive&&x.age>=5).slice(0,9))
   out.push({id:'scene:start:bond:'+p.id,label:'Share an interactive day with '+p.name,detail:'Three decisions · surprises · relationship memories',enabled:active&&e.used['bond-'+p.id]!==s.age&&!s.justice?.case});
  if(s.age>=6&&s.age<=18)out.push({id:'scene:start:school',label:'Play a school-life challenge',detail:'Classmates · surprise setbacks · final showcase',enabled:active&&e.used.school!==s.age});
@@ -79,7 +80,7 @@ export function everydayCommands(s){
 }
 export function beginEveryday(s,id,ctx){
  if(!id.startsWith('scene:start:')||!everydayCommands({...s,actions:s.actions+1}).some(x=>x.id===id&&x.enabled))throw Error('This everyday scene is not available.');
- const e=ensure(s),parts=id.split(':'),type=parts[2];let person=null,track=null;
+ const e=ensure(s),parts=id.split(':'),type=parts[2];if(type==='outing')return beginOuting(s,e,parts[3],ctx);let person=null,track=null;
  if(type==='bond'){person=human(s,Number(parts[3]));if(!person)throw Error('Relationship unavailable.');}
  else if(type==='school'){
   track=tracks[pick(ctx,s,tracks.length)];
@@ -120,6 +121,7 @@ function prompt(a){
 }
 export function everydayView(s){
  const a=everydayState(s).active;if(!a)return null;
+ if(a.type==='outing')return outingView(a,s);
  const stage=options[a.type]?.[a.stage];if(!stage)return null;
  return {id:a.id,type:a.type,title:{bond:'The relationship between us',school:a.track+' challenge',court:'The fictional hearing'}[a.type],
   stage:a.stage,round:a.stage+1,total:3,phase:phases[a.type][a.stage],prompt:prompt(a),
@@ -131,6 +133,7 @@ export function everydayView(s){
 const affinity={bond:['listen','adventure','practical'],school:['study','team','creative'],court:['record','fairness','clarity']};
 export function replyEveryday(s,index,ctx){
  const e=ensure(s),a=e.active;if(!s.alive||!a)throw Error('No active everyday scene.');
+ if(a.type==='outing')return playOuting(s,e,index,ctx);
  if(index==='leave'){
   if(a.type==='court')ctx.change(s,'stress',2);
   e.completed.push({...a,outcome:'interrupted',endedAge:s.age});e.completed=e.completed.slice(-45);e.active=null;return null;

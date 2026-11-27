@@ -174,7 +174,8 @@ export function chronicleView(s){
  }));
  const delivery=(s.civicMandates?.deliveries||[]).filter(x=>x.ending&&x.endedAge!==null).map(x=>({id:'delivery-'+x.id,age:x.endedAge,title:'Public delivery review — '+x.groupAName+' & '+x.groupBName+' — '+x.ending,category:'relationship',turning:true,source:'memory',choice:'',netWorth:0,changes:[],bonds:[],future:[]}));
  const reversals=(s.civicMandates?.reversals||[]).filter(x=>x.ending&&x.endedAge!==null).map(x=>({id:'reversal-'+x.id,age:x.endedAge,title:'Public accountability — '+x.issue.replaceAll('-',' ')+' — '+x.ending,category:'relationship',turning:true,source:'memory',choice:'',netWorth:0,changes:[],bonds:[],future:[]}));
- const all=[...journal,...echoes,...fates,...social,...npcPlans,...competingFutures,...influence,...circleStories,...institutions,...leadership,...publicAlliances,...playablePublic,...aftermath,...civic,...delivery,...reversals,...entries.map(e=>({...e,source:'choice'}))]
+ const outings=(s.everydayScenes?.completed||[]).filter(x=>x.type==='outing'&&x.outcome!=='interrupted'&&!x.inheritedFrom).map(x=>({id:'outing-'+x.id,age:x.endedAge,title:x.track+' — '+(x.collectible||x.outcome.replaceAll('-',' ')),category:'relationship',turning:!!x.collectible,source:'memory',choice:'',netWorth:0,changes:[],bonds:[],future:[]}));
+ const all=[...journal,...echoes,...fates,...social,...npcPlans,...competingFutures,...influence,...circleStories,...institutions,...leadership,...publicAlliances,...playablePublic,...aftermath,...civic,...delivery,...reversals,...outings,...entries.map(e=>({...e,source:'choice'}))]
   .sort((a,b)=>a.age-b.age||(a.source==='history'?-1:1));
  const timeline=all.slice(-90);
  // Include the birth marker even in long lives, without affecting chronology.

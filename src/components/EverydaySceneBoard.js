@@ -36,6 +36,16 @@ function Classroom({v}){
    <Text style={S.hint}>Classmates remember cooperation, setbacks and how you handle pressure.</Text>
  </View>;
 }
+function Outing({v}){
+ return <View testID="playful-outing" style={S.scene}>
+  <View style={S.split}><Text style={S.caption}>{v.track?.toUpperCase()}</Text><Text style={S.caption}>ROUND {v.round}/3</Text></View>
+  <View style={S.boardSchool}><Text style={S.chalkTitle}>{v.glyph} {v.title}</Text><View style={S.chalkLine}/><Text style={S.chalkFoot}>{v.phase.toUpperCase()} · {v.personName}</Text>
+   <View style={S.seats}>{[1,2,3].map(n=><View key={n} style={[S.seat,{opacity:n<=v.round?1:.45}]}><Text style={S.seatIcon}>{n<v.round?'✓':n===v.round?v.glyph:'○'}</Text><Text style={S.seatLabel}>CHAPTER {n}</Text></View>)}</View></View>
+  <View style={S.meterRow}><Meter label="Momentum" value={v.meters.momentum}/><Meter label="Connection" value={v.meters.connection} tint={C.blue}/><Meter label="Tension" value={v.meters.tension} tint={C.rose}/></View>
+  <View style={S.speech}><Text style={S.caption}>YOUR MOMENT</Text><Text style={S.story}>{v.prompt}</Text></View>
+  <Text style={S.hint}>Preparation, connection and daring approaches create different endings. Balanced choices can uncover rare memories.</Text>
+ </View>;
+}
 function Court({v}){
  return <View testID="interactive-courtroom" style={S.scene}>
    <View style={S.split}><Text style={S.caption}>FICTIONAL COURTROOM</Text><Text style={S.caption}>HEARING {v.round}/3</Text></View>
@@ -73,7 +83,7 @@ export default function EverydaySceneBoard({view,onChoice,soundEnabled=true}){
  function choose(i){if(soundEnabled)tap.seekTo(0).then(()=>tap.play()).catch(()=>{});onChoice(i);}
  if(!view)return null;
  return <View style={S.root} testID="everyday-scene">
-  {view.type==='bond'?<Bonds v={view}/>:view.type==='school'?<Classroom v={view}/>:<Court v={view}/>}
+  {view.type==='bond'?<Bonds v={view}/>:view.type==='school'?<Classroom v={view}/>:view.type==='outing'?<Outing v={view}/>:<Court v={view}/>}
   <View style={S.split}><Text style={S.caption}>MAKE A DECISION</Text><Text style={S.caption}>{view.round} OF {view.total}</Text></View>
   {view.options.map(o=><Pressable key={o.index} testID={'scene-choice-'+o.index} accessibilityRole="button" accessibilityLabel={o.label+', '+o.note} onPress={()=>choose(o.index)} style={({pressed})=>[S.choice,pressed&&{opacity:.78}]}>
    <View style={S.number}><Text style={S.numberText}>{o.index+1}</Text></View><View style={{flex:1,gap:4}}><Text style={S.choiceTitle}>{o.label}</Text><Text style={S.choiceText}>{o.note}</Text></View>
