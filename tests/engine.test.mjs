@@ -2084,8 +2084,8 @@ test('living world has five industry sectors, six countries, three rival houses,
  assert.equal(status.sectors.length,5);
  assert.ok(E.validate(JSON.parse(JSON.stringify(s))));
 });
-test('all 150 careers map to a real world-sector economy without special-case missing data',()=>{
- assert.equal(E.careers.length,150);
+test('all 153 careers map to a real world-sector economy without special-case missing data',()=>{
+ assert.equal(E.careers.length,153);
  for(const j of E.careers){
   assert.ok(E.pulseSectors.some(x=>x.industries.includes(j.industry)),j.title+' missing sector');
   let s=worldReady(77200+j.id);s.job={id:j.id,level:0,experience:0};
