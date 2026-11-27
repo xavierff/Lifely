@@ -16,6 +16,17 @@ function Meter({title,value,danger=false}){
    backgroundColor:danger?C.red:C.mint}]}/></View>
  </View>;
 }
+function SuccessionCard({item,commands,onAction}){
+ const e=item.succession;
+ const choices=commands.filter(c=>c.id.startsWith('circle:succession:'+e.id+':'));
+ return <View testID={'succession-'+item.id} style={S.invite}>
+  <Text style={S.overline}>INTERNAL LEADERSHIP CONTEST</Text>
+  <Text style={S.groupTitle}>{item.name}</Text>
+  <Text style={S.description}>{e.incumbentName||'Unavailable'} vs {e.challengerName||'Unavailable'}</Text>
+  <Text style={S.small}>Real members cast their ballots at age {e.dueAge}. Endorsements influence preferences, not the final result.</Text>
+  {e.response?<Text style={S.waiting}>Response recorded: {e.response}</Text>:choices.map(c=><Pressable key={c.id} testID={'succession-choice-'+c.id.split(':').at(-1)} accessibilityRole="button" accessibilityState={{disabled:!c.enabled}} disabled={!c.enabled} onPress={()=>onAction(c.id)} style={[S.option,!c.enabled&&S.disabled]}><Text style={S.optionTitle}>{c.label}</Text><Text style={S.small}>{c.detail}</Text></Pressable>)}
+ </View>;
+}
 function GroupCard({item,compact=false}){
  return <View testID={'circle-group-'+item.id} style={S.card}>
   <View style={S.split}><Text style={S.overline}>{kinds[item.kind]}</Text>
@@ -46,6 +57,7 @@ function GroupCard({item,compact=false}){
    <Text style={S.small}>{item.status==='dormant'?'Paused until real members return':
     'Group members work on this even when you do nothing'} · {item.completedProjects} past projects</Text>
   </View>
+  {!compact&&item.governance?.results?.length?<View style={S.history}><Text style={S.overline}>LEADERSHIP HISTORY</Text>{item.governance.results.slice(-3).reverse().map(r=><Text key={r.id} style={S.description}>Age {r.age}: {r.winnerName||'No winner'} · {r.outcome.replaceAll('-',' ')} · Challenger {r.votesForChallenger}/{r.totalVotes}</Text>)}</View>:null}
   {!compact&&item.history?.length?<View style={S.history}>
    <Text style={S.overline}>HISTORY THAT DOESN'T DISAPPEAR</Text>
    {item.history.slice(0,3).map((h,i)=><Text key={h.age+'-'+h.kind+'-'+i}
@@ -95,13 +107,15 @@ export default function SocialCirclesBoard({view,commands=[],onAction,compact=fa
  const invites=view.invites.filter(o=>!filterKinds.length||filterKinds.includes(o.kind));
  const recent=view.completed.find(x=>x.endedAge===view.age&&
   (!filterKinds.length||filterKinds.includes(x.kind)));
- if(compact&&!invites.length&&!recent)return null;
+ const succession=groups.filter(g=>g.succession&&(!compact||g.succession.response===null));
+ if(compact&&!invites.length&&!recent&&!succession.length)return null;
  return <View testID={compact?'social-circles-preview':'social-circles-board'} style={S.root}>
   <View style={S.split}><View style={{flex:1,gap:4}}>
    <Text style={S.overline}>A WORLD THAT ORGANIZES ITSELF</Text>
    <Text style={S.title}>{compact?'A circle wants your attention':'Organizations & rival households'}</Text>
   </View><Text style={S.counter}>{groups.length} GROUPS</Text></View>
   <Text style={S.description}>Living organizations depend on real NPC members. They pursue multi-year projects, disagree, reconcile and sometimes outlive the generation that formed them.</Text>
+  {succession.map(g=><SuccessionCard key={g.id} item={g} commands={commands} onAction={onAction}/>)}
   {invites.map(x=><InviteCard key={x.id} item={x} commands={commands} onAction={onAction}/>)}
   {compact&&recent&&!invites.length?<View testID="circle-recent-result" style={S.card}>
    <Text style={S.overline}>THIS YEAR'S GROUP OUTCOME</Text>
