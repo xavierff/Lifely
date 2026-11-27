@@ -35,7 +35,7 @@ export default function HobbyCircuitBoard({view,onChoose,soundEnabled=true}){
  if(!view)return null;
  const decide=i=>{if(soundEnabled)tap.seekTo(0).then(()=>tap.play()).catch(()=>{});onChoose(i);};
  return <View testID="hobby-circuit-board" style={S.board}>
-  <View style={S.split}><Text style={S.topline}>{view.mode==='contest'?'LIVE CONTEST':'TRAINING SESSION'}</Text><Text style={S.topline}>{view.league.toUpperCase()} CIRCUIT · {view.difficultyName}</Text></View>
+  <View style={S.split}><Text style={S.topline}>{view.competition?view.competition.division.toUpperCase()+' '+view.competition.kind.toUpperCase():view.mode==='contest'?'LIVE CONTEST':'TRAINING SESSION'}</Text><Text style={S.topline}>{view.league.toUpperCase()} CIRCUIT · {view.difficultyName}</Text></View>
   <View style={S.arena}>
    <View style={S.competitor}><Text style={S.heroGlyph}>{view.glyph}</Text><Text style={S.competitorLabel}>YOUR SCORE</Text><Text style={S.bigScore}>{view.score}<Text style={S.scoreSmall}> / {view.round-1}</Text></Text></View>
    <View style={S.versus}><Text style={S.versusText}>VS</Text><Text style={S.tiny}>{view.mode==='practice'?'LEARN':'COMPETE'}</Text></View>
@@ -81,6 +81,7 @@ export function HobbyLeagueOverview({summary,commands,onAction}){
     <View style={S.statBox}><Text style={S.statValue}>{active.points}</Text><Text style={S.tiny}>POINTS</Text></View>
    </View>
    {active.rivals.length?<><Text style={S.topline}>OPPONENTS WHO KEEP IMPROVING</Text>{active.rivals.map(r=><View key={r.id} style={S.rivalLine}><View style={{flex:1,gap:3}}><Text style={S.rivalName}>{r.name}</Text><Text style={S.small}>{r.encounters} encounters · {r.wins} wins against you · Respect {r.respect}</Text></View><Text style={S.rating}>{r.rating}</Text></View>)}</>:null}
+   {active.championship?<View testID="championship-progress" style={S.result}><Text style={S.topline}>CHAMPIONSHIP PATH · {active.championship.division.toUpperCase()}</Text><Text style={S.resultTitle}>{active.championship.status}</Text><Text style={S.small}>Mastery 20 unlocks qualifiers. Score 2/3 to qualify, then enter a final in the next two years. Titles: {active.championship.titles}</Text>{active.championship.expiresAge!==null?<Text style={S.small}>Entry expires after age {active.championship.expiresAge}</Text>:null}{active.championship.records.map((r,i)=><Text key={i} style={S.small}>Age {r.age} · {r.division} {r.kind} · {r.outcome} · {r.score}/3</Text>)}</View>:null}
    {actions.length?actions.map(c=><Pressable key={c.id} testID={'hobby-action-'+c.id.replaceAll(':','-')} accessibilityRole="button" accessibilityLabel={c.label+', '+c.detail} accessibilityState={{disabled:!c.enabled}} disabled={!c.enabled} onPress={()=>onAction(c.id)}
     style={({pressed})=>[S.action,!c.enabled&&{opacity:.35},pressed&&{opacity:.75}]}>
     <Text style={S.actionTitle}>{c.label}</Text><Text style={S.small}>{c.detail}</Text>
