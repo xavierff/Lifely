@@ -82,6 +82,22 @@ function observe(s){
   impact(s,'story',x.id,clip(x.title||'A social story')+' — '+result,
    'community',value,x.firstId||null);
  }
+ // Policy delivery earns reputation only when the player actually audits,
+ // advocates, or contributes a real skill. Independent implementation
+ // does not award free personal standing.
+ for(const task of [
+  ...(s.civicImplementation?.completed||[]),
+  ...(s.civicImplementation?.active?[s.civicImplementation.active]:[])
+ ]){
+  for(let i=0;i<(task.choices||[]).length;i++){
+   const d=task.choices[i],group=task.issue==='skills-access'?
+    'professional':task.issue==='family-support'?'family':'community';
+   const gain=d.tag==='audit'?3:d.tag==='collaborate'?3:
+    d.tag==='prioritize'?-3:0;
+   impact(s,'delivery',task.id+':'+i,
+    task.issueName+' — '+d.label,group,gain,task.representativeA);
+  }
+ }
  // Multi-year public campaigns affect earned standing only through a
  // meaningful player response. Autonomous organizations get no player reward.
  for(const mandate of [
