@@ -1,4 +1,4 @@
-// Lifely 1.25.0 — multi-year civic and professional proposals.
+// Lifely 1.26.0 — civic campaigns and accountable post-agreement delivery.
 // Existing organizations advocate for their own interests without inventing
 // voters, anonymous committee members, money or employment positions.
 const cap=v=>Math.max(0,Math.min(100,Math.round(v)));
@@ -20,9 +20,9 @@ const issues={
 const RESULTS=['joint-adoption','a-priority','b-priority','partial-compromise',
  'gridlock','dissolved'];
 const fresh=()=>({version:1,serial:0,active:null,completed:[],used:[],
- news:[],ancestors:[],lastStartAge:-100,lastOfferAge:-100});
+ news:[],ancestors:[],deliveries:[],lastStartAge:-100,lastOfferAge:-100});
 export const civicMandatesState=s=>s.civicMandates||fresh();
-const ensure=s=>s.civicMandates??=fresh();
+const ensure=s=>{const m=s.civicMandates??=fresh();m.deliveries??=[];return m;};
 const group=(s,id)=>(s.socialCircles?.groups||[]).find(g=>g.id===id)||null;
 const link=(s,id)=>(s.organizationNetwork?.links||[]).find(l=>l.id===id)||null;
 function contact(s,id){
@@ -152,6 +152,7 @@ function close(s,m,ctx,reason=null){
   l.history=l.history.slice(-8);
  }
  mm.active=null;mm.completed.push({...m});mm.completed=mm.completed.slice(-24);
+ if(!['gridlock','dissolved'].includes(ending))beginDelivery(s,m);
  report(s,ctx,m.finalLine);
 }
 function touch(s,id,trust,rivalry,message){
@@ -220,6 +221,142 @@ function ongoing(s,m,ctx){
   m.pending=true;m.offerAge=s.age;state.lastOfferAge=s.age;
  }
 }
+
+// Promising a policy is not the same as delivering it. Delivery records
+// reference only the two original organizations, their existing projects,
+// and the current living representatives. They never create money or office.
+const deliveryResults=['delivered','partial','stalled','disbanded'];
+function deliveryNote(d,s,kind,text){
+ d.history.push({age:s.age,kind,text:short(text,220)});
+ d.history=d.history.slice(-10);
+}
+function beginDelivery(s,mandate){
+ const state=ensure(s);
+ const d={id:'delivery-'+mandate.id,mandateId:mandate.id,
+  linkId:mandate.linkId,issue:mandate.issue,
+  groupAId:mandate.groupAId,groupBId:mandate.groupBId,
+  groupAName:mandate.groupAName,groupBName:mandate.groupBName,
+  promisedOutcome:mandate.ending,startedAge:s.age,lastAge:s.age,
+  nextAge:Math.min(110,s.age+2),dueAge:Math.min(110,s.age+6),
+  progress:10,verification:cap(mandate.evidence),
+  coordination:cap(mandate.commonGround),
+  status:'active',pending:false,offerAge:null,unavailableSince:null,
+  ending:null,endedAge:null,history:[],decisions:[]};
+ deliveryNote(d,s,'promise','The organizations must now show what their '+issues[d.issue].name.toLowerCase()+' agreement actually achieves.');
+ state.deliveries.push(d);state.deliveries=state.deliveries.slice(-12);
+}
+function finishDelivery(s,d,ctx,forced=null){
+ const state=ensure(s),r=reps(s,link(s,d.linkId));
+ const ending=forced||(d.progress>=65&&d.verification>=57&&d.coordination>=45?
+  'delivered':d.progress>=38&&d.coordination>=28?'partial':'stalled');
+ d.status='completed';d.ending=ending;d.endedAge=s.age;d.pending=false;
+ d.offerAge=null;d.lastAge=s.age;
+ const explanation={
+  delivered:'The existing organizations followed through with verifiable work.',
+  partial:'Some commitments were fulfilled, but the overall agreement remained incomplete.',
+  stalled:'The promise remained largely undelivered despite the original agreement.',
+  disbanded:'The original organizations could no longer continue the work.'
+ }[ending];
+ deliveryNote(d,s,'result',explanation);
+ if(r&&ending!=='disbanded'){
+  const standing=ending==='delivered'?3:ending==='stalled'?-3:0;
+  for(const g of [r.a,r.b]){
+   g.standing=cap(g.standing+standing);
+   g.history.push({age:s.age,kind:'relationship',
+    title:'Mandate delivery review',outcome:ending,
+    description:short(issues[d.issue].name+': '+explanation,240)});
+   g.history=g.history.slice(-8);
+  }
+  r.l.trust=cap(r.l.trust+(ending==='delivered'?3:ending==='stalled'?-3:0));
+ }
+ report(s,ctx,issues[d.issue].name+': '+explanation);
+}
+function deliveryOptions(d){
+ return [
+  {index:0,tag:'review',label:'Review the evidence with both organizations',
+   detail:'Improve verification and rebuild trust with real representatives'},
+  {index:1,tag:'push',label:'Press both organizations to meet their commitments',
+   detail:'Accelerate work but risk tension between the existing leaders'},
+  {index:2,tag:'observe',label:'Leave the work to the organizations',
+   detail:'Use one activity; no changes to money, stats, contacts or organizations'}
+ ];
+}
+function deliveryCommands(s){
+ return (civicMandatesState(s).deliveries||[]).filter(d=>d.status==='active'&&d.pending)
+  .flatMap(d=>deliveryOptions(d).map(o=>({
+   id:'mandate:delivery:'+d.id+':'+o.index,
+   label:o.label,detail:o.detail+' · '+issues[d.issue].name,
+   enabled:!blocked(s)&&s.actions>0&&!!reps(s,link(s,d.linkId))
+  })));
+}
+function actDelivery(s,id,ctx){
+ const match=/^mandate:delivery:(delivery-mandate-g[0-9]+-[0-9]+):([012])$/.exec(id);
+ const d=ensure(s).deliveries.find(x=>x.id===match?.[1]);
+ const r=d&&reps(s,link(s,d.linkId));
+ if(!match||!d||d.status!=='active'||!d.pending||!r||blocked(s))
+  throw Error('This follow-through review is unavailable.');
+ const choice=deliveryOptions(d)[Number(match[2])];
+ const prev={progress:d.progress,verification:d.verification,coordination:d.coordination};
+ if(choice.index===0){
+  d.verification=cap(d.verification+12);
+  d.coordination=cap(d.coordination+5);
+  r.l.trust=cap(r.l.trust+3);
+  r.a.cohesion=cap(r.a.cohesion+2);r.b.cohesion=cap(r.b.cohesion+2);
+  touch(s,r.pa.id,3,-1,choice.label);touch(s,r.pb.id,3,-1,choice.label);
+  ctx.change?.(s,'knowledge',1);
+ }else if(choice.index===1){
+  d.progress=cap(d.progress+7);
+  d.coordination=cap(d.coordination-7);
+  r.l.competition=cap(r.l.competition+5);
+  r.a.tension=cap(r.a.tension+3);r.b.tension=cap(r.b.tension+3);
+  touch(s,r.pa.id,-2,4,choice.label);touch(s,r.pb.id,-2,4,choice.label);
+  ctx.change?.(s,'confidence',1);
+ }
+ d.decisions.push({age:s.age,index:choice.index,tag:choice.tag,
+  label:choice.label,progress:d.progress-prev.progress,
+  verification:d.verification-prev.verification,
+  coordination:d.coordination-prev.coordination});
+ d.decisions=d.decisions.slice(-4);
+ d.pending=false;d.offerAge=null;
+ deliveryNote(d,s,'decision',choice.label);
+ report(s,ctx,'Implementation review: '+choice.label+'.');
+ return d;
+}
+function tickDeliveries(s,ctx){
+ for(const d of ensure(s).deliveries.filter(x=>x.status==='active')){
+  const r=reps(s,link(s,d.linkId));
+  if(!r||r.a.id!==d.groupAId||r.b.id!==d.groupBId){
+   if(d.unavailableSince===null){
+    d.unavailableSince=s.age;d.pending=false;d.offerAge=null;
+    deliveryNote(d,s,'pause','The original organizations became unavailable; delivery is paused.');
+   }else if(s.age-d.unavailableSince>=2)finishDelivery(s,d,ctx,'disbanded');
+   continue;
+  }
+  if(d.unavailableSince!==null){
+   d.unavailableSince=null;
+   deliveryNote(d,s,'resume','Living representatives of both original organizations resumed delivery.');
+  }
+  if(d.pending&&d.offerAge!==null&&s.age-d.offerAge>=2){
+   d.pending=false;d.offerAge=null;
+   deliveryNote(d,s,'missed','The player did not intervene; the organizations carried on independently.');
+  }
+  if(s.age<d.nextAge)return;
+  const projects=[r.a.project,r.b.project].filter(p=>p&&p.status==='active');
+  const actualWork=projects.length?
+   Math.round(projects.reduce((n,p)=>n+p.progress,0)/projects.length):0;
+  const capacity=Math.round((r.a.cohesion+r.b.cohesion-r.a.tension-r.b.tension)/30);
+  const alignment=Math.round((r.l.trust-r.l.competition)/25);
+  const delta=Math.max(-3,Math.min(24,10+capacity+alignment+Math.round(actualWork/20)));
+  d.progress=cap(d.progress+delta);
+  d.coordination=cap(d.coordination+Math.round((r.l.trust-r.l.competition)/22));
+  if(projects.length)d.verification=cap(d.verification+Math.round(actualWork/25));
+  d.lastAge=s.age;d.nextAge=Math.min(110,s.age+2);
+  deliveryNote(d,s,'checkpoint','Actual organizations reviewed delivery. Recorded progress '+d.progress+'/100; evidence '+d.verification+'/100.');
+  if(s.age>=d.dueAge){finishDelivery(s,d,ctx);continue;}
+  d.pending=true;d.offerAge=s.age;
+ }
+}
+
 const blocked=s=>!s.alive||s.pending!==null||s.mini||
  s.world?.network?.conversation||s.world?.storyDirector?.active||
  s.fate?.active?.status==='playing'||s.careerCampaigns?.active||
@@ -239,14 +376,15 @@ function options(m){
  ];
 }
 export function civicMandateCommands(s){
- const m=civicMandatesState(s),o=m.active;
- if(!o?.pending)return [];
+ const m=civicMandatesState(s),o=m.active,choices=deliveryCommands(s);
+ if(!o?.pending)return choices;
  const r=reps(s,link(s,o.linkId));
- return options(o).map(x=>({id:'mandate:'+o.id+':'+x.index,
+ return [...options(o).map(x=>({id:'mandate:'+o.id+':'+x.index,
   label:x.label,detail:x.detail+' · '+issues[o.issue].name,
-  enabled:!blocked(s)&&s.actions>0&&!!r}));
+  enabled:!blocked(s)&&s.actions>0&&!!r})),...choices];
 }
 export function civicMandateAct(s,id,ctx){
+ if(id.startsWith('mandate:delivery:'))return actDelivery(s,id,ctx);
  const match=/^mandate:(mandate-g[0-9]+-[0-9]+):([012])$/.exec(id);
  if(!match||!civicMandateCommands({...s,actions:s.actions+1})
   .some(x=>x.id===id&&x.enabled))throw Error('This civic proposal is unavailable.');
@@ -298,6 +436,7 @@ export function civicMandatesYear(s,ctx={}){
  if(!s.alive||s.age<22)return;
  const m=ensure(s),hadActive=!!m.active;
  if(m.active)ongoing(s,m.active,ctx);
+ tickDeliveries(s,ctx);
  if(!hadActive&&!m.active&&s.age-m.lastStartAge>=7&&s.age<=101){
   const c=source(s);
   if(c)launch(s,c,ctx);
@@ -318,6 +457,11 @@ export function civicMandatesView(s){
    ending:t.ending,finalLine:t.finalLine,
    endedAge:t.endedAge,decisions:t.decisions.length
   })),
+  deliveries:(m.deliveries||[]).slice(-7).reverse().map(d=>({...d,
+   issueName:issues[d.issue].name,
+   representativeA:reps(s,link(s,d.linkId))?.pa.name||null,
+   representativeB:reps(s,link(s,d.linkId))?.pb.name||null,
+   options:d.status==='active'?deliveryOptions(d):[]})),
   ancestors:m.ancestors.slice().reverse(),news:m.news.slice(-8).reverse()
  };
 }
@@ -327,7 +471,9 @@ export function civicMandatesInheritance(next,old){
  newState.ancestors=[...m.ancestors,{generation:old.generation,
   name:short(old.name,32),note:short(seen.length?seen.map(t=>
    issues[t.issue].name+': '+(t.ending||'unfinished public debate')).join('; '):
-   'Earlier generations debated community priorities without passing on personal loyalties.',230)
+   'Earlier generations debated community priorities without passing on personal loyalties.',185)+
+   ((m.deliveries||[]).length?' Delivery reviews: '+(m.deliveries||[]).slice(-2).map(d=>
+    d.ending||'unfinished').join(', ')+'.':'')
  }].slice(-10);
  // No old officeholder, policy authority or campaign is automatically
  // assigned to a descendant who did not participate.
@@ -364,10 +510,32 @@ export function validateCivicMandates(m){
   (x.finalLine===null||str(x.finalLine,230))&&
   (x.status==='completed'?x.ending!==null&&x.endedAge!==null&&str(x.finalLine,230):
    x.ending===null&&x.endedAge===null&&x.finalLine===null);
+
+ const delivery=x=>x&&str(x.id,110)&&x.id==='delivery-'+x.mandateId&&
+  str(x.mandateId,100)&&str(x.linkId,190)&&Object.hasOwn(issues,x.issue)&&
+  str(x.groupAId,100)&&str(x.groupBId,100)&&x.groupAId!==x.groupBId&&
+  str(x.groupAName,100)&&str(x.groupBName,100)&&
+  ['joint-adoption','a-priority','b-priority','partial-compromise'].includes(x.promisedOutcome)&&
+  age(x.startedAge)&&age(x.lastAge)&&age(x.nextAge)&&age(x.dueAge)&&
+  [x.progress,x.verification,x.coordination].every(score)&&
+  ['active','completed'].includes(x.status)&&typeof x.pending==='boolean'&&
+  (x.offerAge===null||age(x.offerAge))&&(!x.pending||x.offerAge!==null)&&
+  (x.unavailableSince===null||age(x.unavailableSince))&&
+  (x.ending===null||deliveryResults.includes(x.ending))&&
+  (x.endedAge===null||age(x.endedAge))&&
+  Array.isArray(x.history)&&x.history.length<=10&&x.history.every(y=>
+   age(y.age)&&['promise','checkpoint','result','decision','missed','pause','resume'].includes(y.kind)&&str(y.text,220))&&
+  Array.isArray(x.decisions)&&x.decisions.length<=4&&x.decisions.every(y=>
+   age(y.age)&&[0,1,2].includes(y.index)&&['review','push','observe'].includes(y.tag)&&
+   str(y.label,120)&&['progress','verification','coordination'].every(k=>signed(y[k])))&&
+  (x.status==='completed'?x.endedAge!==null&&x.ending!==null&&!x.pending:
+   x.endedAge===null&&x.ending===null);
  return !!m&&m.version===1&&Number.isInteger(m.serial)&&m.serial>=0&&
   (m.active===null||t(m.active)&&m.active.status==='active')&&
   Array.isArray(m.completed)&&m.completed.length<=24&&
   m.completed.every(x=>t(x)&&x.status==='completed')&&
+  (m.deliveries===undefined||(Array.isArray(m.deliveries)&&m.deliveries.length<=12&&
+   m.deliveries.every(delivery)&&new Set(m.deliveries.map(d=>d.id)).size===m.deliveries.length))&&
   Array.isArray(m.used)&&m.used.length<=36&&m.used.every(x=>str(x,230))&&
   new Set(m.used).size===m.used.length&&
   Array.isArray(m.news)&&m.news.length<=25&&
