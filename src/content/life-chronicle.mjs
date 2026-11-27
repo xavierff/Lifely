@@ -142,7 +142,15 @@ export function chronicleView(s){
   category:'relationship',turning:true,source:'memory',
   choice:'',netWorth:0,changes:[],bonds:[],future:[]
  }));
- const all=[...journal,...echoes,...fates,...social,...npcPlans,...competingFutures,...influence,...circleStories,...publicAlliances,...entries.map(e=>({...e,source:'choice'}))]
+ const playablePublic=(s.playableEvents?.completed||[]).filter(x=>[
+   'agreement','celebrated','merit','new-leader','escalation','controversy','disputed'
+  ].includes(x.ending)).map(x=>({
+   id:'played-event-'+x.id,age:x.endedAge,
+   title:'Hosted '+x.mode+': '+x.groupA+' & '+x.groupB+' — '+x.ending,
+   category:x.mode==='competition'?'career':'relationship',
+   turning:true,source:'memory',choice:'',netWorth:0,changes:[],bonds:[],future:[]
+  }));
+ const all=[...journal,...echoes,...fates,...social,...npcPlans,...competingFutures,...influence,...circleStories,...publicAlliances,...playablePublic,...entries.map(e=>({...e,source:'choice'}))]
   .sort((a,b)=>a.age-b.age||(a.source==='history'?-1:1));
  const timeline=all.slice(-90);
  // Include the birth marker even in long lives, without affecting chronology.

@@ -82,6 +82,23 @@ function observe(s){
   impact(s,'story',x.id,clip(x.title||'A social story')+' — '+result,
    'community',value,x.firstId||null);
  }
+ // Completing an interactive public event is evidence only when the player
+ // meaningfully participated; watching one unfold is never a free reward.
+ for(const x of s.playableEvents?.completed||[]){
+  if(!x.id||x.endedAge===null||x.endedAge===undefined)continue;
+  const played=(x.decisions||[]).some(d=>d.option!==2);
+  const kind=x.mode==='festival'?'community':
+   x.mode==='competition'?'professional':
+   x.mode==='election'?'family':'community';
+  const gain={
+   agreement:6,celebrated:6,merit:6,'new-leader':5,incumbent:3,
+   stalemate:0,quiet:0,draw:0,independent:0,abandoned:0,interrupted:0,
+   escalation:-6,divided:-6,controversy:-7,disputed:-8
+  }[x.ending]??0;
+  impact(s,'public-event',x.id,
+   'Hosted '+x.mode+' for '+x.groupA+' and '+x.groupB+' — '+x.ending,
+   kind,played?gain:0,x.leaderA);
+ }
  // Public intergroup choices influence the player only when the player acted.
  // Autonomous fair results alone never create reputation for an observer.
  for(const x of s.organizationNetwork?.completed||[]){
