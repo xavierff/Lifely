@@ -1,5 +1,6 @@
 // Lifely 1.0 — authored profession simulations, deterministic offline state.
 // Four distinct steps per profession; results connect to the existing simulation.
+import {choosePhasePlan} from './phase-plans.mjs';
 import {initialCareerPlayfield,careerPlayfieldView,careerPlayfieldAct} from './career-playfields.mjs';
 import {ensureCareerSocial,careerContact,careerReaction,scheduleCareerAftermath,careerSocialHistory} from './career-aftermath.mjs';
 // All salaries, election processes and clinical events are fictional abstractions.
@@ -194,6 +195,7 @@ function award(s,a,ctx){
  }
  return {rating,chance,grade,succeeded,gross,fee,net:gross-fee,message,score:a.type==='sports'&&p?{player:p.ours,rival:p.theirs}:undefined,plays:p?.plays?.length||0};
 }
+export function campaignPlan(s,id,ctx){const a=ensureCareerCampaign(s).active;if(!s.alive||!a)throw Error('No career project is active.');return choosePhasePlan(s,a,id,ctx);}
 export function campaignPlay(s,selection,ctx){
  const a=ensureCareerCampaign(s).active;if(!s.alive||!a)throw Error('No career project is active.');
  const play=careerPlayfieldAct(s,a,selection,ctx);

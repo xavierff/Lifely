@@ -6,6 +6,10 @@ import {ElectionBoard,MedicalBoard} from './CivicClinicBoards';
 const C={ink:'#F6F8EE',muted:'#C0D6CD',lime:'#D0FB93',gold:'#FFE0A2',border:'#4C7065',panel:'#102926'};
 const cash=n=>'$'+Math.round(n||0).toLocaleString('en-US');
 function Metric({name,value,accent}){return <View style={S.metric}><Text style={S.metricLabel}>{name}</Text><Text style={[S.metricValue,accent&&{color:C.lime}]}>{value}</Text></View>}
+function PhasePlans({v,onPlan}){
+ if(!v.plan)return null;
+ return <View testID="phase-plans" style={S.phaseHeader}><Text style={S.kicker}>{v.type==='sports'?'TACTICAL FORMATION':v.type==='film'?'CREW & PRODUCTION BUDGET':'STAFF ALLOCATION'}</Text><Text style={S.small}>{v.plan.locked?'Plan locked for this phase.':'Optional: select one plan before your first interaction.'}</Text>{v.plan.options.map(p=><Pressable key={p.id} testID={'phase-plan-'+p.id} accessibilityRole="button" accessibilityLabel={p.name+(p.id===v.plan.chosen?', selected':'')} disabled={!p.enabled} accessibilityState={{disabled:!p.enabled}} onPress={()=>onPlan(p.id)} style={[S.planTile,p.id===v.plan.chosen&&{borderColor:C.lime},!p.enabled&&p.id!==v.plan.chosen&&S.disabled]}><Text style={S.directLabel}>{p.id===v.plan.chosen?'✓ ':''}{p.name} · {p.cost?cash(p.cost):'Free'}</Text><Text style={S.small}>{p.detail}</Text></Pressable>)}</View>;
+}
 function PlayHistory({v}){
  const history=v.playHistory||[];
  return <View testID="playfield-history" style={S.phaseHeader}><Text style={S.kicker}>PROJECT ACTION LOG</Text><View style={S.historyRow}>{Array.from({length:4},(_,stage)=><View key={stage} style={S.historyPhase}><Text style={S.small}>P{stage+1}</Text><View style={S.historyRow}>{[0,1].map(i=>{const x=history.filter(h=>h.stage===stage)[i];return <View key={i} accessibilityLabel={'Phase '+(stage+1)+' action '+(i+1)+': '+(x?x.success?'success':'setback':'not played')} style={[S.historyDot,x&&{backgroundColor:x.success?'#487952':'#875B55'}]}><Text style={S.historyText}>{x?x.success?'✓':'×':'·'}</Text></View>})}</View></View>)}</View></View>;
@@ -69,7 +73,7 @@ function BusinessDesk({v,onPlay}){
   {v.options.map((o,i)=><Choice key={i} item={o} i={i} disabled={v.remaining===0} onPlay={onPlay} testPrefix="business"/>)}
  </View>;
 }
-export default function CareerPlayfield({view,onPlay,soundEnabled=true}){
+export default function CareerPlayfield({view,onPlay,onPlan,soundEnabled=true}){
  const tap=useAudioPlayer(require('../../assets/sfx/tap.wav'));
  const win=useAudioPlayer(require('../../assets/sfx/success.wav'));
  const miss=useAudioPlayer(require('../../assets/sfx/setback.wav'));
@@ -96,13 +100,14 @@ export default function CareerPlayfield({view,onPlay,soundEnabled=true}){
  if(!view)return null;
  return <View style={S.container}>
   <View style={S.phaseHeader}><Text style={S.kicker}>PROJECT PROGRESS · PHASE {view.stage+1}/4</Text><View accessibilityRole="progressbar" accessibilityLabel="Project phases completed" accessibilityValue={{min:0,max:4,now:view.stage}} style={S.phaseTrack}>{[0,1,2,3].map(i=><View key={i} style={[S.phaseSegment,i<view.stage&&S.phaseDone,i===view.stage&&S.phaseCurrent]}/>)}</View><Text style={S.small}>{view.remaining===0?'Ready for the next story decision':view.remaining+' interactions remaining in this phase'}</Text></View>
-  {view.type==='sports'?<Pitch v={view} onPlay={interact}/>:view.type==='film'?<FilmSet v={view} onPlay={interact}/>:view.type==='business'?<BusinessDesk v={view} onPlay={interact}/>:view.type==='election'?<ElectionBoard v={view} onPlay={interact}/>:view.type==='medical'?<MedicalBoard v={view} onPlay={interact}/>:null}
+  <PhasePlans v={view} onPlan={onPlan}/>{view.type==='sports'?<Pitch v={view} onPlay={interact}/>:view.type==='film'?<FilmSet v={view} onPlay={interact}/>:view.type==='business'?<BusinessDesk v={view} onPlay={interact}/>:view.type==='election'?<ElectionBoard v={view} onPlay={interact}/>:view.type==='medical'?<MedicalBoard v={view} onPlay={interact}/>:null}
   <PlayHistory v={view}/><View style={S.status}><Text style={S.statusText}>{view.played} / {view.maxPerStage} interactions this phase</Text><Text style={S.statusText}>{view.remaining===0?'PHASE READY':'PLAY TO IMPROVE YOUR RESULT'}</Text></View>
   {view.last?<Animated.View testID="playfield-feedback" accessibilityLiveRegion="polite" style={[S.feedback,{transform:[{scale:pulse}]}]}><Text style={S.feedbackTitle}>{view.last.success?'✓ SUCCESSFUL ACTION':'↻ ANOTHER APPROACH NEEDED'}</Text><Text style={S.feedbackBody}>{view.last.description}</Text>{view.last.reaction?<Text style={S.reactionText}>{view.last.reaction.person}: {view.last.reaction.text.replace(view.last.reaction.person+' ','')}</Text>:null}</Animated.View>:null}
   {view.remaining===0?<Text style={S.done}>Now make the story decision below to move to the next phase.</Text>:null}
  </View>;
 }
 const S=StyleSheet.create({
+ planTile:{padding:9,minHeight:48,borderWidth:1,borderColor:C.border,borderRadius:8,gap:4,backgroundColor:'#31544A'},
  historyRow:{flexDirection:'row',gap:4,flexWrap:'wrap'},historyPhase:{flex:1,minWidth:54,gap:4},historyDot:{width:22,height:24,borderRadius:5,backgroundColor:'#3D5750',alignItems:'center',justifyContent:'center'},historyText:{fontSize:14,fontWeight:'900',color:C.ink},directRow:{flexDirection:'row',gap:5},directTile:{flex:1,minWidth:0,minHeight:76,padding:6,gap:4,alignItems:'center',justifyContent:'center',borderRadius:9,backgroundColor:'#31544A',borderWidth:1,borderColor:C.border},directGlyph:{fontSize:22,color:C.gold},directLabel:{fontSize:11,fontWeight:'800',color:C.ink,textAlign:'center'},
  phaseHeader:{padding:10,gap:6,borderRadius:11,backgroundColor:'#213E34'},phaseTrack:{flexDirection:'row',gap:5},phaseSegment:{flex:1,height:8,borderRadius:4,backgroundColor:'#49675F'},phaseDone:{backgroundColor:C.lime},phaseCurrent:{backgroundColor:C.gold},container:{gap:9,marginVertical:3},board:{padding:12,borderRadius:17,backgroundColor:C.panel,borderWidth:1,borderColor:C.border,gap:11},
  rowBetween:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:5},
