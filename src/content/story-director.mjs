@@ -211,6 +211,14 @@ export function storyDirectorView(s){
  return {id:e.id,title:e.title,theme:e.theme,phase:e.phase,round:e.phase+1,total:3,
   lead:e.firstName,other:e.secondName,headline:theme.beats[e.phase],prompt:withActors(theme.scenes[e.phase],e),
   backstory:(e.previous?'An earlier story with these characters involved '+e.previous+'. ':theme.context+' ')+
+   ((s.civicImplementation?.completed||[]).findLast(t=>
+     t.representativeA===e.firstId||t.representativeA===e.secondId||
+     t.representativeB===e.firstId||t.representativeB===e.secondId)?
+    (()=>{const p=(s.civicImplementation?.completed||[]).findLast(t=>
+      t.representativeA===e.firstId||t.representativeA===e.secondId||
+      t.representativeB===e.firstId||t.representativeB===e.secondId);
+      return 'A public promise involving their organization was '+p.result+
+       ' during '+p.issueName+'. ';})():'')+
    ((s.civicMandates?.completed||[]).findLast(t=>
     t.leaderA===e.firstId||t.leaderA===e.secondId||
     t.leaderB===e.firstId||t.leaderB===e.secondId)?

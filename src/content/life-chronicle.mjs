@@ -170,7 +170,13 @@ export function chronicleView(s){
   category:t.issue==='skills-access'?'career':'relationship',
   turning:true,source:'memory',choice:'',netWorth:0,changes:[],bonds:[],future:[]
  }));
- const all=[...journal,...echoes,...fates,...social,...npcPlans,...competingFutures,...influence,...circleStories,...publicAlliances,...playablePublic,...aftermath,...civic,...entries.map(e=>({...e,source:'choice'}))]
+ const implementations=(s.civicImplementation?.completed||[]).map(t=>({
+  id:'implementation-'+t.id,age:t.endedAge,
+  title:'Policy delivery: '+t.issueName+' — '+t.result,
+  category:t.issue==='skills-access'?'career':'relationship',
+  turning:true,source:'memory',choice:'',netWorth:0,changes:[],bonds:[],future:[]
+ }));
+ const all=[...journal,...echoes,...fates,...social,...npcPlans,...competingFutures,...influence,...circleStories,...publicAlliances,...playablePublic,...aftermath,...civic,...implementations,...entries.map(e=>({...e,source:'choice'}))]
   .sort((a,b)=>a.age-b.age||(a.source==='history'?-1:1));
  const timeline=all.slice(-90);
  // Include the birth marker even in long lives, without affecting chronology.
