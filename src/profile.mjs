@@ -36,6 +36,10 @@ const worldRibbons=[
 {id:"sixpaths",name:"A Life Without Limits",description:"Try every one of the six connected paths.",test:s=>!!s.world?.entertainment?.releases&&!!s.world?.sports?.sport&&!!s.world?.politics?.party&&!!s.world?.royalty?.title&&(s.world?.travel?.stamps?.length||0)>0&&(s.world?.dynasty?.archives||0)>0}
 ];
 ribbons.unshift(...worldRibbons);
+ribbons.unshift(
+ {id:'case-closed',name:'Truth Before Rumor',description:'Correctly conclude at least four fictional investigation reviews.',test:s=>(s.justiceJourney?.solved||0)>=4},
+ {id:'restored-life',name:'A New Chapter',description:'Complete reintegration after conviction and rebuild reputation to 65.',test:s=>(s.record||0)>0&&(s.justiceJourney?.recoveries||0)>=1&&s.stats.reputation>=65}
+);
 const hobbyProfiles=s=>Object.values(s.hobbyCircuit?.disciplines||{});
 const experientialRibbons=[
  {id:'life-scrapbook',name:'Scrapbook of a Lifetime',description:'Collect five rare memories and complete eight distinct outings.',test:s=>{const m=outingStats(s);return m.rare>=5&&m.distinct.length>=8;}},

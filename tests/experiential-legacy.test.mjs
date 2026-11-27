@@ -45,7 +45,7 @@ test('1.32: five alternative ribbons have concrete requirements and are collecte
  s.age=25;s.actions=3;s=experience(s,'street-festival');
  s.age=70;s.actions=3;s=experience(s,'later-adventure');
  s.age=71;s.actions=3;s=experience(s,'later-adventure');
- assert.equal(E.ribbons.length,37);
+ assert.equal(E.ribbons.length,39);
  assert.equal(E.lifeEnding(s).id,'four-eras');
  s.alive=false;
  let p=mergeLife(emptyProfile(),s,E.worth(s));p=mergeLife(p,s,E.worth(s));
