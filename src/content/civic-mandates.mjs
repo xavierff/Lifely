@@ -340,10 +340,10 @@ function tickDeliveries(s,ctx){
    d.pending=false;d.offerAge=null;
    deliveryNote(d,s,'missed','The player did not intervene; the organizations carried on independently.');
   }
-  if(s.age<d.nextAge)return;
+  if(s.age<d.nextAge)continue;
   const projects=[r.a.project,r.b.project].filter(p=>p&&p.status==='active');
   const actualWork=projects.length?
-   Math.round(projects.reduce((n,p)=>n+p.progress,0)/projects.length):0;
+   Math.round(projects.reduce((n,p)=>n+(Number.isFinite(p.progress)?p.progress:0),0)/projects.length):0;
   const capacity=Math.round((r.a.cohesion+r.b.cohesion-r.a.tension-r.b.tension)/30);
   const alignment=Math.round((r.l.trust-r.l.competition)/25);
   const delta=Math.max(-3,Math.min(24,10+capacity+alignment+Math.round(actualWork/20)));
