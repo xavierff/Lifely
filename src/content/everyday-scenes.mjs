@@ -78,12 +78,7 @@ export function everydayCommands(s){
   out.push({id:'scene:callback:'+cb.id+':'+index,label:index?'Set a boundary with '+cb.personName:'Reconnect with '+cb.personName,detail:cb.title+' · from age '+cb.startedAge,enabled:active});
  return out;
 }
-export function beginEveryday(s,id,ctx){
- if(!id.startsWith('scene:start:')||!everydayCommands({...s,actions:s.actions+1}).some(x=>x.id===id&&x.enabled))throw Error('This everyday scene is not available.');
- const e=ensure(s),parts=id.split(':'),type=parts[2];if(type==='outing')return beginOuting(s,e,parts[3],ctx);let person=null,track=null;
- if(type==='bond'){person=human(s,Number(parts[3]));if(!person)throw Error('Relationship unavailable.');}
- else if(type==='school'){
-  track=tracks[pick(ctx,s,tracks.length)];
+function prepareClassmates(s,e,ctx){
   if(!Array.isArray(e.classmates)||!e.classmates.length){
    const prior=e.classmate;
    const first=prior?Math.max(0,peerNames.indexOf(prior.name)):pick(ctx,s,peerNames.length);
@@ -93,6 +88,14 @@ export function beginEveryday(s,id,ctx){
      preference:pick(ctx,s,3),joinedAge:s.age,history:[]};
    });
   }
+}
+export function beginEveryday(s,id,ctx){
+ if(!id.startsWith('scene:start:')||!everydayCommands({...s,actions:s.actions+1}).some(x=>x.id===id&&x.enabled))throw Error('This everyday scene is not available.');
+ const e=ensure(s),parts=id.split(':'),type=parts[2];if(type==='outing'){if(s.age<=18)prepareClassmates(s,e,ctx);return beginOuting(s,e,parts[3],ctx);}let person=null,track=null;
+ if(type==='bond'){person=human(s,Number(parts[3]));if(!person)throw Error('Relationship unavailable.');}
+ else if(type==='school'){
+  track=tracks[pick(ctx,s,tracks.length)];
+  prepareClassmates(s,e,ctx);
   person=e.classmates[(e.schoolResults?.length||0)%e.classmates.length];
   e.classmate=person;
  }else if(type!=='court')throw Error('Unknown everyday scene.');
@@ -225,10 +228,10 @@ export function everydayCallback(s,id,ctx){
  return cb;
 }
 export function everydayHistory(s){
- const e=everydayState(s);return {active:e.active,completed:(e.completed||[]).slice(-16).reverse(),callbacks:(e.callbacks||[]).slice(-12).reverse(),schoolResults:(e.schoolResults||[]).slice(-12).reverse(),classmate:e.classmate,classmates:(e.classmates||[]).slice()};
+ const e=everydayState(s);return {active:e.active,completed:(e.completed||[]).slice(-16).reverse(),callbacks:(e.callbacks||[]).slice(-12).reverse(),schoolResults:(e.schoolResults||[]).slice(-12).reverse(),classmate:e.classmate,classmates:(e.classmates||[]).slice(),outingCollection:(e.outingCollection||[]).slice().reverse(),outingLegacy:(e.outingLegacy||[]).slice().reverse()};
 }
 export function inheritEveryday(next,previous){
  const e=previous.everydayScenes;if(!e)return next;
- next.everydayScenes={...emptyEverydayScenes(),completed:(e.completed||[]).slice(-8).map(x=>({...x,inheritedFrom:previous.name})),callbacks:[]};
+ next.everydayScenes={...emptyEverydayScenes(),completed:(e.completed||[]).slice(-8).map(x=>({...x,inheritedFrom:previous.name})),callbacks:[],outingCollection:[],outingLegacy:[...(e.outingLegacy||[]),...(e.outingCollection||[]).map(x=>({...x,ancestor:previous.name,generation:previous.generation}))].slice(-26)};
  return next;
 }

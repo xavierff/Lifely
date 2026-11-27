@@ -81,12 +81,18 @@ export function playOuting(s,e,index,ctx){
  const peer=a.classmateId===null?null:(e.classmates||[]).find(x=>x.id===a.classmateId);
  const delta=a.connection>=62?7:a.connection>=43?3:a.connection<25?-2:1;
  if(p){ctx.bond(s,p,delta,d.title+' · '+grade);if(p.world){p.world.trust=cap((p.world.trust??p.bond)+delta);p.world.rivalry=cap((p.world.rivalry??0)+(delta<0?3:-2));}}
- if(peer){peer.trust=cap(peer.trust+delta);peer.rivalry=cap(peer.rivalry+(delta<0?3:-2));peer.history??=[];peer.history.push({age:s.age,track:d.title,grade:rare?'breakthrough':grade==='mixed'?'complicated':'progress'});peer.history=peer.history.slice(-16);}
+ if(peer){e.classmate=peer;peer.trust=cap(peer.trust+delta);peer.rivalry=cap(peer.rivalry+(delta<0?3:-2));peer.history??=[];peer.history.push({age:s.age,track:d.title,grade:rare?'breakthrough':grade==='mixed'?'complicated':'progress'});peer.history=peer.history.slice(-16);}
  ctx.change(s,d.stat,rare?5:grade==='mixed'?1:3);ctx.change(s,'happiness',grade==='mixed'?1:4);
  const result={...a,outcome:grade,endedAge:s.age,track:d.title,collectible:rare?d.rare:null,successful:a.score};
  e.completed.push(result);e.completed=e.completed.slice(-45);e.active=null;
+ if(result.collectible){e.outingCollection??=[];if(!e.outingCollection.some(x=>x.activityId===d.id))e.outingCollection.push({activityId:d.id,title:result.collectible,age:s.age});}
  if(p&&s.age<=108){e.callbacks.push({id:'callback-'+a.id,title:'The '+d.title+' memory',type:'bond',startedAge:s.age,dueAge:s.age+2,personId:p.id,classmateId:null,personName:p.name,grade:grade==='mixed'?'complicated':'progress',status:'scheduled'});e.callbacks=e.callbacks.slice(-24);}
+ if(peer&&s.age<=18){e.callbacks.push({id:'callback-'+a.id,title:'The '+d.title+' reunion',type:'school',startedAge:s.age,dueAge:s.age+1,personId:null,classmateId:peer.id,personName:peer.name,grade:grade==='mixed'?'complicated':'progress',status:'scheduled'});e.callbacks=e.callbacks.slice(-24);}
  ctx.add(s,d.title+' — '+(result.collectible||grade.replaceAll('-',' '))+'.','milestone');return result;
+}
+export function validateOutingCollections(e){
+ const valid=x=>x&&!!spec(x.activityId)&&x.title===spec(x.activityId).rare&&Number.isInteger(x.age)&&x.age>=6&&x.age<=105;
+ return (e.outingCollection===undefined||Array.isArray(e.outingCollection)&&e.outingCollection.length<=outings.length&&e.outingCollection.every(valid)&&new Set(e.outingCollection.map(x=>x.activityId)).size===e.outingCollection.length)&&(e.outingLegacy===undefined||Array.isArray(e.outingLegacy)&&e.outingLegacy.length<=26&&e.outingLegacy.every(x=>valid(x)&&typeof x.ancestor==='string'&&Number.isInteger(x.generation)&&x.generation>=1));
 }
 export function validateOuting(a){
  if(a?.type!=='outing')return true;
