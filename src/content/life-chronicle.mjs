@@ -161,7 +161,12 @@ export function chronicleView(s){
   })));
  const civic=(s.civicMandates?.completed||[]).map(t=>({
   id:'civic-'+t.id,age:t.endedAge,
-  title:'Public mandate: '+t.groupAName+' & '+t.groupBName+' — '+t.ending,
+  title:'Public mandate: '+({
+   'family-support':'Family care & neighborhood support',
+   'skills-access':'Apprenticeship & skills access',
+   'shared-space':'Shared neighborhood spaces',
+   'community-standards':'Community program standards'
+  }[t.issue]||t.issue)+' — '+t.groupAName+' & '+t.groupBName+' — '+t.ending,
   category:t.issue==='skills-access'?'career':'relationship',
   turning:true,source:'memory',choice:'',netWorth:0,changes:[],bonds:[],future:[]
  }));

@@ -39,10 +39,14 @@ function contact(s,id){
 function reps(s,l){
  const a=group(s,l?.aId),b=group(s,l?.bId);
  if(!a||!b||a.id===b.id||a.status!=='active'||b.status!=='active')return null;
- const pa=contact(s,a.leaderId);
+ let pa=contact(s,a.leaderId);
  let pb=contact(s,b.leaderId);
  if(pa?.id===pb?.id){
-  pb=b.members.map(id=>contact(s,id)).find(x=>x&&x.id!==pa.id);
+  // Two real organizations can share an officeholder. In that case a
+  // different living actual member represents one side of the debate.
+  const otherB=b.members.map(id=>contact(s,id)).find(x=>x&&x.id!==pa.id);
+  if(otherB)pb=otherB;
+  else pa=a.members.map(id=>contact(s,id)).find(x=>x&&x.id!==pb.id)||null;
  }
  return pa&&pb&&a.members.includes(pa.id)&&b.members.includes(pb.id)?
   {a,b,pa,pb,l}:null;
@@ -88,7 +92,9 @@ function launch(s,c,ctx){
   id:'mandate-g'+s.generation+'-'+(++m.serial),sourceKey:c.key,linkId:l.id,
   issue,groupAId:r.a.id,groupBId:r.b.id,
   groupAName:short(r.a.name,100),groupBName:short(r.b.name,100),
-  leaderA:r.pa.id,leaderB:r.pb.id,leaderAName:short(r.pa.name,75),
+  leaderA:r.pa.id,leaderB:r.pb.id,
+  officeA:r.a.leaderId,officeB:r.b.leaderId,
+  leaderAName:short(r.pa.name,75),
   leaderBName:short(r.pb.name,75),
   startedAge:s.age,lastAge:s.age,nextAge:Math.min(110,s.age+2),
   expiryAge:Math.min(110,s.age+8),stage:0,status:'active',pending:false,
@@ -183,7 +189,9 @@ function ongoing(s,m,ctx){
   note(m,s,'resume','Current living representatives resumed the public proposal.');
   m.unavailableSince=null;
  }
- if(m.leaderA!==r.pa.id||m.leaderB!==r.pb.id){
+ if(m.leaderA!==r.pa.id||m.leaderB!==r.pb.id||
+   m.officeA!==r.a.leaderId||m.officeB!==r.b.leaderId){
+  m.officeA=r.a.leaderId;m.officeB=r.b.leaderId;
   m.leaderA=r.pa.id;m.leaderB=r.pb.id;
   m.leaderAName=short(r.pa.name,75);m.leaderBName=short(r.pb.name,75);
   note(m,s,'leadership','Actual organizational leadership changed during the campaign.');
@@ -340,6 +348,7 @@ export function validateCivicMandates(m){
   Object.hasOwn(issues,x.issue)&&str(x.groupAId,100)&&str(x.groupBId,100)&&
   x.groupAId!==x.groupBId&&str(x.groupAName,100)&&str(x.groupBName,100)&&
   str(x.leaderA,100)&&str(x.leaderB,100)&&x.leaderA!==x.leaderB&&
+  str(x.officeA,100)&&str(x.officeB,100)&&
   str(x.leaderAName,75)&&str(x.leaderBName,75)&&
   age(x.startedAge)&&age(x.lastAge)&&age(x.nextAge)&&age(x.expiryAge)&&
   [0,1,2,3,4].includes(x.stage)&&['active','completed'].includes(x.status)&&

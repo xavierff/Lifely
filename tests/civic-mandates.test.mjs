@@ -183,10 +183,10 @@ test('without player intervention, the groups can settle a proposal independentl
 test('policy responses earn one deduplicated social-influence adjustment per real action',()=>{
  let s=world(125013);years(s,2);
  socialInfluenceYear(s,{add:silent});
- const before=s.socialInfluence.scores.community;
+ const before=s.socialInfluence.scores.family;
  s=decision(s,0);
  socialInfluenceYear(s,{add:silent});
- assert.equal(s.socialInfluence.scores.community,before+3);
+ assert.equal(s.socialInfluence.scores.family,before+3);
  const signals=JSON.stringify(s.socialInfluence);
  socialInfluenceYear(s,{add:silent});
  assert.equal(JSON.stringify(s.socialInfluence),signals);
@@ -199,7 +199,11 @@ test('a real leader change updates the same campaign without phantom representat
  s.socialCircles.groups[0].leaderId=alternate;
  s.age++;
  civicMandatesYear(s,{add:silent});
- assert.equal(m.leaderA,alternate);
+ assert.equal(m.officeA,alternate,'actual group officeholder must change');
+ assert.ok(s.socialCircles.groups[0].members.includes(m.leaderA),
+  'the campaign representative must be a real member of that group');
+ assert.notEqual(m.leaderA,m.leaderB,
+  'joint organizations need two distinct actual representatives');
  assert.ok(m.history.some(x=>x.kind==='leadership'));
  assert.ok(E.validate(s));
 });

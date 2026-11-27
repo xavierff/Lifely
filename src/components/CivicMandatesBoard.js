@@ -32,6 +32,7 @@ function Active({m,commands,onAction,compact}){
    <Text style={S.vs}>↔</Text>
    <Representative name={m.bRepresentative||m.leaderBName} group={m.groupBName}/>
   </View>
+  {m.officeA===m.officeB?<Text style={S.small}>These organizations share a real officeholder, so two distinct living members represent the groups in this campaign.</Text>:null}
   <View style={S.meters}>
    <Gauge name="First group support" n={m.supportA}/>
    <Gauge name="Second group support" n={m.supportB}/>
