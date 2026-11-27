@@ -1079,5 +1079,8 @@ export const extraCareers = [
     "salary": 41150,
     "skill": "communication",
     "demand": 0.95
-  }
+  },
+  {"title":"Police officer","industry":"Public & legal","education":1,"knowledge":50,"salary":52000,"skill":"communication","demand":1.05},
+  {"title":"Detective","industry":"Public & legal","education":2,"knowledge":70,"salary":69000,"skill":"technical","demand":0.95},
+  {"title":"Forensic analyst","industry":"Public & legal","education":2,"knowledge":75,"salary":72000,"skill":"technical","demand":0.95}
 ];

@@ -29,7 +29,7 @@ export function justiceJourneyCommands(s,careerTitle=''){
  if((s.record||0)>0&&m.release&&!m.release.completed){
   const r=m.release,ok=r.lastAction!==s.age;
   put('reentry:training','Build an employment plan','Improve readiness and skills',ok&&!r.training);
-  put('reentry:support','Reconnect with a trusted person','Real relationship support',ok&&!r.support&&family(s).length>0);
+  put('reentry:support',family(s).length?'Reconnect with a trusted person':'Attend a community support session','Build a sustainable support network',ok&&!r.support);
   put('reentry:service','Complete community service','Restore trust through constructive activity',ok&&!r.service);
  }
  const professional=/police|detective|investigat|lawyer|attorney|forensic/i.test(careerTitle);
@@ -54,7 +54,7 @@ export function justiceJourneyAct(s,id,ctx,careerTitle){
  if(verb==='reentry'){
   const r=m.release;r.lastAction=s.age;r[key]=true;
   if(key==='training'){ctx.change(s,'knowledge',5);ctx.change(s,'performance',5);}
-  if(key==='support'){ctx.bond(s,family(s)[0],6,'Rebuilt contact after a difficult chapter');ctx.change(s,'stress',-5);}
+  if(key==='support'){const p=family(s)[0];if(p)ctx.bond(s,p,6,'Rebuilt contact after a difficult chapter');else ctx.change(s,'social',4);ctx.change(s,'stress',-5);}
   if(key==='service'){ctx.change(s,'kindness',5);ctx.change(s,'reputation',6);}
   log(s,'reentry','Completed the '+key+' reintegration milestone.',ctx);
   if(r.training&&r.support&&r.service&&s.age>r.age){r.completed=true;m.recoveries++;log(s,'recovery','Completed a multi-year reintegration plan. The conviction record remains.',ctx);}

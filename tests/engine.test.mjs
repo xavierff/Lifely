@@ -38,7 +38,7 @@ test('legacy carries an adult heir’s earned assets and education',()=>{let s=E
 
 test('each profession exposes a signature action with annual cooldown',()=>{for(const p of E.professions){let s=E.createLife({seed:8});s.age=p.age;s.cash=500000;s.education=3;s.stats[p.stat]=90;if(p.id==='entrepreneur')s=E.act(s,'business:studio');if(p.id==='investor')s=E.act(s,'invest:10000');s=E.act(s,'profession:'+p.id);s.profession.wins=3;s.profession.attempts=3;s.audience=3000;s.actions=3;assert.ok(E.commands(s).some(c=>c.id==='pro:special'&&c.enabled));s=E.act(s,'pro:special');assert.equal(s.profession.specials,1);assert.ok(!E.commands(s).some(c=>c.id==='pro:special'&&c.enabled));assert.ok(E.validate(s));}});
 
-test('catalog targets, distinct prompts and valid IDs',()=>{let s=E.createLife({seed:2});assert.equal(E.events.length,1109);assert.equal(new Set(E.events.map(e=>e.prompt)).size,1109);assert.equal(E.careers.length,150);assert.equal(new Set(E.careers.map(j=>j.title)).size,150);assert.equal(E.achievementStatus(s).length,136);assert.equal(new Set(E.achievementStatus(s).map(a=>a.name)).size,136);assert.equal(E.challengeProgress(s).length,68);assert.equal(new Set(E.challengeProgress(s).map(c=>c.id)).size,68);for(let i=0;i<E.events.length;i++)assert.equal(E.events[i].id,i);});
+test('catalog targets, distinct prompts and valid IDs',()=>{let s=E.createLife({seed:2});assert.equal(E.events.length,1109);assert.equal(new Set(E.events.map(e=>e.prompt)).size,1109);assert.equal(E.careers.length,153);assert.equal(new Set(E.careers.map(j=>j.title)).size,153);assert.equal(E.achievementStatus(s).length,136);assert.equal(new Set(E.achievementStatus(s).map(a=>a.name)).size,136);assert.equal(E.challengeProgress(s).length,68);assert.equal(new Set(E.challengeProgress(s).map(c=>c.id)).size,68);for(let i=0;i<E.events.length;i++)assert.equal(E.events[i].id,i);});
 test('bank savings conserve net worth and earn simulated interest',()=>{let s=E.createLife({seed:5});s.age=30;s.cash=100000;const before=E.worth(s);s=E.act(s,'save:10000');assert.equal(E.worth(s),before);assert.equal(s.bankSavings,10000);s=E.act(s,'unsave:1000');assert.equal(E.worth(s),before);assert.equal(s.bankSavings,9000);s=E.ageUp(s);assert.equal(s.bankSavings,9225);assert.equal(s.annual.savingsInterest,225);assert.ok(E.validate(s));});
 test('company hiring, products, marketing and cash flow',()=>{let s=E.createLife({seed:4});s.age=30;s.cash=500000;s=E.act(s,'business:studio');s=E.act(s,'company:hire');s=E.act(s,'company:product');assert.equal(s.business.employees,1);assert.equal(s.business.products.length,1);assert.equal(s.progression.productsLaunched,1);s.actions=3;let worth=E.worth(s);s=E.act(s,'company:capital');assert.equal(E.worth(s),worth);s=E.act(s,'company:marketing');assert.ok(s.business.demand>=70);s=E.ageUp(s);assert.equal(s.business.lastProfit,s.business.revenue-s.business.payroll-s.business.operating);assert.equal(s.annual.business,s.business.lastProfit);assert.ok(E.validate(s));});
 test('every regular job is reachable and supports industry-specific training',()=>{for(const j of E.careers){let s=E.createLife({seed:20});s.age=25;s.education=3;s.stats.knowledge=100;s=E.act(s,'job:'+j.id);s=E.act(s,'careertrain');assert.equal(s.job.id,j.id);assert.equal(s.job.experience,12);assert.equal(s.skills[j.skill],6);assert.ok(E.validate(s));}});
@@ -54,7 +54,7 @@ test('player profile deduplicates completed lives and retains collections',()=>{
 test('six world domains, stable content IDs and new collection are present',()=>{
  let s=E.createLife({seed:7});assert.equal(E.domains.length,6);assert.equal(E.destinations.length,18);assert.equal(E.events.length,1109);assert.equal(new Set(E.events.map(e=>e.prompt)).size,1109);
  assert.equal(E.events.filter(e=>e.origin==='world-drama').length,48);assert.ok(E.events.slice(1036).every((e,i)=>e.id===1036+i));
- assert.equal(E.achievementStatus(s).length,136);assert.equal(E.challengeProgress(s).length,68);assert.equal(E.ribbons.length,37);
+ assert.equal(E.achievementStatus(s).length,136);assert.equal(E.challengeProgress(s).length,68);assert.equal(E.ribbons.length,39);
  for(const d of E.domains)assert.equal(E.events.filter(e=>e.domain===d.id).length,8);
 });
 test('entertainment release and sport competition carry financial and annual consequences',()=>{
@@ -1433,7 +1433,7 @@ test('ambition choices are deterministic, immutable and isolated from unrelated 
  assert.ok(E.validate(a));
 });
 
-test('ordinary career storytelling covers all 150 jobs and all twelve original industries',()=>{
+test('ordinary career storytelling covers all 153 jobs and all twelve original industries',()=>{
  assert.equal(E.workplaceTypes.length,12);
  assert.equal(new Set(E.workplaceTypes.map(x=>x.industry)).size,12);
  for(const job of E.careers){
