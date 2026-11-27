@@ -281,3 +281,56 @@ test('normal engine age-up drives the same autonomous group world',()=>{
  const view=E.socialCirclesView(after);
  assert.ok(view.groups.some(x=>x.completedProjects>=0));
 });
+
+
+function successionFixture(seed=128001,third=false){
+ let s=base(seed);
+ if(third){
+  s=E.act(s,'friend');
+  const p=s.people.at(-1);p.role='sibling';p.age=30;
+  p.world.trust=70;p.world.rivalry=5;
+ }
+ const g=s.socialCircles.groups[0];
+ const incumbent=s.people.find(p=>'person-'+p.id===g.leaderId);
+ const challenger=s.people.find(p=>p.id!==incumbent.id);
+ incumbent.world.trust=40;incumbent.world.rivalry=50;
+ challenger.world.trust=90;challenger.world.rivalry=5;
+ years(s,6);
+ assert.ok(g.governance.election);
+ return s;
+}
+test('1.28: leadership contest uses distinct existing adult members and ordinary actions',()=>{
+ const s=successionFixture(),g=s.socialCircles.groups[0],e=g.governance.election;
+ assert.ok(g.members.includes(e.incumbent)&&g.members.includes(e.challenger));
+ const n=E.act(s,'circle:succession:'+e.id+':1');
+ assert.equal(n.socialCircles.groups[0].governance.election.response,'challenger');
+ assert.equal(n.actions,s.actions-1);
+ assert.equal(n.cash,s.cash);assert.equal(n.rng,s.rng);assert.ok(E.validate(n));
+});
+test('1.28: a tied two-member ballot retains incumbent and records only real votes',()=>{
+ const s=successionFixture(128002),g=s.socialCircles.groups[0],leader=g.leaderId;
+ years(s,2);const r=g.governance.results.at(-1);
+ assert.equal(r.totalVotes,2);assert.equal(r.votesForChallenger,1);
+ assert.equal(r.outcome,'retained');assert.equal(g.leaderId,leader);assert.ok(E.validate(s));
+});
+test('1.28: three real members can elect a challenger and change project priorities',()=>{
+ const s=successionFixture(128003,true),g=s.socialCircles.groups[0],e=g.governance.election,previousMission=g.project.mission;
+ years(s,2);const r=g.governance.results.at(-1);
+ assert.equal(r.totalVotes,3);assert.equal(r.votesForChallenger,2);
+ assert.equal(r.outcome,'new-leadership');assert.equal(g.leaderId,e.challenger);
+ assert.equal(g.governance.policy,'renewal');assert.ok(E.validate(s));
+});
+test('1.28: neutral player endorsement cannot modify contacts or institutions beyond recorded response',()=>{
+ const s=successionFixture(128004),e=s.socialCircles.groups[0].governance.election;
+ const n=E.act(s,'circle:succession:'+e.id+':2');
+ assert.deepEqual(n.people,s.people);assert.deepEqual(n.stats,s.stats);assert.equal(n.cash,s.cash);
+ assert.equal(n.socialCircles.groups[0].governance.election.incumbentSupport,0);
+ assert.equal(n.socialCircles.groups[0].governance.election.challengerSupport,0);assert.ok(E.validate(n));
+});
+test('1.28: invalid candidates fail validation and descendants inherit no active contest',()=>{
+ const s=successionFixture(128005),bad=structuredClone(s),e=bad.socialCircles.groups[0].governance.election;
+ e.challenger=e.incumbent;assert.equal(E.validate(bad),false);
+ const heir=E.createLife({seed:128006});socialCirclesInheritance(heir,s);
+ assert.equal(heir.socialCircles.groups[0].governance.election,null);
+ assert.deepEqual(heir.socialCircles.groups[0].members,[]);assert.ok(E.validate(heir));
+});
