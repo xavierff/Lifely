@@ -51,7 +51,7 @@ export function luxuryCommands(s,c){
 export function luxuryAct(s,id,ctx,c){
  if(!luxuryCommands({...s,actions:s.actions+1},c).some(x=>x.id===id&&x.enabled))throw Error('Luxury activity unavailable.');
  const m=ensure(s),[,action,key]=id.split(':'),d=find(key),h=m.holdings.find(x=>x.id===key);
- if(action==='buy'){const cost=price(d,c);ctx.spend(s,cost);m.holdings.push({id:key,value:cost,condition:100,boughtAge:s.age,lastService:null});if(!m.ownedEver.includes(key))m.ownedEver.push(key);ctx.change(s,'happiness',d.joy);ctx.change(s,'reputation',d.status);log(s,'purchase','Bought '+d.name+'.',ctx);}
+ if(action==='buy'){const cost=price(d,c);ctx.spend(s,cost);m.holdings.push({id:key,value:cost,condition:100,boughtAge:s.age,lastService:null});const first=!m.ownedEver.includes(key);if(first)m.ownedEver.push(key);ctx.change(s,'happiness',first?d.joy:1);if(first)ctx.change(s,'reputation',d.status);log(s,'purchase','Bought '+d.name+'.',ctx);}
  if(action==='sell'){const proceeds=money(h.value*.92);s.cash+=proceeds;m.holdings=m.holdings.filter(x=>x.id!==key);log(s,'sale','Sold '+d.name+' for '+fmt(proceeds)+'.',ctx);}
  if(action==='service'){ctx.spend(s,Math.max(500,money(price(d,c)*.015)));h.condition=cap(h.condition+25);h.lastService=s.age;log(s,'service','Maintained '+d.name+'.',ctx);}
  if(action==='renovate'){
