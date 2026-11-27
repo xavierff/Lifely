@@ -75,7 +75,7 @@ function log(t,s,kind,message,detail){
 function create(s,e,ctx){
  const c=cast(s,e),m=ensure(s);
  if(!c||m.threads.length>=5)return;
- const kind=typeOf(e),positive=POS.has(e.ending);
+ const kind=typeOf(e),positive=POS.has(e.ending)&&e.mode!=='election';
  const t={
   id:'afterlife-g'+s.generation+'-'+(++m.serial),sourceId:e.id,
   sourceAge:e.endedAge,sourceEnding:e.ending,mode:e.mode,

@@ -82,14 +82,14 @@ export default function PublicAftermathBoard({view,commands=[],onAction,compact=
  const threads=(view.threads||[]).filter(x=>!onlyProfessional||x.kind.includes('professional'));
  const recent=(view.completed||[]).find(x=>x.endedAge===view.age&&
   (!onlyProfessional||x.kind.includes('professional')));
- if(compact&&!threads.some(x=>x.pending)&&!recent)return null;
+ if(compact&&!threads.some(x=>x.pending||x.decisions.at(-1)?.age===view.age)&&!recent)return null;
  return <View testID={compact?'public-aftermath-preview':'public-aftermath-board'} style={S.root}>
   <View style={S.split}><View style={{flex:1,gap:3}}>
    <Text style={S.overline}>LIVING CONSEQUENCES · THE LONG GAME</Text>
    <Text style={S.title}>{compact?'The past has returned':'Choices that echo for decades'}</Text>
   </View><Text style={S.mini}>{threads.length} ONGOING</Text></View>
   <Text style={S.desc}>Elections create rivals. Competitions build partnerships or grudges. Festivals reshape communities. Agreements gain new supporters or opponents years later.</Text>
-  {threads.filter(t=>!compact||t.pending).map(t=>
+  {threads.filter(t=>!compact||t.pending||t.decisions.at(-1)?.age===view.age).map(t=>
    <Saga key={t.id} saga={t} commands={commands} onAction={onAction} compact={compact}/>)}
   {compact&&recent&&!threads.some(x=>x.pending)?<View testID="aftermath-recent" style={S.card}>
    <Text style={S.overline}>THIS YEAR'S LONG-TERM RESULT</Text>
