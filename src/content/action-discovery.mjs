@@ -7,7 +7,7 @@ const groups={
  World:['city','world','character','circle','intergroup','publicplay','afterlife','mandate','pulse','autonomy'],
  Money:['lifestyle','buy','sell','invest','withdraw','bank','marketbuy','marketsell','renttenant','rentrepair','rentraise','rentlower','budget','debt','luxury','empire'],
  Justice:['justice','justicejourney'],
- Life:['rest','exercise','learn','create','volunteer','pet','petcare','club','hobby','scene','fate','episode','ambition','ripple','clinic']
+ Life:['identity','rest','exercise','learn','create','volunteer','pet','petcare','club','hobby','scene','fate','episode','ambition','ripple','clinic']
 };
 export function categoryForAction(id){
  if(id.startsWith('scene:start:court'))return 'Justice';
