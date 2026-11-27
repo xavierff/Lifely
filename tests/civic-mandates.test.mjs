@@ -315,7 +315,7 @@ test('1.26: real evidence reviews improve proof, relationships and player knowle
  assert.ok(E.commands(s).find(c=>c.id===id&&c.enabled));
  s=E.act(s,id);
  assert.equal(s.actions,oldActions-1);
- assert.ok(s.civicMandates.deliveries[0].verification>proof);
+ assert.equal(s.civicMandates.deliveries[0].verification,Math.min(100,proof+12));
  assert.ok(s.people[0].world.trust>=trust);
  assert.equal(s.stats.knowledge,Math.min(100,knowledge+1));
  assert.equal(s.cash,cash);assert.equal(s.rng,rng);
