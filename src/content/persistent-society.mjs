@@ -8,7 +8,7 @@ export const familyClock=s=>s.age+(s.npcFamilies?.society?.offset||0);
 export const ensureSociety=s=>(s.npcFamilies.society??=fresh());
 export function familyPerson(s,pid){
  const p=s.people.find(p=>p.id===pid);if(p)return p;
- const q=s.npcFamilies?.society,old=q?.identities.find(p=>p.id===pid);
+ const q=s.npcFamilies?.society,old=Array.isArray(q?.identities)?q.identities.find(p=>p?.id===pid):null;
  if(old&&q.playerId===pid)return {...old,name:s.name,age:s.age,alive:s.alive,role:'player',world:{...old.world,job:s.job?.id??null,cash:s.cash,debt:s.debt}};
  return old||null;
 }
@@ -34,6 +34,12 @@ function relation(s,a,b){
  return kinAncestors(s,a).has(b)?'Ancestor':kinAncestors(s,b).has(a)?'Descendant':familyRelated(s,a,b)?'Extended relative':null;
 }
 function pushEdge(q,parent,child){if(parent!==child&&!q.kinship.some(x=>x.parent===parent&&x.child===child))q.kinship.push({parent,child});}
+export function syncPlayerKinship(s){
+ if(!s.npcFamilies?.unions.length&&!s.npcFamilies?.society?.playerId)return;
+ const so=ensureSociety(s);
+ if(so.playerId===null){const pid=s.nextId++;so.playerId=pid;so.identities.push({id:pid,name:s.name,age:s.age,alive:true,role:'player',bond:65,world:{job:s.job?.id??null,cash:0,debt:0}});}
+ for(const p of s.people){if(p.role==='child')pushEdge(so,so.playerId,p.id);if(p.role==='parent')pushEdge(so,p.id,so.playerId);}
+}
 export function inheritSociety(next,old,heir){
  if(!old.npcFamilies||(!old.npcFamilies.unions.length&&!old.npcFamilies.society?.playerId))return;
  next.npcFamilies=copy(old.npcFamilies);const q=next.npcFamilies,so=ensureSociety(next),at=familyClock(old);
@@ -57,21 +63,21 @@ export function inheritSociety(next,old,heir){
  if(u.adults.includes(heir.id))for(const cid of u.children){const c=next.people.find(p=>p.id===cid);if(c&&c.alive)c.role='child';}}
  for(const p of next.people){const r=relation(next,heir.id,p.id);if(p.role==='partner'||p.role==='child')continue;if(r==='Parent')p.role='parent';else if(r==='Sibling')p.role='sibling';else if(r==='Grandparent')p.role='grandparent';}
  // A former NPC business is retained as a historical family asset; player economy never pays twice.
- for(const b of so.enterprises)if(b.ownerId===heir.id&&b.status==='active')b.status='player';
+ for(const b of so.enterprises)if(b.ownerId===heir.id&&b.status==='active'){next.cash+=b.value;b.status='player';}
  so.news.push({year:at,text:old.name+' → '+heir.name+': the same society continues.'});so.news=so.news.slice(-40);
 }
-function heirsFor(s,pid){const q=s.npcFamilies;const children=edges(s).filter(x=>x.parent===pid).map(x=>x.child);const spouse=q.unions.find(u=>u.status==='married'&&u.adults.includes(pid))?.adults.find(i=>i!==pid);return [...new Set([...(spouse?[spouse]:[]),...children])].map(i=>s.people.find(p=>p.id===i&&p.alive)).filter(p=>p&&p.world);}
+function heirsFor(s,pid){const q=s.npcFamilies;const children=edges(s).filter(x=>x.parent===pid).map(x=>x.child);const spouse=q.unions.find(u=>['married','player'].includes(u.status)&&u.adults.includes(pid))?.adults.find(i=>i!==pid);return [...new Set([...(spouse?[spouse]:[]),...children])].map(i=>familyPerson(s,i)).filter(p=>p&&p.alive&&p.world);}
 function log(so,at,text){so.news.push({year:at,text});so.news=so.news.slice(-40);}
 export function societyYear(s,ctx,roll){
  const q=s.npcFamilies;if(!q||!q.unions.length)return;const so=ensureSociety(s),at=familyClock(s),cost=ctx.country(s).cost;
  const people=new Set([...q.unions.flatMap(u=>[...u.adults,...u.children])]);
  for(const p of s.people.filter(p=>people.has(p.id)&&!p.alive&&p.world&&!p.world.familyEstateSettled)){
   const heirs=heirsFor(s,p.id),net=money(p.world.cash-p.world.debt);p.world.familyEstateSettled=true;p.world.cash=0;p.world.debt=0;
-  const shares=heirs.map((h,i)=>({id:h.id,amount:Math.floor(net/heirs.length)+(i===0?net%heirs.length:0)}));for(const h of shares)s.people.find(p=>p.id===h.id).world.cash+=h.amount;
+  const shares=heirs.map((h,i)=>({id:h.id,amount:Math.floor(net/heirs.length)+(i===0?net%heirs.length:0)}));for(const h of shares){if(h.id===so.playerId)s.cash+=h.amount;else s.people.find(p=>p.id===h.id).world.cash+=h.amount;}
   so.estates.push({year:at,personId:p.id,name:p.name,amount:shares.reduce((n,h)=>n+h.amount,0),heirs:shares});so.estates=so.estates.slice(-40);
   if(shares.length)log(so,at,p.name+' left '+shares.length+' family beneficiaries an independent estate.');
  }
- for(const b of so.enterprises){if(b.status!=='active')continue;let p=s.people.find(p=>p.id===b.ownerId&&p.alive);if(!p){const heirs=heirsFor(s,b.ownerId).filter(p=>p.age>=18);if(!heirs.length){b.status='closed';continue;}p=heirs.sort((a,b)=>b.age-a.age||a.id-b.id)[0];b.ownerId=p.id;b.transfers++;log(so,at,p.name+' inherited '+b.name+'.');}
+ for(const b of so.enterprises){if(b.status!=='active')continue;let p=s.people.find(p=>p.id===b.ownerId&&p.alive);if(!p){const heirs=heirsFor(s,b.ownerId).filter(p=>p.age>=18);if(!heirs.length){b.status='closed';continue;}p=heirs.sort((a,b)=>b.age-a.age||a.id-b.id)[0];b.ownerId=p.id;b.transfers++;log(so,at,p.name+' inherited '+b.name+'.');if(p.id===so.playerId){s.cash+=b.value;b.status='player';continue;}}
  const rate=(roll(b.id,'enterprise-return')-.42)*.16;const profit=Math.round(b.value*rate);b.lastProfit=profit;if(profit>0)p.world.cash+=profit;else b.value=Math.max(0,b.value+profit);if(b.value<100)b.status='closed';
  }
  if(so.enterprises.length>=24)return;
@@ -79,7 +85,7 @@ export function societyYear(s,ctx,roll){
 }
 export function societyView(s){const q=s.npcFamilies,so=q?.society;if(!so)return {year:familyClock(s),persistent:false,relatives:[],estates:[],enterprises:[],news:[]};
  const relatives=so.playerId===null?[]:[...s.people,...so.identities.filter(p=>p.id!==so.playerId)].map(p=>({...p,relationship:relation(s,so.playerId,p.id)})).filter(p=>p.relationship).map(p=>({id:p.id,name:p.name,age:p.age,alive:p.alive,relationship:p.relationship}));
- return {year:familyClock(s),persistent:so.playerId!==null,relatives,estates:so.estates.slice().reverse().map(e=>({...e,heirs:e.heirs.map(h=>({...h,name:familyPerson(s,h.id)?.name||'Relative'}))})),enterprises:so.enterprises.map(b=>({...b,owner:familyPerson(s,b.ownerId)?.name||'Unknown'})),news:so.news.slice().reverse()};
+ return {year:familyClock(s),persistent:s.generation>1,relatives,estates:so.estates.slice().reverse().map(e=>({...e,heirs:e.heirs.map(h=>({...h,name:familyPerson(s,h.id)?.name||'Relative'}))})),enterprises:so.enterprises.map(b=>({...b,owner:familyPerson(s,b.ownerId)?.name||'Unknown'})),news:so.news.slice().reverse()};
 }
 export function validateSociety(s){const so=s.npcFamilies?.society;if(so===undefined)return true;
  if(!so||so.version!==1||!Number.isSafeInteger(so.offset)||familyClock(s)<0||!(so.playerId===null||id(so.playerId))||!Array.isArray(so.identities)||!Array.isArray(so.kinship)||!Array.isArray(so.estates)||so.estates.length>40||!Array.isArray(so.enterprises)||so.enterprises.length>24||!Array.isArray(so.news)||so.news.length>40)return false;
