@@ -170,6 +170,55 @@ export function flowGuidance(s,commands){
  }
  return chosen;
 }
+// Keep alternate decisions together. Only current enabled engine commands
+// are exposed; this panel does not select or execute a decision automatically.
+const storySources={
+ npcgoal:['Someone else’s dream','relationships',83],
+ cross:['A changing relationship','relationships',90],
+ clash:['Competing ambitions','career',84],
+ influence:['Reputation and trust','relationships',82],
+ circle:['An organization needs a response','relationships',80],
+ intergroup:['An intergroup negotiation','relationships',82],
+ afterlife:['A past public decision returns','relationships',91],
+ mandate:['Public commitments and consequences','relationships',87]
+};
+function storyIdentity(s,id){
+ const parts=id.split(':'),family=parts[0],key=parts.at(-2);
+ if(family==='npcgoal'){const a=s.npcAmbitions?.active?.find(x=>x.id===key);return a?{name:a.personName||a.name||a.goal,context:a.goal}:{};}
+ if(family==='clash'){const a=s.competingFutures?.active?.find(x=>x.id===key);return a?{name:a.personName,context:a.title}:{};}
+ if(family==='cross'){const a=s.crossroads?.open?.find(x=>x.id===key);return a?{name:[a.aName,a.bName].filter(Boolean).join(' & '),context:a.title}:{};}
+ if(family==='influence'){const a=s.socialInfluence?.active;return a?.id===key?{name:a.personName,context:a.context}:{};}
+ if(family==='circle'){
+  const g=s.socialCircles?.groups?.find(x=>x.governance?.election?.id===key||x.institution?.crisis?.id===key);
+  if(g)return {name:g.name,context:parts[1]==='succession'?'Leadership succession':'Internal faction challenge',resolutionAge:(g.governance?.election?.id===key?g.governance.election:g.institution.crisis).dueAge};
+  const o=s.socialCircles?.invites?.find(x=>x.id===key);
+  return o?{name:o.personName,context:o.title}:{};
+ }
+ if(family==='intergroup'){const a=s.organizationNetwork?.active;return a?.id===key?{name:a.aName+' & '+a.bName,context:'Public cooperation'}:{};}
+ if(family==='afterlife'){const a=s.publicAftermath?.threads?.find(x=>x.id===key);return a?{name:a.title,context:'A consequence from your earlier public story'}:{};}
+ if(family==='mandate'){
+  const m=s.civicMandates,a=[m?.active,...(m?.deliveries||[]),...(m?.reversals||[])].find(x=>x?.id===key);
+  return a?{name:a.groupAName&&a.groupBName?a.groupAName+' & '+a.groupBName:undefined,context:parts[1]==='reversal'?'Accountability dispute':parts[1]==='delivery'?'Implementation review':'Multi-year mandate',resolutionAge:a.dueAge??a.expiryAge}:{};
+ }
+ return {};
+}
+export function storyOpportunities(s,commands=[]){
+ const groups=new Map(),focus=flowState(s).focus;
+ if(!s.alive)return [];
+ for(const c of commands){
+  const family=c.id.split(':')[0],meta=storySources[family];
+  if(!c.enabled||!meta||!/:([012])$/.test(c.id))continue;
+  const key=c.id.slice(0,c.id.lastIndexOf(':'));
+  if(!groups.has(key)){
+   const identity=storyIdentity(s,c.id);
+   groups.set(key,{id:key,title:identity.name||meta[0],category:meta[0],context:identity.context||'',resolutionAge:Number.isInteger(identity.resolutionAge)&&identity.resolutionAge>=s.age?identity.resolutionAge:null,
+    rank:meta[2]+(focus===meta[1]?8:0)+(identity.resolutionAge===s.age?12:0),choices:[]});
+  }
+  const group=groups.get(key);
+  if(!group.choices.some(x=>x.id===c.id))group.choices.push({id:c.id,label:c.label,detail:c.detail||''});
+ }
+ return [...groups.values()].sort((a,b)=>b.rank-a.rank||a.id.localeCompare(b.id)).map(({rank,...g})=>({...g,choices:g.choices.sort((a,b)=>a.id.localeCompare(b.id))}));
+}
 export function flowSummary(s,commands=[]){
  const f=flowState(s),stress=s.stats?.stress||0,pressure=stress>=78?'High':stress>=50?'Elevated':'Steady',
   moneyRisk=hardship(s),age=s.age,focus=flowThemes.find(x=>x.id===f.focus)||flowThemes[0];
@@ -180,7 +229,7 @@ export function flowSummary(s,commands=[]){
  return {focus:f.focus,focusLabel:focus.label,stage:stage(age),pressure,moneyRisk,
   latest:last?{...last}:null,recent:f.recent.slice(-5).reverse(),
   chapters:latestChapters,summary:{choices:f.choices,years:f.yearsSeen,quietYears:f.quietWins},
-  suggested:flowGuidance(s,commands),headline:active?.status==='ready'?'Complete your active story before advancing':
+  suggested:flowGuidance(s,commands),opportunities:storyOpportunities(s,commands),headline:active?.status==='ready'?'Complete your active story before advancing':
    unread?'A past story is ready for a new chapter':
    moneyRisk?'Stability matters this year':
    stress>=75?'Make room for recovery':
