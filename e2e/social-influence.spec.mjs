@@ -47,7 +47,7 @@ test('three earned reputation circles and a real professional opportunity surviv
  expect(stored.people[0].world.trust).toBe(s.people[0].world.trust+8);
  expect(stored.socialInfluence.active).toBeNull();
  expect(stored.socialInfluence.completed[0].ending).toBe('earned');
- expect(stored.actions).toBe(2);
+ expect(stored.actions).toBe(s.actions-1);
  expect(E.validate(stored)).toBe(true);
 });
 test('accountability offers repair actual rivalry, without fabricated cash or employment',async({page})=>{
