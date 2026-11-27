@@ -1149,9 +1149,9 @@ function readyForHobby(seed=17001,age=19){
  const s=E.createLife({seed});s.age=age;s.pending=null;s.actions=3;
  return s;
 }
-test('all eight original hobbies have unique tactical problems and readable strategies',()=>{
- assert.equal(E.hobbyTypes.length,8);
- assert.equal(new Set(E.hobbyTypes.map(x=>x.id)).size,8);
+test('all twelve original hobbies have unique tactical problems and readable strategies',()=>{
+ assert.equal(E.hobbyTypes.length,12);
+ assert.equal(new Set(E.hobbyTypes.map(x=>x.id)).size,12);
  for(const hobby of E.hobbyTypes){
   const s=readyForHobby(17010,Math.max(8,hobby.minAge+1));
   const cmd='hobby:start:'+hobby.id+':practice';
