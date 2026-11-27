@@ -82,6 +82,17 @@ function observe(s){
   impact(s,'story',x.id,clip(x.title||'A social story')+' — '+result,
    'community',value,x.firstId||null);
  }
+ // Long-term choices affect earned social standing, but autonomous NPC
+ // development and unanswered invitations create no free player rewards.
+ for(const t of [...(s.publicAftermath?.threads||[]),...(s.publicAftermath?.archive||[])]){
+  for(let i=0;i<(t.decisions||[]).length;i++){
+   const d=t.decisions[i],group=t.kind.includes('professional')?
+    'professional':t.kind.includes('community')?'community':'family';
+   impact(s,'afterlife',t.id+':'+i,
+    t.aName+' and '+t.bName+' — '+d.label,
+    group,d.tag==='repair'?3:d.tag==='polarize'?-3:0,t.aId);
+  }
+ }
  // Completing an interactive public event is evidence only when the player
  // meaningfully participated; watching one unfold is never a free reward.
  for(const x of s.playableEvents?.completed||[]){
