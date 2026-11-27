@@ -211,6 +211,9 @@ export function storyDirectorView(s){
  return {id:e.id,title:e.title,theme:e.theme,phase:e.phase,round:e.phase+1,total:3,
   lead:e.firstName,other:e.secondName,headline:theme.beats[e.phase],prompt:withActors(theme.scenes[e.phase],e),
   backstory:(e.previous?'An earlier story with these characters involved '+e.previous+'. ':theme.context+' ')+
+   ((s.socialInfluence?.completed||[]).findLast(x=>x.personId===e.firstId||x.personId===e.secondId)?
+    (()=>{const echo=(s.socialInfluence?.completed||[]).findLast(x=>x.personId===e.firstId||x.personId===e.secondId);
+     return echo.name+' remembers a reputation-driven decision ending '+echo.ending+'. ';})():'')+
    ((s.competingFutures?.completed||[]).findLast(x=>x.personId===e.firstId||x.personId===e.secondId)?
     (()=>{const c=(s.competingFutures?.completed||[]).findLast(x=>x.personId===e.firstId||x.personId===e.secondId);
      return c.personName+' and the player previously faced '+c.title.toLowerCase()+' ending in '+c.ending+'. ';})():'')+
