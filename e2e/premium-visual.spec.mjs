@@ -5,7 +5,7 @@ test('appearance persists and NPC portraits appear on a narrow screen',async({pa
  await page.setViewportSize({width:320,height:740});await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
  await page.getByRole('tab',{name:'More'}).click();const b=page.getByTestId('appearance-studio');await b.getByTestId('appearance-toggle').click();await b.getByTestId('appearance-skin-2').click();
  await expect.poll(async()=>page.evaluate(()=>JSON.parse(localStorage.getItem('lifely.save.v2')).appearance?.skin)).toBe(2);
- await page.reload();await page.getByRole('tab',{name:'More'}).click();await b.getByTestId('appearance-toggle').click();await expect(b.getByTestId('appearance-skin-2')).toHaveAttribute('aria-selected','true');
+ await page.reload();await page.getByRole('tab',{name:'More'}).click();await b.getByTestId('appearance-toggle').click();await expect(b.getByTestId('appearance-skin-2')).toHaveAttribute('aria-checked','true');
  await page.getByRole('tab',{name:'People'}).click();await expect(page.getByTestId('npc-portrait-'+s.people[0].id)).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(322);
  await page.getByTestId('advance-year').click();await expect(page.getByTestId('milestone-celebration')).toContainText('Reached age 18');await page.getByTestId('milestone-dismiss').click();await expect(page.getByTestId('milestone-celebration')).toHaveCount(0);
