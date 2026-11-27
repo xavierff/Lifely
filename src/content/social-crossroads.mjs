@@ -61,6 +61,10 @@ const statusNetwork=l=>{
  return 'acquaintances';
 };
 const asNum=x=>Number.isFinite(x)?clamp(x):50;
+// Generic social edges store loyalty instead of a separate rivalry metric.
+// Preserve that schema: a neutral choice must not invent a rivalry or change loyalty.
+const rivalryFor=(link,source)=>source==='network'&&!Number.isFinite(link.rivalry)?
+ clamp(100-(link.loyalty??50)):asNum(link.rivalry);
 function candidates(s){
  const autonomy=s.world?.autonomy||{},network=s.world?.network||{};
  const result=[];
@@ -101,7 +105,7 @@ function offer(s,{source,link,status},ctx){
   kind:description.kind,sourceStatus:status,title:description.title,
   introduction:description.prompt(data.a.name,data.b.name),startAge:s.age,dueAge:s.age,
   status:'open',steps:[],ending:null,endedAge:null,finalLine:null,
-  firstTrust:asNum(link.trust),lastTrust:asNum(link.trust),firstRivalry:asNum(link.rivalry)};
+  firstTrust:asNum(link.trust),lastTrust:asNum(link.trust),firstRivalry:rivalryFor(link,source)};
  x.open.push(inv);
  x.seen.push({source,key,status,age:s.age});x.seen=x.seen.slice(-MAX_SEEN);
  announcement(s,data.a.name+' and '+data.b.name+' have a new crossroads: '+description.title+'.',ctx);
@@ -130,11 +134,12 @@ function touchNPC(s,id,dTrust,dRivalry,why){
 function changeLink(s,inv,choice,ctx){
  const link=linkFor(s,inv.source,inv.sourceKey);
  if(!link||!persons(s,link))return null;
- const previous={trust:asNum(link.trust),rivalry:asNum(link.rivalry),status:link.status};
+ const previous={trust:asNum(link.trust),rivalry:rivalryFor(link,inv.source),status:link.status};
+ const isNeutral=choice.trust===0&&choice.rivalry===0;
  link.trust=clamp(previous.trust+choice.trust);
- link.rivalry=clamp(previous.rivalry+choice.rivalry);
  if(inv.source==='alumni'){
-  link.status=statusAlumni(link);
+  link.rivalry=clamp(previous.rivalry+choice.rivalry);
+  if(!isNeutral)link.status=statusAlumni(link);
   if(previous.status==='partners'&&link.status!=='partners'&&link.kind==='romantic'){
    const a=nameFor(s,link.a),b=nameFor(s,link.b);
    if(a?.partnerId===link.b)a.partnerId=null;
@@ -154,19 +159,25 @@ function changeLink(s,inv,choice,ctx){
    text:inv.aName+' and '+inv.bName+' reconsidered their relationship.'});
   link.history=link.history.slice(-8);
  }else{
-  link.loyalty=clamp((link.loyalty??50)+(choice.trust>=0?2:-3));
-  link.status=statusNetwork(link);
+  // Existing network edges express tension through loyalty. A neutral decision
+  // preserves both scores and their original relationship category unchanged.
+  if(Number.isFinite(link.rivalry))link.rivalry=clamp(previous.rivalry+choice.rivalry);
+  if(!isNeutral){
+   link.loyalty=clamp((link.loyalty??50)-choice.rivalry+
+    (choice.trust>0?2:choice.trust<0?-3:0));
+   link.status=statusNetwork(link);
+  }
   link.memories??=[];
   link.memories.push({age:s.age,event:'A social crossroads: '+choice.tag});
   link.memories=link.memories.slice(-8);
  }
- const aBoost=choice.tag==='side'?choice.trustNpc:choice.trustNpc;
+ const aBoost=choice.trustNpc;
  const bBoost=choice.tag==='side'?-Math.max(2,choice.trustNpc):choice.trustNpc;
  touchNPC(s,inv.aId,aBoost,choice.rivalryNpc,inv.title);
  touchNPC(s,inv.bId,bBoost,choice.rivalryNpc,inv.title);
  const before=choice.stat?s.stats[choice.stat]:null;
  if(choice.stat)ctx.change(s,choice.stat,choice.delta);
- return {trust:link.trust-previous.trust,rivalry:link.rivalry-previous.rivalry,
+ return {trust:link.trust-previous.trust,rivalry:rivalryFor(link,inv.source)-previous.rivalry,
   statusBefore:previous.status,statusAfter:link.status,
   stat:choice.stat,statDelta:choice.stat?s.stats[choice.stat]-before:0,
   aTrust:choice.trustNpc,bTrust:bBoost};
@@ -261,7 +272,7 @@ export function crossroadsView(s){
    const link=linkFor(s,inv.source,inv.sourceKey);
    return {...inv,
     nowStatus:link?.status||'unavailable',nowTrust:link?asNum(link.trust):null,
-    nowRivalry:link?asNum(link.rivalry):null,
+    nowRivalry:link?rivalryFor(link,inv.source):null,
     remaining:Math.max(0,inv.dueAge-s.age),changes:inv.steps.at(-1)||null};
   }),
   completed:x.completed.slice(-9).reverse().map(inv=>({

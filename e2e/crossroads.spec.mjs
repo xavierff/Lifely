@@ -51,7 +51,7 @@ test('the years-later social decision changes relationships and enters the chron
  const board=page.getByTestId('crossroads-board');
  await expect(board).toContainText('THE STORY RETURNS');
  await board.getByRole('button',{name:/Help them rebuild a realistic agreement/}).click();
- await expect(page.getByTestId('crossroads-archive')).toContainText('Alliance');
+ await expect(page.getByTestId('crossroads-archive')).toContainText('ALLIANCE');
  await expect(page.getByTestId('crossroads-archive')).toContainText('cooperation survived');
  await page.reload();
  await page.getByRole('tab',{name:'More'}).click();

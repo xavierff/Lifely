@@ -53,9 +53,11 @@ test('mediation and taking sides change actual NPC relationships in opposite dir
  const a=reply(s,0),b=reply(JSON.parse(json),1),c=reply(JSON.parse(json),2);
  const network=x=>x.world.network.edges[0];
  assert.ok(network(a).trust>network(b).trust);
- assert.ok(network(a).rivalry<network(b).rivalry);
+ assert.ok(network(a).loyalty>network(b).loyalty,'mediation protects loyalty while taking sides increases tension');
  assert.equal(network(c).trust,network(s).trust,'respecting independence does not create trust');
  assert.equal(network(c).rivalry,network(s).rivalry,'respecting independence does not create rivalry');
+ assert.equal(network(c).loyalty,network(s).loyalty,'neutral choices preserve actual NPC loyalty');
+ assert.equal(network(c).status,network(s).status,'neutral choices preserve the relationship outcome');
  assert.ok(a.people[1].world.trust>b.people[1].world.trust);
  assert.equal(a.actions,2);
  assert.equal(a.crossroads.open[0].status,'waiting');
