@@ -79,6 +79,15 @@ function member(s,p){
   independence:p.role==='child'?clamp(20+p.age*2):50,resilience:50,care:50,history:[],lastContactAge:s.age};
  f.members[id]=m;return m;
 }
+export function parentingPractice(s,p,style,ctx){
+ const m=member(s,p),effects={encourage:{care:8,resilience:5,independence:2,trust:7,bond:5,talent:1},structure:{care:3,resilience:8,independence:3,trust:5,bond:4,talent:4},independence:{care:3,resilience:4,independence:9,trust:6,bond:5,talent:2}}[style];
+ if(!effects||p.role!=='child'||p.age<3||p.age>17)throw Error('Parenting activity unavailable.');
+ for(const k of ['care','resilience','independence','trust'])m[k]=clamp(m[k]+effects[k]);
+ m.lastContactAge=s.age;ctx.bond(s,p,effects.bond,'A parenting experience shaped our relationship');
+ if(p.world)p.world.talent=clamp(p.world.talent+effects.talent);
+ m.history.push({age:s.age,event:'Parenting practice',response:style+' shaped '+p.name+'’s development.'});m.history=m.history.slice(-8);
+ return m;
+}
 function choiceEffect(s,p,choice,ctx,storyKind){
  const m=member(s,p),bonus=m.values==='care'&&choice===0?3:m.values==='security'&&choice===1?3:
   m.values==='freedom'&&choice===0?2:m.values==='fairness'&&choice===1?2:
