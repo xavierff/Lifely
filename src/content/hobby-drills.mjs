@@ -5,7 +5,7 @@ const content={
  {cue:'A bishop stands on c1 on an empty board. Which destination is legal?',options:[['h6','Same diagonal'],['c6','Same file'],['f3','Not the same diagonal']],ideal:0,lesson:'A bishop travels along diagonals.',visual:['c1','h6','c6','f3']},
  {cue:'A knight stands on e4 on an empty board. Which square is one legal knight move away?',options:[['e6','Straight two'],['g6','Two by two'],['f6','One by two']],ideal:2,lesson:'A knight moves two squares in one direction and one perpendicular.',visual:['e4','e6','g6','f6']}],
  streetball:[
- {cue:'Choose the highest expected points: each shot has the shown probability.',options:[['2-point · 45%','Inside shot'],['3-point · 50%','Open three'],['2-point · 55%','Midrange']],ideal:1,lesson:'Expected points = points × probability; 1.5 beats 1.1 and 0.9.',visual:['0.90','1.50','1.10']},
+ {cue:'Choose the highest expected points: each shot has the shown probability.',options:[['2-point · 45%','Inside shot'],['3-point · 50%','Open three'],['2-point · 55%','Midrange']],ideal:1,lesson:'Expected points = points × probability; 1.5 beats 1.1 and 0.9.',visual:['2 pts × 45%','3 pts × 50%','2 pts × 55%']},
  {cue:'Your team trails by two with one possession. Which made shot wins outright?',options:[['3-point shot','Three points'],['2-point shot','Two points'],['Free throw','One point']],ideal:0,lesson:'Three points turn a two-point deficit into a one-point lead.',visual:['3','2','1']},
  {cue:'One defender covers the middle; two cover the left. The right lane is unguarded. Where do you drive?',options:[['Left','Two defenders'],['Middle','One defender'],['Right','No defenders']],ideal:2,lesson:'Use the unguarded lane.',visual:['●●','●','○']}],
  openmic:[
@@ -18,4 +18,5 @@ const content={
  {cue:'The salad recipe requires three parts oil to one part vinegar. With 2 spoonfuls of vinegar, how much oil?',options:[['2','Equal parts'],['4','Two parts'],['6','Three times']],ideal:2,lesson:'Three times two equals six spoonfuls.',visual:['Oil : vinegar','3 : 1','? : 2']}]
 };
 export const drillIds=Object.keys(content);
+export function validHobbyDrill(a){return !a||a.drill===undefined||a.drill===true&&drillIds.includes(a.hobbyId)&&a.mode==='practice'&&Number.isInteger(a.pattern)&&a.pattern>=0&&a.pattern<3;}
 export function drillRound(a){return content[a.hobbyId]?.[(a.pattern+a.stage*2)%3]||null;}
