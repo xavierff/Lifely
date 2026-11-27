@@ -54,8 +54,8 @@ function belongs(s,type,p,anchorId){
   (p.raw.children||0)>0&&p.rivalry>=42;
  return false;
 }
-function candidate(s,type,anchorId){
- const found=actors(s).filter(p=>belongs(s,type,p,anchorId));
+function candidate(s,type,anchorId,excluded=new Set()){
+ const found=actors(s).filter(p=>!excluded.has(p.id)&&belongs(s,type,p,anchorId));
  if(type==='rival-family'){
   const chosen=found.sort((a,b)=>b.rivalry-a.rivalry);
   return chosen.slice(0,1);
@@ -145,7 +145,7 @@ function renewGroup(s,g){
  const reserved=new Set((socialCirclesState(s).groups||[]).filter(x=>x.institution?.parentId===g.id&&!x.institution.mergedInto).flatMap(x=>x.members));
  const available=inst?.mergedInto?[]:inst?.parentId?
   old.map(id=>actor(s,id)).filter(p=>p&&belongs(s,g.kind,p,g.anchorId)):
-  candidate(s,g.kind,g.anchorId).filter(p=>!reserved.has(p.id));
+  candidate(s,g.kind,g.anchorId,reserved);
  if(inst?.parentId||inst?.mergedInto){
   g.members=available.map(p=>p.id);
   if(g.members.length<2){g.leaderId=null;g.members=[];g.status='dormant';return;}
@@ -383,6 +383,7 @@ function evolveGroup(s,g,ctx){
  if(s.age<=g.lastAge)return;
  renewGroup(s,g);
  if(g.status==='dormant'){
+  if(g.institution?.crisis){g.institution.crisis=null;institutionalRecord(s,g,'reform','The faction challenge ended because its living membership was no longer available.',ctx);}
   if(g.governance?.election)tickGovernance(s,g,ctx);
   g.standing=cap(g.standing-1);
   if(g.project)g.project.status='paused';
@@ -670,6 +671,7 @@ export function validateSocialCircles(m){
   new Set(m.groups.map(g=>g.id)).size===m.groups.length&&
   new Set(m.groups.filter(g=>!g.institution?.parentId).map(g=>g.kind)).size===m.groups.filter(g=>!g.institution?.parentId).length&&
   m.groups.every(g=>!g.institution?.parentId||m.groups.some(p=>p.id===g.institution.parentId&&p.id!==g.id&&p.kind===g.kind&&!p.institution?.parentId&&g.members.every(id=>!p.members.includes(id))))&&
+  new Set(m.groups.filter(g=>g.institution?.parentId&&!g.institution.mergedInto).map(g=>g.institution.parentId)).size===m.groups.filter(g=>g.institution?.parentId&&!g.institution.mergedInto).length&&
   Array.isArray(m.invites)&&m.invites.length<=MAX_INVITES&&
   m.invites.every(o=>offer(o)&&o.status!=='completed'&&m.groups.some(g=>g.id===o.groupId))&&
   Array.isArray(m.completed)&&m.completed.length<=MAX_COMPLETED&&
