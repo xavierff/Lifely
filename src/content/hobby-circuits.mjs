@@ -2,6 +2,7 @@
 // A good tactical read dominates luck; rival ratings and real mastery make outcomes matter.
 const clamp=x=>Math.max(0,Math.min(100,Math.round(x)));
 const phases=['Opening','Adaptation','Final moment'];
+import {hobbyDifficulty,difficultyNames} from './adaptive-challenges.mjs';
 import {drillIds,drillRound} from './hobby-drills.mjs';
 const hobbyContent=[
  {id:'chess',name:'Chess & strategy',glyph:'♟',minAge:7,stat:'knowledge',benefit:'knowledge',theme:'The local chess club has a new challenger.',
@@ -125,9 +126,9 @@ export function beginHobby(s,id,ctx){
  h.playedThisAge++;
  p.lastAge=s.age;
  const session={id:'hobby-'+discipline+'-'+s.age+'-'+(p.contests+p.practice+1),hobbyId:discipline,
-  mode,...(drill?{drill:true}:{}),startedAge:s.age,stage:0,pattern:Math.floor(ctx.rng(s)*3),
+  mode,difficulty:hobbyDifficulty(p),...(drill?{drill:true,drillVersion:2}:{}),startedAge:s.age,stage:0,pattern:Math.floor(ctx.rng(s)*3),
   opponentId:opponent.id,opponentName:mode==='contest'?opponent.name:'Practice partner',
-  opponentRating:mode==='contest'?clamp(opponent.rating+league(p.mastery)*3):clamp(Math.round((opponent.rating+p.mastery)/3)),
+  opponentRating:mode==='contest'?clamp(Math.max(opponent.rating+league(p.mastery)*3,p.mastery*.55+hobbyDifficulty(p)*13)):clamp(Math.round((opponent.rating+p.mastery)/3)),
   score:0,focus:50,momentum:50,choices:[],last:null,observer:null};
  const candidates=[...(s.people||[]).filter(x=>x.alive&&x.age>=6).map(x=>({id:'person-'+x.id,name:x.name})),
   ...(s.world?.autonomy?.alumni||[]).map(x=>({id:x.id,name:x.name}))];
@@ -140,7 +141,7 @@ export function hobbyView(s){
  const type=hobbyContent.find(x=>x.id===a.hobbyId),p=h.disciplines[a.hobbyId],round=roundFor(a);
  const difficulty=clamp(36+a.opponentRating*.39+(a.stage*3)-p.mastery*.32);
  return {id:a.id,title:type.name,glyph:type.glyph,mode:a.mode,round:a.stage+1,total:3,phase:phases[a.stage],
-  prompt:round.cue,drill:a.drill?{kind:a.hobbyId,visual:round.visual}:null,opponent:a.opponentName,opponentRating:a.opponentRating,
+  prompt:round.cue,difficultyName:difficultyNames[a.difficulty??0],drill:a.drill?{kind:a.hobbyId,visual:round.visual,piece:round.piece}:null,opponent:a.opponentName,opponentRating:a.opponentRating,
   observer:a.observer?.name||null,league:leagues[league(p.mastery)],mastery:p.mastery,
   meters:{focus:a.focus,momentum:a.momentum,opponent:a.opponentRating},score:a.score,
   risk:difficulty,options:round.options.map(([label,note],index)=>({index,label,note})),
@@ -208,7 +209,7 @@ export function hobbyChoose(s,index,ctx){
  const related=s.stats[t.stat]||45,mastery=p.mastery,opponent=a.opponentRating;
  // Narrow random swing: correct strategy dominates; experienced opponents still challenge veterans.
  const performance=38+mastery*.4+related*.25-opponent*.26+(correct?32:-16)+a.momentum*.09+
-  (ctx.rng(s)-.5)*15-(a.stage*2);
+  (ctx.rng(s)-.5)*15-(a.stage*2)-(a.difficulty||0)*3;
  const success=a.drill?correct:performance>=54;
  a.score+=success?1:0;
  a.focus=clamp(a.focus+(correct?10:-11)+(success?4:-6));
@@ -242,7 +243,7 @@ export function hobbySummary(s){
  return {types:hobbyTypes,playedThisAge:h.year===s.age?h.playedThisAge||0:0,
   profiles:hobbyTypes.map(t=>{
    const p=h.disciplines?.[t.id];return {...t,mastery:p?.mastery||0,level:league(p?.mastery||0),
-    league:leagues[league(p?.mastery||0)],practice:p?.practice||0,contests:p?.contests||0,wins:p?.wins||0,
+    league:leagues[league(p?.mastery||0)],difficultyName:difficultyNames[hobbyDifficulty(p)],practice:p?.practice||0,contests:p?.contests||0,wins:p?.wins||0,
     losses:p?.losses||0,trophies:p?.trophies||0,points:p?.points||0,streak:p?.streak||0,
     rivals:(p?.rivals||[]).map(x=>({...x})),lastResult:p?.lastResult||null};
   }),history:(h.recent||[]).slice(-15).reverse(),hallOfFame:(h.hallOfFame||[]).slice(-10).reverse(),news:(h.news||[]).slice(-10).reverse()};

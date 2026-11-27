@@ -1,4 +1,5 @@
 // Offline academic challenges; deterministic and graded by objective answers.
+import {examDifficulty,difficultyNames} from './adaptive-challenges.mjs';
 export const examSubjects={math:'Mathematics',science:'Science',logic:'Logic',olympiad:'Academic competition'};
 const science=[
  ['Which material is attracted to an ordinary magnet?',['Iron','Glass','Wood'],0,'Iron is ferromagnetic.'],
@@ -8,9 +9,10 @@ const science=[
  ['What travels fastest through a vacuum?',['Sound','A thrown ball','Light'],2,'Light travels through a vacuum; sound needs a medium.'],
  ['Which organ pumps blood around the body?',['Heart','Lungs','Stomach'],0,'The heart pumps blood through the circulatory system.']
 ];
+const expandedScience=[['Which force pulls objects toward Earth?',['Gravity','Friction','Magnetism'],0,'Gravity attracts objects toward Earth.'],['Which gas do humans need for cellular respiration?',['Helium','Oxygen','Neon'],1,'Oxygen supports aerobic cellular respiration.'],['Which simple machine is a seesaw?',['Pulley','Wedge','Lever'],2,'A seesaw pivots around a fulcrum.'],['What part of a plant usually absorbs water?',['Roots','Flowers','Fruit'],0,'Roots absorb water from the soil.'],['What is the main gas in Earth’s atmosphere?',['Oxygen','Nitrogen','Carbon dioxide'],1,'Nitrogen is the most abundant atmospheric gas.'],['Which energy transfer occurs through direct contact?',['Radiation','Reflection','Conduction'],2,'Conduction transfers thermal energy through contact.']];
 function mix(n){return (Math.imul(n^0x9e3779b9,2654435761)>>>0);}
 export function examQuestion(a,stage=a.stage){
- const h=mix(a.examSeed+stage*431),subject=a.subject==='olympiad'?['math','science','logic'][stage]:a.subject,advanced=a.startedAge>=13||a.subject==='olympiad';
+ const h=mix(a.examSeed+stage*431),subject=a.subject==='olympiad'?['math','science','logic'][stage]:a.subject,advanced=a.difficulty===undefined?(a.startedAge>=13||a.subject==='olympiad'):a.difficulty>=1;
  let q,opts,correct,explanation;
  if(subject==='math'){const x=2+h%8,y=3+(h>>>5)%9,z=2+(h>>>9)%6;
   const result=advanced?x*y+z:x+y;const wrong=advanced?x*(y+z):result+2;
@@ -18,11 +20,12 @@ export function examQuestion(a,stage=a.stage){
  }else if(subject==='logic'){const x=1+h%9,step=advanced?2+(h>>>8)%6:1+(h>>>8)%3;const seq=[x,x+step,x+2*step,x+3*step];
   q='Continue the pattern: '+seq.join(', ')+', ?';opts=[String(x+4*step),String(x+4*step+1),String(x+3*step+1+(step===1?2:0))];if(new Set(opts).size<3)opts[2]=String(x+4*step+2);correct=0;explanation='Each term increases by '+step+'.';
  }else{const item=science[(a.examSeed%science.length+stage)%science.length];[q,opts,correct,explanation]=item;opts=opts.slice();}
+ if(a.difficulty===2&&subject==='math'){const n=4+h%12,m=2+(h>>>6)%8,total=n*m;q='What is '+total+' ÷ '+n+' + '+m+'?';opts=[String(m*2),String(m*2+1),String(m*2-1)];correct=0;explanation=total+' ÷ '+n+' = '+m+'; add '+m+'.';}else if(a.difficulty!==undefined&&subject==='science'){const bank=[...science,...expandedScience];[q,opts,correct,explanation]=bank[(a.examSeed%bank.length+stage*5)%bank.length];opts=opts.slice();}else if(a.difficulty===2&&subject==='logic'){const n=2+h%4;q='Continue: '+[n,n*2,n*4,n*8].join(', ')+', ?';opts=[String(n*16),String(n*12),String(n*18)];correct=0;explanation='Each term doubles.';}
  const shift=h%3;return {subject,q,options:opts.map((_,i)=>opts[(i+shift)%3]),correct:(correct-shift+3)%3,explanation};
 }
 export function examCommands(s,e){if(s.age<6||s.age>18||s.justice?.case)return [];return Object.entries(examSubjects).filter(([id])=>id!=='olympiad'||s.age>=10).map(([id,name])=>({id:'scene:start:exam:'+id,label:id==='olympiad'?'Enter academic competition':'Take '+name+' exam',detail:'Three objective questions · one academic session per year',enabled:s.actions>0&&e.used.exam!==s.age}));}
-export function beginExam(s,e,subject,ctx){if(!examSubjects[subject])throw Error('Unknown subject.');const a={id:'exam-'+s.age+'-'+subject,type:'exam',subject,startedAge:s.age,stage:0,examSeed:Math.floor(ctx.rng(s)*1000000),choices:[],score:0,last:null};e.used.exam=s.age;e.active=a;ctx.add(s,'Started '+examSubjects[subject]+'.','activity');return a;}
-export function examView(a){const q=examQuestion(a);return {id:a.id,type:'exam',title:examSubjects[a.subject],round:a.stage+1,total:3,phase:q.subject,personName:'Academic challenge',prompt:q.q,score:a.score,options:q.options.map((label,index)=>({index,label,note:'Select your answer'})),history:a.choices.slice(),last:a.last};}
+export function beginExam(s,e,subject,ctx){if(!examSubjects[subject])throw Error('Unknown subject.');const a={id:'exam-'+s.age+'-'+subject,type:'exam',subject,difficulty:examDifficulty(s,e,subject),startedAge:s.age,stage:0,examSeed:Math.floor(ctx.rng(s)*1000000),choices:[],score:0,last:null};e.used.exam=s.age;e.active=a;ctx.add(s,'Started '+examSubjects[subject]+'.','activity');return a;}
+export function examView(a){const q=examQuestion(a);return {id:a.id,type:'exam',title:examSubjects[a.subject],round:a.stage+1,total:3,phase:q.subject,difficultyName:difficultyNames[a.difficulty??0],personName:'Academic challenge',prompt:q.q,score:a.score,options:q.options.map((label,index)=>({index,label,note:'Select your answer'})),history:a.choices.slice(),last:a.last};}
 export function answerExam(s,e,index,ctx){const a=e.active;if(index==='leave'){e.active=null;ctx.add(s,'Left the academic challenge.','activity');return null;}if(!Number.isInteger(index)||index<0||index>2)throw Error('Choose a valid answer.');const q=examQuestion(a),success=index===q.correct;
  const row={stage:a.stage,index,success,explanation:q.explanation,answer:q.options[q.correct]};a.choices.push(row);a.last=row;a.score+=Number(success);a.stage++;if(a.stage<3)return row;
  const grade=['Needs practice','Developing','Pass','Distinction'][a.score],medal=a.subject==='olympiad'&&a.score===3;
