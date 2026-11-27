@@ -2,9 +2,9 @@ import React,{useState,useEffect,useRef} from 'react';
 import {View,Text,Pressable,StyleSheet,Animated,AccessibilityInfo} from 'react-native';
 const C={ink:'#F7F6ED',muted:'#C0D4C9',gold:'#FFE1A0',green:'#C9F28A'};
 const delta=n=>(n<0?'−':'+')+Math.abs(n).toLocaleString('en-US'),cash=n=>(n<0?'−':'+')+'$'+Math.abs(n).toLocaleString('en-US');
-export function CharacterPortrait({view:v,name,compact=false}){
+export function CharacterPortrait({view:v,name,compact=false,testID='character-portrait'}){
  const child=['baby','child'].includes(v.stage),elder=['mature','elder'].includes(v.stage),eyes=v.mood==='tired'||v.mood==='remembered'?2:5;
- return <View testID="character-portrait" accessibilityRole="image" accessibilityLabel={name+', '+v.stage+', '+v.mood} style={[S.portrait,compact&&{width:68,height:80}]}>
+ return <View testID={testID} accessibilityRole="image" accessibilityLabel={name+', '+v.stage+', '+v.mood} style={[S.portrait,compact&&{width:68,height:80}]}>
   <View style={S.halo}/><View style={[S.shoulders,{backgroundColor:v.clothes,width:child?44:56}]}/><View style={[S.neck,{backgroundColor:v.skin}]}/>
   <View style={[S.face,{backgroundColor:v.skin,width:child?44:40,height:child?44:48,top:child?17:11}]}>
    <View style={[S.hair,{backgroundColor:v.hair,height:v.stage==='baby'?9:v.style===0?14:19,borderBottomLeftRadius:v.style===2?14:5,borderBottomRightRadius:v.style===1?15:5}]}/>
