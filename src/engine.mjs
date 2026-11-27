@@ -25,6 +25,7 @@ import {npcGoalTypes,npcAmbitionState,npcAmbitionYear,npcAmbitionCommands,npcAmb
 import {competingFuturesState,competingFuturesYear,competingFuturesCommands,competingFuturesAct,competingFuturesView,competingFuturesInheritance,validateCompetingFutures} from './content/competing-futures.mjs';
 import {socialInfluenceState,socialInfluenceYear,socialInfluenceCommands,socialInfluenceAct,socialInfluenceView,socialInfluenceInheritance,validateSocialInfluence} from './content/social-influence.mjs';
 import {yearBefore,recordYear,yearRecapView,validateYearRecap,validAppearance,appearanceDefaults} from './content/immersive-life.mjs';
+import {inheritSociety} from './content/persistent-society.mjs';
 import {npcFamilyYear,npcFamilyView,validateNpcFamilies} from './content/dynamic-npc-families.mjs';
 import {socialLifeYear,socialLifeCommands,socialLifeAct,socialLifeView,declineSocial,socialMarriage,socialSeparation,validateSocialLife} from './content/autonomous-social-life.mjs';
 import {identityTrack,identityYear,identityCommands,identityAct,identityView,setIdentityValue,validateIdentity} from './content/life-identity.mjs';
@@ -531,7 +532,7 @@ function makeEngine(){
     const allocation=estateAllocation(s,sharedEstate);
     const estateShare=allocation?allocation[id]:hasPreferred&&preferredId!==id?Math.round(sharedEstate*.4):sharedEstate;
     n.age=child.age;n.generation=s.generation+1;characterInheritance(n,s);n.cash=estateShare+earmarks.heirFund+(child.world?.cash||0);n.debt=child.world?.debt||0;n.legacy=[...s.legacy,{name:s.name,age:s.age,netWorth:worth(s),achievements:s.achievements,goal:s.goal}].slice(-50);
-    n.people=s.people.filter(p=>p.alive&&p.id!==id&&(p.role==="child"||p.role==="partner"||p.role==="parent")).map(p=>({...copy(p),role:p.role==="child"?"sibling":p.role==="partner"?"parent":"grandparent",married:false}));n.nextId=Math.max(0,...n.people.map(p=>p.id))+1;for(const sibling of n.people.filter(p=>p.role==='sibling'))if(sibling.world)sibling.world.cash+=(earmarks.siblings[sibling.id]||0);inheritNetwork(n,s);rippleInheritance(n,s);campaignInheritance(n,s);inheritEveryday(n,s);autonomyInheritance(n,s);storyDirectorInheritance(n,s);hobbyInheritance(n,s);ambitionInheritance(n,s);workplaceInheritance(n,s);
+    n.people=s.people.filter(p=>p.alive&&p.id!==id&&(p.role==="child"||p.role==="partner"||p.role==="parent")).map(p=>({...copy(p),role:p.role==="child"?"sibling":p.role==="partner"?"parent":"grandparent",married:false}));n.nextId=Math.max(0,...n.people.map(p=>p.id))+1;inheritSociety(n,s,child);for(const sibling of n.people.filter(p=>p.role==='sibling'))if(sibling.world)sibling.world.cash+=(earmarks.siblings[sibling.id]||0);inheritNetwork(n,s);rippleInheritance(n,s);campaignInheritance(n,s);inheritEveryday(n,s);autonomyInheritance(n,s);storyDirectorInheritance(n,s);hobbyInheritance(n,s);ambitionInheritance(n,s);workplaceInheritance(n,s);
     if(!allocation&&hasPreferred&&preferredId!==id){
       const preferredSibling=n.people.find(p=>p.id===preferredId);
       if(preferredSibling?.world)preferredSibling.world.cash+=sharedEstate-estateShare;
