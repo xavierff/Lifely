@@ -40,7 +40,7 @@ export function specialCareerView(s,a){
  const p=a.playfield||initialSpecialPlayfield(a.type);
  if(!p)return null;
  const roundPlays=p.plays.filter(x=>x.stage===a.stage);
- const common={type:a.type,stage:a.stage,remaining:Math.max(0,2-roundPlays.length),played:roundPlays.length,maxPerStage:2,plays:p.plays.length,last:p.last};
+ const common={type:a.type,stage:a.stage,remaining:Math.max(0,2-roundPlays.length),played:roundPlays.length,maxPerStage:2,plays:p.plays.length,last:p.last,playHistory:p.plays.map(x=>({...x}))};
  if(a.type==='election'){
   const d=debateTopics[a.stage];return {...common,topic:d.name,question:d.question,hint:d.brief,options:d.options.map(({label,note,icon})=>({label,note,icon})),poll:p.poll,credibility:p.credibility,community:p.community,applause:p.applause,answers:p.answers,
    rival:a.stakeholder||'Civic challenger',rivalApproval:s.world?.characters?.politicians?.find(x=>x.id===a.stakeholderId)?.approval??50};

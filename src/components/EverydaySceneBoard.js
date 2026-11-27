@@ -46,13 +46,13 @@ function Outing({v}){
   <Text style={S.hint}>Preparation, connection and daring approaches create different endings. Balanced choices can uncover rare memories.</Text>
  </View>;
 }
-function Court({v}){
+function Court({v,onChoice}){
  return <View testID="interactive-courtroom" style={S.scene}>
    <View style={S.split}><Text style={S.caption}>FICTIONAL COURTROOM</Text><Text style={S.caption}>HEARING {v.round}/3</Text></View>
    <View style={S.courtStage}>
     <View style={S.courtBench}><Text style={S.courtJudge}>⚖</Text><Text style={S.benchName}>SIMULATED JUDGE</Text></View>
     <View style={S.rail}/>
-    <View style={S.courtDesks}><View style={S.desk}><Text style={S.deskTop}>▣</Text><Text style={S.deskText}>COURT RECORD</Text></View><View style={S.desk}><Text style={S.deskTop}>◉</Text><Text style={S.deskText}>YOUR STATEMENT</Text></View></View>
+    <View style={S.courtDesks}>{['COURT RECORD','FAIR REVIEW','STATEMENT'].map((label,i)=><Pressable key={label} testID={'court-control-'+i} accessibilityRole="button" accessibilityLabel={'Court control: '+v.options[i].label} onPress={()=>onChoice(i)} style={({pressed})=>[S.desk,{flex:1,minHeight:64,minWidth:0},pressed&&{opacity:.7}]}><Text style={S.deskTop}>{['▣','⚖','◉'][i]}</Text><Text style={S.deskText}>{label}</Text></Pressable>)}</View><Text style={S.small}>Select a courtroom approach directly or use the decisions below.</Text>
    </View>
    <View style={S.meterRow}><Meter label="Documented facts" value={v.meters.evidence} tint={C.blue}/><Meter label="Composure" value={v.meters.composure} tint={C.gold}/></View>
    <View style={S.speech}><Text style={S.caption}>PROCEEDING · {v.phase.toUpperCase()}</Text><Text style={S.story}>{v.prompt}</Text></View>
@@ -83,8 +83,8 @@ export default function EverydaySceneBoard({view,onChoice,soundEnabled=true}){
  function choose(i){if(soundEnabled)tap.seekTo(0).then(()=>tap.play()).catch(()=>{});onChoice(i);}
  if(!view)return null;
  return <View style={S.root} testID="everyday-scene">
-  {view.type==='bond'?<Bonds v={view}/>:view.type==='school'?<Classroom v={view}/>:view.type==='outing'?<Outing v={view}/>:<Court v={view}/>}
-  <View style={S.split}><Text style={S.caption}>MAKE A DECISION</Text><Text style={S.caption}>{view.round} OF {view.total}</Text></View>
+  {view.type==='bond'?<Bonds v={view}/>:view.type==='school'?<Classroom v={view}/>:view.type==='outing'?<Outing v={view}/>:<Court v={view} onChoice={choose}/>}
+  <View style={S.sceneHistory} testID="scene-round-history">{Array.from({length:view.total},(_,i)=>{const h=view.history[i];return <View key={i} style={[S.historyCell,h&&{backgroundColor:h.success?'#395F43':'#714D4C'},i===view.round-1&&{borderColor:C.gold}]}><Text style={S.caption}>ROUND {i+1}</Text><Text style={S.choiceTitle}>{h?h.success?'✓ Progress':'× Setback':i===view.round-1?'Current':'Upcoming'}</Text></View>})}</View><View style={S.split}><Text style={S.caption}>MAKE A DECISION</Text><Text style={S.caption}>{view.round} OF {view.total}</Text></View>
   {view.options.map(o=><Pressable key={o.index} testID={'scene-choice-'+o.index} accessibilityRole="button" accessibilityLabel={o.label+', '+o.note} onPress={()=>choose(o.index)} style={({pressed})=>[S.choice,pressed&&{opacity:.78}]}>
    <View style={S.number}><Text style={S.numberText}>{o.index+1}</Text></View><View style={{flex:1,gap:4}}><Text style={S.choiceTitle}>{o.label}</Text><Text style={S.choiceText}>{o.note}</Text></View>
   </Pressable>)}
@@ -96,6 +96,7 @@ export default function EverydaySceneBoard({view,onChoice,soundEnabled=true}){
  </View>;
 }
 const S=StyleSheet.create({
+ sceneHistory:{flexDirection:'row',gap:5},historyCell:{flex:1,minWidth:0,padding:7,gap:3,borderRadius:8,borderWidth:1,borderColor:C.border,backgroundColor:'#243B39'},
  root:{gap:10},scene:{padding:12,borderRadius:16,backgroundColor:C.dark,borderWidth:1,borderColor:C.border,gap:11},
  split:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:6},
  caption:{fontSize:10,fontWeight:'900',color:C.gold,letterSpacing:.7,flexShrink:1},

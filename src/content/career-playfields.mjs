@@ -12,12 +12,26 @@ export function initialCareerPlayfield(type){
  if(type==='business')return {customers:20,orders:0,loyalty:50,trend:[20],plays:[],last:null};
  return initialSpecialPlayfield(type);
 }
+// Exact probabilities shared by the display and resolution. No additional RNG draw.
+export function careerActionChance(s,a,p,index){
+ if(a.type==='sports'){
+  const lane=(a.stage+(a.stakeholder||'Rival').length+(p.adjustments||0))%3;
+  const form=s.world?.sports?.form??s.profession?.metric??50;
+  return clamp(44+(form-50)*.22+(s.stats.health-50)*.15+(index===lane?19:0)-p.fatigue*.23-a.risk*.10,12,88);
+ }
+ if(a.type==='film'){
+  const skill=(s.stats.creativity+(s.skills?.art??0))/2;
+  return clamp(48+skill*.28+a.team*.12-a.risk*.12+[12,4,-6][index],15,94);
+ }
+ const base=s.business?.demand??50;
+ return clamp(52+base*.20+(a.quality-40)*.12-a.risk*.15+[7,8,-4][index],20,94);
+}
 export function careerPlayfieldView(s,a){
  if(!OPTIONS[a.type])return specialCareerView(s,a);
  const p=a.playfield||initialCareerPlayfield(a.type);
  const roundPlays=p.plays.filter(x=>x.stage===a.stage);
  const remaining=Math.max(0,2-roundPlays.length);
- const common={type:a.type,stage:a.stage,remaining,played:roundPlays.length,maxPerStage:2,options:OPTIONS[a.type],last:p.last,plays:p.plays.length};
+ const common={type:a.type,stage:a.stage,remaining,played:roundPlays.length,maxPerStage:2,options:OPTIONS[a.type].map((o,index)=>({...o,chance:careerActionChance(s,a,p,index)})),last:p.last,plays:p.plays.length,playHistory:p.plays.map(x=>({...x}))};
  if(a.type==='sports'){
   const weakLane=(a.stage+(a.stakeholder||'Rival').length+(p.adjustments||0))%3;
   return {...common,ours:p.ours,theirs:p.theirs,fatigue:p.fatigue,trainingHits:p.trainingHits||0,matchday:a.stage>=2,weakLane,opponent:a.stakeholder||'League rival',sport:a.theme,
@@ -37,9 +51,7 @@ export function careerPlayfieldAct(s,a,index,ctx){
  if(p.plays.filter(x=>x.stage===a.stage).length>=2)throw Error('This phase is complete. Choose a story decision to continue.');
  let success=false,description='';
  if(a.type==='sports'){
-  const lane=(a.stage+(a.stakeholder||'Rival').length+(p.adjustments||0))%3;
-  const form=s.world?.sports?.form??s.profession?.metric??50;
-  const chance=clamp(44+(form-50)*.22+(s.stats.health-50)*.15+(index===lane?19:0)-p.fatigue*.23-a.risk*.10,12,88);
+  const chance=careerActionChance(s,a,p,index);
   success=ctx.rng(s)*100<chance;
   const counter=!success&&ctx.rng(s)<clamp(16+a.risk*.22+(p.fatigue/4),8,48)/100;
   if(success){if(a.stage>=2)p.ours++;else p.trainingHits=(p.trainingHits||0)+1;a.quality=clamp(a.quality+7);a.reach=clamp(a.reach+4);a.team=clamp(a.team+2);}
@@ -49,8 +61,7 @@ export function careerPlayfieldAct(s,a,index,ctx){
   p.adjustments=(p.adjustments||0)+1;
   description=success?(a.stage>=2?'GOAL! ':'DRILL COMPLETE! ')+OPTIONS.sports[index].label+' beats the defense.':counter&&a.stage>=2?'The rival counters and scores. Adjust your approach.':a.stage<2?'The practice defense holds. Refine the run before matchday.':'The defense holds. Look for a better attacking channel.';
  }else if(a.type==='film'){
-  const skill=(s.stats.creativity+(s.skills?.art??0))/2;
-  const chance=clamp(48+skill*.28+a.team*.12-a.risk*.12+[12,4,-6][index],15,94);
+  const chance=careerActionChance(s,a,p,index);
   success=ctx.rng(s)*100<chance;
   p.takes++;
   if(success){p.usable++;p.coverage[index]++;a.quality=clamp(a.quality+[5,8,10][index]);a.team=clamp(a.team+[2,4,-1][index]);a.reach=clamp(a.reach+[1,2,6][index]);}
@@ -59,7 +70,7 @@ export function careerPlayfieldAct(s,a,index,ctx){
  }else{
   const qualityBonus=[8,2,0][index],teamBonus=[1,9,-2][index],reachBonus=[2,1,10][index];
   const base=s.business?.demand??50;
-  const chance=clamp(52+base*.20+(a.quality-40)*.12-a.risk*.15+[7,8,-4][index],20,94);
+  const chance=careerActionChance(s,a,p,index);
   success=ctx.rng(s)*100<chance;
   a.quality=clamp(a.quality+qualityBonus+(success?2:-2));
   a.team=clamp(a.team+teamBonus);
