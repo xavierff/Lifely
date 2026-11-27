@@ -1,0 +1,32 @@
+// Offline academic challenges; deterministic and graded by objective answers.
+export const examSubjects={math:'Mathematics',science:'Science',logic:'Logic',olympiad:'Academic competition'};
+const science=[
+ ['Which material is attracted to an ordinary magnet?',['Iron','Glass','Wood'],0,'Iron is ferromagnetic.'],
+ ['What supplies most of the energy for photosynthesis?',['Moonlight','Sunlight','Soil'],1,'Plants convert light energy into chemical energy.'],
+ ['Which state has a fixed volume but takes the shape of its container?',['Gas','Solid','Liquid'],2,'A liquid has a fixed volume but flows to fit its container.'],
+ ['Which process changes liquid water into water vapour?',['Freezing','Evaporation','Condensation'],1,'Evaporation changes liquid into vapour.'],
+ ['What travels fastest through a vacuum?',['Sound','A thrown ball','Light'],2,'Light travels through a vacuum; sound needs a medium.'],
+ ['Which organ pumps blood around the body?',['Heart','Lungs','Stomach'],0,'The heart pumps blood through the circulatory system.']
+];
+function mix(n){return (Math.imul(n^0x9e3779b9,2654435761)>>>0);}
+export function examQuestion(a,stage=a.stage){
+ const h=mix(a.examSeed+stage*431),subject=a.subject==='olympiad'?['math','science','logic'][stage]:a.subject,advanced=a.startedAge>=13||a.subject==='olympiad';
+ let q,opts,correct,explanation;
+ if(subject==='math'){const x=2+h%8,y=3+(h>>>5)%9,z=2+(h>>>9)%6;
+  const result=advanced?x*y+z:x+y;const wrong=advanced?x*(y+z):result+2;
+  q=advanced?'What is '+x+' × '+y+' + '+z+'?':'What is '+x+' + '+y+'?';opts=[String(result),String(wrong),String(result-1)];correct=0;explanation=advanced?'Multiply first: '+x+' × '+y+' = '+x*y+', then add '+z+'.':'Add the two numbers to get '+result+'.';
+ }else if(subject==='logic'){const x=1+h%9,step=advanced?2+(h>>>8)%6:1+(h>>>8)%3;const seq=[x,x+step,x+2*step,x+3*step];
+  q='Continue the pattern: '+seq.join(', ')+', ?';opts=[String(x+4*step),String(x+4*step+1),String(x+3*step+1+(step===1?2:0))];if(new Set(opts).size<3)opts[2]=String(x+4*step+2);correct=0;explanation='Each term increases by '+step+'.';
+ }else{const item=science[(a.examSeed%science.length+stage)%science.length];[q,opts,correct,explanation]=item;opts=opts.slice();}
+ const shift=h%3;return {subject,q,options:opts.map((_,i)=>opts[(i+shift)%3]),correct:(correct-shift+3)%3,explanation};
+}
+export function examCommands(s,e){if(s.age<6||s.age>18||s.justice?.case)return [];return Object.entries(examSubjects).filter(([id])=>id!=='olympiad'||s.age>=10).map(([id,name])=>({id:'scene:start:exam:'+id,label:id==='olympiad'?'Enter academic competition':'Take '+name+' exam',detail:'Three objective questions · one academic session per year',enabled:s.actions>0&&e.used.exam!==s.age}));}
+export function beginExam(s,e,subject,ctx){if(!examSubjects[subject])throw Error('Unknown subject.');const a={id:'exam-'+s.age+'-'+subject,type:'exam',subject,startedAge:s.age,stage:0,examSeed:Math.floor(ctx.rng(s)*1000000),choices:[],score:0,last:null};e.used.exam=s.age;e.active=a;ctx.add(s,'Started '+examSubjects[subject]+'.','activity');return a;}
+export function examView(a){const q=examQuestion(a);return {id:a.id,type:'exam',title:examSubjects[a.subject],round:a.stage+1,total:3,phase:q.subject,personName:'Academic challenge',prompt:q.q,score:a.score,options:q.options.map((label,index)=>({index,label,note:'Select your answer'})),history:a.choices.slice(),last:a.last};}
+export function answerExam(s,e,index,ctx){const a=e.active;if(index==='leave'){e.active=null;ctx.add(s,'Left the academic challenge.','activity');return null;}if(!Number.isInteger(index)||index<0||index>2)throw Error('Choose a valid answer.');const q=examQuestion(a),success=index===q.correct;
+ const row={stage:a.stage,index,success,explanation:q.explanation,answer:q.options[q.correct]};a.choices.push(row);a.last=row;a.score+=Number(success);a.stage++;if(a.stage<3)return row;
+ const grade=['Needs practice','Developing','Pass','Distinction'][a.score],medal=a.subject==='olympiad'&&a.score===3;
+ const result={id:a.id,age:s.age,subject:a.subject,score:a.score,grade,medal};e.examResults??=[];e.examResults.push(result);e.examResults=e.examResults.slice(-20);e.active=null;
+ ctx.change(s,'knowledge',a.score+1);ctx.change(s,'confidence',a.score>=2?3:-1);if(medal)ctx.change(s,'reputation',3);ctx.add(s,examSubjects[a.subject]+': '+grade+' ('+a.score+'/3)'+(medal?' · Gold medal':'')+'.','milestone');return result;}
+export function validExam(a){return a?.type!=='exam'||!!examSubjects[a.subject]&&Number.isInteger(a.examSeed)&&a.examSeed>=0&&a.examSeed<1000000&&Number.isInteger(a.startedAge)&&a.startedAge>=6&&a.startedAge<=18&&Number.isInteger(a.score)&&a.score===a.choices.filter(c=>c.success).length&&a.choices.every((c,i)=>c.stage===i&&[0,1,2].includes(c.index)&&typeof c.success==='boolean'&&c.success===(c.index===examQuestion(a,i).correct)&&typeof c.explanation==='string'&&typeof c.answer==='string');}
+export function validExamResults(e){return !e||e.examResults===undefined||Array.isArray(e.examResults)&&e.examResults.length<=20&&e.examResults.every(r=>r&&typeof r.id==='string'&&Number.isInteger(r.age)&&r.age>=6&&r.age<=18&&!!examSubjects[r.subject]&&Number.isInteger(r.score)&&r.score>=0&&r.score<=3&&r.grade===['Needs practice','Developing','Pass','Distinction'][r.score]&&r.medal===(r.subject==='olympiad'&&r.score===3));}
