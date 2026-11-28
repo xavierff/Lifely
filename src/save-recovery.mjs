@@ -6,7 +6,7 @@ export async function readLifeSlot(storage,key,validate){
  const staged=await storage.getItem(key+'.pending'),candidate=parseValidated(staged,validate);
  if(candidate)return {game:candidate,source:'pending',invalid:false};
  const backup=await storage.getItem(key+'.backup'),previous=parseValidated(backup,validate);
- if(previous)return {game:previous,source:'backup',invalid:false};
+ if(previous)return {game:previous,source:'backup',invalid:false,primaryMissing:primary===null||primary===undefined};
  return {game:null,source:null,invalid:[primary,staged,backup].some(v=>v!==null&&v!==undefined)};
 }
 export async function writeLifeSlot(storage,key,game,validate,{replace=false}={}){
@@ -24,7 +24,7 @@ export async function writeLifeSlot(storage,key,game,validate,{replace=false}={}
 }
 export function recoveryMessage(result){
  if(result.source==='pending')return 'Recovered an interrupted local save. Use Save now to repair the slot.';
- if(result.source==='backup')return 'Primary save damaged or missing. Recovered the previous local backup. Use Save now to repair.';
+ if(result.source==='backup')return result.primaryMissing?'Primary save missing. Recovered the previous local backup. Use Save now to repair.':'Primary save damaged. Recovered the previous local backup. Use Save now to repair.';
  if(result.invalid)return 'Save could not be validated. It remains until you explicitly replace this slot.';
  return '';
 }
