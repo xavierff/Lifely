@@ -4,7 +4,7 @@ import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import E from './src/engine.mjs';
 import appConfig from './app.json';
-import {readLifeSlot,writeLifeSlot,recoveryMessage,parseValidated} from './src/save-recovery.mjs';
+import {readLifeSlot,writeLifeSlot,recoveryMessage} from './src/save-recovery.mjs';
 import {sectionLinks} from './src/content/section-navigation.mjs';
 import SectionJumpBar from './src/components/SectionJumpBar';
 import CareerPlayfield from './src/components/CareerPlayfield';
@@ -66,7 +66,6 @@ const SLOT_KEY='lifely.active.slot';
 const PROFILE_KEY='lifely.player.profile.v1';
 function parseProfile(raw){try{const p=JSON.parse(raw);return validProfile(p)?p:null;}catch{return null;}}
 const slotKey=i=>i===1?KEY:KEY+'.'+i;
-const parseSave=raw=>parseValidated(raw,E.validate);
 const TABS=[['Life','◉'],['People','♡'],['Work','▤'],['World','✦'],['Money','◇'],['More','⋯']];
 const fmt=n=>'$'+Math.round(n).toLocaleString('en-US');
 const title=s=>s.charAt(0).toUpperCase()+s.slice(1);
@@ -142,7 +141,7 @@ function Game(){
  const tripMatches=selectedActions.filter(c=>c.id.startsWith('world:travel:visit:')&&c.label.toLowerCase().includes(travelQuery.toLowerCase()));
  const worldActions=worldSection==='travel'?[...selectedActions.filter(c=>!c.id.startsWith('world:travel:visit:')),...tripMatches.slice(0,travelLimit)]:selectedActions;
  const matchedTalks=filter(['dialogue']).filter(c=>{const kind=worldSection==='entertainment'?'agent-':worldSection==='sports'?'ath-':worldSection==='politics'?'pol-':worldSection==='dynasty'?'person-':null;return !!kind&&c.id.startsWith('dialogue:open:'+kind);}).slice(0,12);
- return <SafeAreaView style={S.safe}><StatusBar barStyle="light-content"/><View style={S.shell}><View style={S.header}><Text style={S.brandSmall}>lifely<Text style={{color:C.accent}}>.</Text></Text><View style={{alignItems:'flex-end'}}><Text style={S.small}>GENERATION {g.generation} · {busy?'SAVING':'LOCAL LIFE'}</Text><Text style={S.money}>{fmt(E.worth(g))}</Text></View></View><ScrollView ref={scroll} contentContainerStyle={[S.content,{maxWidth:width>800?760:undefined,width:'100%',alignSelf:'center'}]} keyboardShouldPersistTaps="handled">
+ return <SafeAreaView style={S.safe}><StatusBar barStyle="light-content"/><View style={S.shell}><View style={S.header}><Text style={S.brandSmall}>lifely<Text style={{color:C.accent}}>.</Text></Text><View style={{alignItems:'flex-end'}}><Text style={S.small}>GENERATION {g.generation} · {busy?'SAVING':error.startsWith('Save failed')?'SAVE FAILED':'LOCAL LIFE'}</Text><Text style={S.money}>{fmt(E.worth(g))}</Text></View></View><ScrollView ref={scroll} contentContainerStyle={[S.content,{maxWidth:width>800?760:undefined,width:'100%',alignSelf:'center'}]} keyboardShouldPersistTaps="handled">
  <Panel style={S.profile}><View style={S.between}><CharacterPortrait view={portraitView(g)} name={g.name} compact={compactPhone}/><View style={{flex:1,minWidth:0}}><Text style={S.overline}>{chapter(g.age).toUpperCase()}</Text><Text style={S.h1}>{g.name}</Text><Text style={S.small}>{E.countries[g.country].name} · {g.background} start</Text></View><View style={S.age}><Text style={S.ageNumber}>{g.age}</Text><Text style={S.small}>YEARS</Text></View></View><View style={S.statGrid}>{stats.slice(0,4).map(([k,label])=><Bar key={k} label={label} value={g.stats[k]}/>)}</View><View accessibilityLabel={g.actions+' of 3 activities available'} style={S.activityTokens}>{[0,1,2].map(i=><View key={i} style={[S.activityToken,i<g.actions&&S.activityTokenReady]}/>)}<Text style={S.small}>{g.actions} of 3 activities left this year</Text></View></Panel>
  <SectionJumpBar items={sectionLinks(tab,{adult:g.age>=18,blocked:!!blocked})} onJump={jumpTo}/>
  {celebration?.lifeId===g.lifeId&&celebration.age===g.age?<MilestoneCelebration key={celebration.serial} moment={celebration} soundEnabled={soundEnabled} onDismiss={()=>setCelebration(null)}/>:null}
