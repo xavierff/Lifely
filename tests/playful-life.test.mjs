@@ -6,9 +6,9 @@ import {inheritEveryday,everydayYear} from '../src/content/everyday-scenes.mjs';
 const life=(age,seed=131001)=>{const s=E.createLife({seed,name:'Alex'});s.age=age;s.pending=null;s.actions=3;return s;};
 const key=id=>'scene:start:outing:'+id;
 const complete=(s,choices=[0,1,0])=>choices.reduce((n,i)=>E.sceneChoice(n,i),s);
-test('1.31: thirteen distinct authored experiences have age gates and different scenes',()=>{
- assert.equal(outings.length,13);assert.equal(new Set(outings.map(d=>d.id)).size,13);
- assert.equal(new Set(outings.flatMap(d=>d.rounds.map(r=>r.cue))).size,39);
+test('1.31: nineteen distinct authored experiences have age gates and different scenes',()=>{
+ assert.equal(outings.length,19);assert.equal(new Set(outings.map(d=>d.id)).size,19);
+ assert.equal(new Set(outings.flatMap(d=>d.rounds.map(r=>r.cue))).size,57);
  const child=life(8),teen=life(15),adult=life(28),senior=life(70);
  assert.ok(E.commands(child).some(c=>c.id===key('treasure')&&c.enabled));
  assert.ok(!E.commands(child).some(c=>c.id===key('dance-night')));
