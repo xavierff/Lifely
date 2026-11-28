@@ -3,7 +3,7 @@
 export const actionCategories=['All','Life','People','Work','World','Money','Justice'];
 const groups={
  People:['socialinvite','date','marry','breakup','child','friend','support','askhelp','reconcile','dialogue','family','household','transition','romance','estate','npcgoal','cross','clash','influence'],
- Work:['job','study','education','profession','pro','company','business','mini','campaign','careerfollow','workplace','celebrity','sportdeal','spotlight','side','retire','quit','skill'],
+ Work:['economy','job','study','education','profession','pro','company','business','mini','campaign','careerfollow','workplace','celebrity','sportdeal','spotlight','side','retire','quit','skill'],
  World:['city','world','character','circle','intergroup','publicplay','afterlife','mandate','pulse','autonomy'],
  Money:['lifestyle','buy','sell','invest','withdraw','bank','marketbuy','marketsell','renttenant','rentrepair','rentraise','rentlower','budget','debt','luxury','empire'],
  Justice:['justice','justicejourney'],
