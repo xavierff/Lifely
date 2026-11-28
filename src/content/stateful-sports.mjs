@@ -5,7 +5,7 @@ const lanes=['Left','Center','Right'],stances=['balanced','attack','defense'],fr
 const state=s=>s.matchLeague||fresh(),sport=s=>s.world?.sports,team=(kind,id)=>leagueTeams[kind]?.find(t=>t.id===id);
 const hash=x=>{let h=2166136261;for(const c of String(x))h=Math.imul(h^c.charCodeAt(0),16777619);return (h>>>0)/4294967296;};
 const roll=(a,key)=>hash(a.seed+':'+a.turn+':'+key);
-const teamId=s=>s.sportContracts?.active?.sport===sport(s)?.sport?s.sportContracts.active.team:leagueTeams[sport(s)?.sport]?.[0].id;
+const teamId=s=>s.sportContracts?.active&&s.sportContracts.active.sport===sport(s)?.sport?s.sportContracts.active.team:leagueTeams[sport(s)?.sport]?.[0]?.id;
 const available=s=>s.alive&&s.age>=12&&s.age<=47&&!!leagueTeams[sport(s)?.sport]&&!sport(s).injury&&!s.justice?.case&&!(s.justice?.years>0);
 const same=(s,q)=>q.season?.age===s.age&&q.season.sport===sport(s)?.sport;
 const fixtures=season=>{const [a,b,c,d]=[season.team,...leagueTeams[season.sport].filter(t=>t.id!==season.team).map(t=>t.id)];return [[[a,b],[c,d]],[[a,c],[b,d]],[[a,d],[b,c]]];};
@@ -22,7 +22,7 @@ export function matchStart(s,ctx){const q=s.matchLeague??=fresh();if(!available(
  q.active={id:++q.serial,seed:Math.floor(ctx.rng(s)*4294967295)>>>0,age:s.age,sport:a.sport,home:a.team,away:opponent,turn:0,homeScore:0,awayScore:0,possession:'home',lane:1,build:0,fatigue:0,stance:'balanced',changed:false,substituted:false,shots:0,saves:0,passes:0,turnovers:0,log:[]};
 }
 function situation(a){const open=Math.floor(roll(a,'open')*3),attack=Math.floor(roll(a,'attack')*3),shape=['High press','Compact block','Wide defense'][Math.floor(roll(a,'shape')*3)];return {open,attack,shape};}
-const attackOptions=(a)=>{const v=situation(a);return [...lanes.map((l,i)=>({id:'pass:'+i,label:'Pass '+l.toLowerCase(),detail:i===v.open?'Open channel':'Defended channel'})),{id:'shoot',label:a.sport==='Football'?'Shoot':'Two-point shot',detail:a.build?'Use your buildup':'Shoot without buildup'},{id:'long',label:a.sport==='Football'?'Long-range effort':'Three-point shot',detail:'Lower accuracy, higher risk'}];};
+const attackOptions=(a)=>{const v=situation(a);return [...lanes.map((l,i)=>({id:'pass:'+i,label:'Pass '+l.toLowerCase(),detail:i===v.open?'Open channel':'Defended channel'})),{id:'shoot',label:a.sport==='Football'?'Shoot':'Two-point shot',detail:a.build?'Use your buildup · compact defense reduces accuracy':'Shoot without buildup'},{id:'long',label:a.sport==='Football'?'Long-range effort':'Three-point shot',detail:'Lower accuracy, higher risk'}];};
 const defenseOptions=a=>[...lanes.map((l,i)=>({id:'mark:'+i,label:'Mark '+l.toLowerCase(),detail:i===situation(a).attack?'Opponent threat':'Cover space'})),{id:'press',label:'Press aggressively',detail:'Higher interception chance and fatigue'},{id:'contain',label:'Hold shape',detail:'Conserve energy and protect the goal'}];
 const matchOptions=a=>[...(a.possession==='home'?attackOptions(a):defenseOptions(a)),...(!a.changed?stances.filter(x=>x!==a.stance).map(x=>({id:'stance:'+x,label:'Switch to '+x,detail:'One tactical adjustment · no turn cost'})):[]),...(!a.substituted&&a.fatigue>=18?[{id:'substitute',label:'Bring on fresh teammate',detail:'Reduce fatigue once per match'}]:[]),{id:'leave',label:'Forfeit match',detail:'Record a loss, no activity refund'}];
 function log(a,msg){a.log.push({turn:a.turn+1,text:msg});a.log=a.log.slice(-14);}
@@ -39,13 +39,13 @@ function finish(s,q,a,ctx,forfeit=false){
 }
 export function matchChoose(s,id,ctx){const q=s.matchLeague,a=q?.active;if(!s.alive||!a||!matchOptions(a).some(x=>x.id===id))throw Error('Match action unavailable.');
  if(id==='leave'){finish(s,q,a,ctx,true);return;}if(id==='substitute'){a.substituted=true;a.fatigue=cap(a.fatigue-28);log(a,'A fresh teammate joins the play.');return;}if(id.startsWith('stance:')){a.changed=true;a.stance=id.split(':')[1];log(a,'Changed tactical shape to '+a.stance+'.');return;}
- const v=situation(a),basket=a.sport==='Basketball',r=roll(a,'outcome'),form=sport(s).form,opp=team(a.sport,a.away).strength,quality=(form-opp)*.003-a.fatigue*.003,attack=a.stance==='attack'?.09:a.stance==='defense'?-.08:0,defend=a.stance==='defense'?.09:a.stance==='attack'?-.08:0;
+ const v=situation(a),basket=a.sport==='Basketball',r=roll(a,'outcome'),form=sport(s).form,opp=team(a.sport,a.away).strength,quality=(form-opp)*.003-a.fatigue*.003,press=v.shape==='High press'?.09:0,compact=v.shape==='Compact block'?.09:0,wide=v.shape==='Wide defense'?.06:0,attack=a.stance==='attack'?.09:a.stance==='defense'?-.08:0,defend=a.stance==='defense'?.09:a.stance==='attack'?-.08:0;
  if(a.possession==='home'){
-  if(id.startsWith('pass:')){const i=Number(id.split(':')[1]),chance=(i===v.open?.87:.46)+quality+attack;if(r<Math.max(.12,Math.min(.96,chance))){a.passes++;a.lane=i;a.build=Math.min(2,a.build+1);log(a,'Completed a pass into '+lanes[i].toLowerCase()+' space.');}else{a.turnovers++;a.possession='away';a.build=0;log(a,'Opponent intercepts the pass.');}}
-  else{const long=id==='long',chance=(basket?(long?.39:.57):(long?.17:.34))+a.build*.13+quality+attack+(a.lane===v.open?.07:0);a.shots++;if(r<Math.max(.07,Math.min(.94,chance))){const points=basket?(long?3:2):1;a.homeScore+=points;log(a,'Scored '+points+(basket?' points!':' goal!'));}else log(a,'The shot misses or is saved.');a.possession='away';a.build=0;}
+  if(id.startsWith('pass:')){const i=Number(id.split(':')[1]),chance=(i===v.open?.87:.46)+quality+attack-press-(i!==1?wide:0)-(a.build===2?.10:0);if(r<Math.max(.12,Math.min(.96,chance))){a.passes++;a.lane=i;a.build=Math.min(2,a.build+1);log(a,'Completed a pass into '+lanes[i].toLowerCase()+' space.');}else{a.turnovers++;a.possession='away';a.build=0;log(a,'Opponent intercepts the pass.');}}
+  else{const long=id==='long',chance=(basket?(long?.39:.57):(long?.17:.34))+a.build*.13+quality+attack+(a.lane===v.open?.07:0)-(long?press:compact);a.shots++;if(r<Math.max(.07,Math.min(.94,chance))){const points=basket?(long?3:2):1;a.homeScore+=points;log(a,'Scored '+points+(basket?' points!':' goal!'));}else log(a,'The shot misses or is saved.');a.possession='away';a.build=0;}
   a.fatigue=cap(a.fatigue+(id.startsWith('pass:')?6:9));
  }else{
-  const mark=id.startsWith('mark:'),correct=mark&&Number(id.split(':')[1])===v.attack,stop=(correct?.78:mark?.38:id==='press'?.64:.57)+quality+defend;
+  const mark=id.startsWith('mark:'),correct=mark&&Number(id.split(':')[1])===v.attack,stop=(correct?.78:mark?.38:id==='press'?.64:.57)+quality+defend+(id==='contain'?press:0)-(id==='press'?wide:0);
   if(r<Math.max(.1,Math.min(.94,stop))){a.saves++;log(a,'Stopped the attack and recovered possession.');}
   else{const scoreChance=(basket?.72:.43)+(opp-55)*.003+(a.stance==='attack'?.08:0);if(roll(a,'opponent-shot')<scoreChance){const points=basket?(roll(a,'opponent-range')<.25?3:2):1;a.awayScore+=points;log(a,'Opponent scores '+points+(basket?' points.':' goal.'));}else log(a,'Opponent misses.');}
   a.possession='home';a.build=0;a.fatigue=cap(a.fatigue+(id==='press'?12:id==='contain'?3:6));
