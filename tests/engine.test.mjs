@@ -54,7 +54,7 @@ test('player profile deduplicates completed lives and retains collections',()=>{
 test('six world domains, stable content IDs and new collection are present',()=>{
  let s=E.createLife({seed:7});assert.equal(E.domains.length,6);assert.equal(E.destinations.length,18);assert.equal(E.events.length,1109);assert.equal(new Set(E.events.map(e=>e.prompt)).size,1109);
  assert.equal(E.events.filter(e=>e.origin==='world-drama').length,48);assert.ok(E.events.slice(1036).every((e,i)=>e.id===1036+i));
- assert.equal(E.achievementStatus(s).length,136);assert.equal(E.challengeProgress(s).length,68);assert.equal(E.ribbons.length,39);
+ assert.equal(E.achievementStatus(s).length,136);assert.equal(E.challengeProgress(s).length,68);assert.equal(E.ribbons.length,42);
  for(const d of E.domains)assert.equal(E.events.filter(e=>e.domain===d.id).length,8);
 });
 test('entertainment release and sport competition carry financial and annual consequences',()=>{
