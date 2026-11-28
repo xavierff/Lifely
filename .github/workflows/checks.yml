@@ -23,12 +23,13 @@ jobs:
       fail-fast: false
       matrix:
         mode: [balanced, hardcore, sandbox]
+        strategy: [passive, working]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm run audit:simulation -- 60 ${{ matrix.mode }}
+      - run: npm run audit:simulation -- 60 ${{ matrix.mode }} ${{ matrix.strategy }}
   bundle:
     runs-on: ubuntu-24.04
     steps:
