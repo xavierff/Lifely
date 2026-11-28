@@ -12,7 +12,7 @@ export function ChapterProgress({age,alive}){
  const b=chapterPresentation(age,alive);
  return <View testID="chapter-progress" style={S.root}>
   <View style={S.row}><View style={{flex:1,minWidth:0}}><Text style={[S.caption,{color:b.tone}]}>{b.complete?'LIFE COMPLETE':'CHAPTER '+(b.index+1)+' OF 6'}</Text><Text style={S.detail}>{b.detail}</Text></View><Text style={[S.symbol,{color:b.tone}]} accessibilityElementsHidden importantForAccessibility="no">{b.symbol}</Text></View>
-  <View style={S.track} accessibilityRole="progressbar" accessibilityLabel={b.label+' chapter progress'} accessibilityValue={{min:0,max:100,now:b.progress}}>{Array.from({length:6},(_,i)=><View key={i} style={[S.segment,{backgroundColor:i<b.index?C.accent:i===b.index?b.tone:C.border,opacity:i>b.index?.45:1}]}>{i===b.index?<View style={[S.current,{width:b.progress+'%'}]}/>:null}</View>)}</View>
+  <View style={S.track} accessibilityRole="progressbar" accessibilityLabel={b.label+' chapter progress'} accessibilityValue={{min:0,max:100,now:b.progress}}>{Array.from({length:6},(_,i)=><View key={i} style={[S.segment,{backgroundColor:i<b.index?C.accent:C.border,opacity:i>b.index?.45:1}]}>{i===b.index?<View style={[S.current,{width:b.progress+'%',backgroundColor:b.tone}]}/>:null}</View>)}</View>
   <Text style={S.caption}>{b.complete?'Your story is remembered':b.next?'Next chapter: '+b.next:'A lifetime of experiences'}</Text>
  </View>;
 }
@@ -22,6 +22,6 @@ export function useLifeFeedback(enabled){
  const allow=useRef(enabled),serial=useRef(0);
  useEffect(()=>{allow.current=enabled;if(!enabled){serial.current++;try{tap.pause();next.pause();}catch{}}},[enabled,tap,next]);
  useEffect(()=>()=>{allow.current=false;serial.current++;},[]);
- return kind=>{if(!kind||!allow.current)return;const token=++serial.current,player=kind==='year'?tap:next;setAudioModeAsync({playsInSilentMode:true,shouldPlayInBackground:false}).then(()=>{if(allow.current&&serial.current===token)return player.seekTo(0);}).then(()=>{if(allow.current&&serial.current===token)player.play();}).catch(()=>{});};
+ return kind=>{if(!kind||!allow.current)return;const token=++serial.current,player=kind==='year'?next:tap;setAudioModeAsync({playsInSilentMode:true,shouldPlayInBackground:false}).then(()=>{if(allow.current&&serial.current===token)return player.seekTo(0);}).then(()=>{if(allow.current&&serial.current===token)player.play();}).catch(()=>{});};
 }
-const S=StyleSheet.create({root:{backgroundColor:C.background,borderRadius:12,padding:10,gap:6},row:{flexDirection:'row',alignItems:'center',gap:8},caption:{fontSize:11,lineHeight:16,color:C.muted,fontWeight:'700'},detail:{fontSize:14,lineHeight:20,color:C.text,fontWeight:'700'},symbol:{fontSize:26},track:{flexDirection:'row',gap:4},segment:{height:6,flex:1,borderRadius:4,overflow:'hidden'},current:{height:6,backgroundColor:C.accentInk,opacity:.5}});
+const S=StyleSheet.create({root:{backgroundColor:C.background,borderRadius:12,padding:10,gap:6},row:{flexDirection:'row',alignItems:'center',gap:8},caption:{fontSize:11,lineHeight:16,color:C.muted,fontWeight:'700'},detail:{fontSize:14,lineHeight:20,color:C.text,fontWeight:'700'},symbol:{fontSize:26},track:{flexDirection:'row',gap:4},segment:{height:6,flex:1,borderRadius:4,overflow:'hidden'},current:{height:6,borderRadius:4}});
