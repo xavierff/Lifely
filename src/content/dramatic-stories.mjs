@@ -52,7 +52,7 @@ function reaction(p,path){const personality=p.world?.personality;
 export function dramaCommands(s){const q=state(s),a=q.active,out=[];if(!s.alive||s.justice?.years>0||s.justice?.case)return out;
  if(a&&s.age>=a.due&&person(s,a.personId))for(const [i,c] of type(a.type).chapters[a.stage].choices.entries())out.push({id:'drama:choose:'+i,label:c.label,detail:type(a.type).title+' · chapter '+(a.stage+1),enabled:s.actions>0});
  if(a)out.push({id:'drama:leave',label:'Close this story',detail:'Keep an unfinished record; one activity',enabled:s.actions>0});
- for(const x of q.archive.filter(x=>!q.discovered.includes(x.key)).slice(-3))out.push({id:'drama:discover:'+x.key,label:'Read '+x.ancestor+'’s family record',detail:x.title+' · a memory, not a living person',enabled:s.age>=12&&s.actions>0});
+ for(const x of q.archive.slice(-5).filter(x=>!q.discovered.includes(x.key)))out.push({id:'drama:discover:'+x.key,label:'Read '+x.ancestor+'’s family record',detail:x.title+' · a memory, not a living person',enabled:s.age>=12&&s.actions>0});
  return out;
 }
 export function dramaAct(s,id,ctx){if(!dramaCommands({...s,actions:s.actions+1}).some(c=>c.id===id&&c.enabled))throw Error('Story decision unavailable.');const q=s.dramaticStories??=fresh(),[,tag,arg]=id.split(':'),a=q.active;
