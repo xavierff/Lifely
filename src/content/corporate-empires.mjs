@@ -50,7 +50,7 @@ export function corporateCommands(s,ctx){
    const applicants=s.people.filter(p=>p.alive&&p.age>=18&&p.age<65&&p.world?.job===null&&!qOf(s).companies.some(o=>active(o)&&o.staff.some(e=>e.personId===p.id))&&hireRole(p,c,ctx.careers)).slice(0,4);
    for(const p of applicants)put('hire','Recruit '+p.name,'Hire as '+hireRole(p,c,ctx.careers).title+' · $'+cash(500*cost)+' signing bonus',c.staff.length<c.capacity&&c.cash>=cash(500*cost),p.id);
    for(const e of c.staff){const emp=person(s,e.personId);if(!emp?.alive)continue;put('promote','Promote '+emp.name,'Pay $'+cash(1000*cost)+' company bonus',emp.world.level<5&&c.cash>=cash(1000*cost)&&available(s,c,'promote-'+e.personId),e.personId);put('executive','Appoint '+emp.name+' executive','Permanent management benefit while employed',p.executiveId!==e.personId&&emp.world.level>=1,e.personId);put('dismiss','Dismiss '+emp.name,'Pay $'+cash(1500*cost)+' severance',c.cash>=cash(1500*cost),e.personId);}
-   for(const other of qOf(s).companies.filter(o=>active(o)&&o.playerOwned&&o.id!==c.id&&!profile(o).parentId&&!profile(c).parentId&&!qOf(s).companies.some(x=>profile(x).parentId===other.id)))put('subsidiary','Group '+other.name+' under '+c.name,'Link ownership without duplicating company value',true,other.id);
+   for(const other of qOf(s).companies.filter(o=>active(o)&&o.playerOwned&&o.id!==c.id&&!profile(o).parentId&&!profile(c).parentId&&!qOf(s).companies.some(x=>profile(x).parentId===o.id)))put('subsidiary','Group '+other.name+' under '+c.name,'Link ownership without duplicating company value',true,other.id);
   }
  }
  return out;
