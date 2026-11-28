@@ -4,7 +4,7 @@ export const actionCategories=['All','Life','People','Work','World','Money','Jus
 const groups={
  People:['familylife','socialinvite','date','marry','breakup','child','friend','support','askhelp','reconcile','dialogue','family','household','transition','romance','estate','npcgoal','cross','clash','influence'],
  Work:['specialist','economy','job','study','education','profession','pro','company','business','mini','campaign','careerfollow','workplace','celebrity','sportdeal','spotlight','side','retire','quit','skill'],
- World:['neighborhood','international','city','world','character','circle','intergroup','publicplay','afterlife','mandate','pulse','autonomy'],
+ World:['matchleague','neighborhood','international','city','world','character','circle','intergroup','publicplay','afterlife','mandate','pulse','autonomy'],
  Money:['connected','globalmarket','propertymarket','corporate','lifestyle','buy','sell','invest','withdraw','bank','marketbuy','marketsell','renttenant','rentrepair','rentraise','rentlower','budget','debt','luxury','empire'],
  Justice:['justice','justicejourney'],
  Life:['replay','drama','arcade','identity','rest','exercise','learn','create','volunteer','pet','petcare','club','hobby','scene','fate','episode','ambition','ripple','clinic']
