@@ -92,7 +92,7 @@ function prepareClassmates(s,e,ctx){
 }
 export function beginEveryday(s,id,ctx){
  if(!id.startsWith('scene:start:')||!everydayCommands({...s,actions:s.actions+1}).some(x=>x.id===id&&x.enabled))throw Error('This everyday scene is not available.');
- const e=ensure(s),parts=id.split(':'),type=parts[2];if(type==='exam')return beginExam(s,e,parts[3],ctx);if(type==='outing'){if(s.age<=18)prepareClassmates(s,e,ctx);return beginOuting(s,e,parts[3],ctx);}let person=null,track=null;
+ const e=ensure(s),parts=id.split(':'),type=parts[2];if(type==='exam')return beginExam(s,e,parts[3],ctx);if(type==='outing'){if(s.age<=18)prepareClassmates(s,e,ctx);return beginOuting(s,e,parts[3],ctx,parts[4]);}let person=null,track=null;
  if(type==='bond'){person=human(s,Number(parts[3]));if(!person)throw Error('Relationship unavailable.');}
  else if(type==='school'){
   track=tracks[pick(ctx,s,tracks.length)];

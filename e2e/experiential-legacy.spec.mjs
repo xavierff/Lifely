@@ -8,6 +8,6 @@ test('lifetime adventure progress persists after recent scene history is removed
  await page.setViewportSize({width:320,height:740});await page.goto('/');
  await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
  const progress=page.getByTestId('outing-life-progress');
- await expect(progress).toContainText('1 completed');await expect(progress).toContainText('1/13 distinct');
+ await expect(progress).toContainText('1 completed');await expect(progress).toContainText('1/19 distinct');
  await page.reload();await expect(progress).toContainText('Adult 1');
 });

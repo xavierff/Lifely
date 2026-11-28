@@ -1,3 +1,4 @@
+import {socialOutings} from './social-outing-content.mjs';
 // Age-specific playable outings. Authored choices, persistent memories,
 // distinct results, bounded bonuses and no external services.
 const cap=n=>Math.max(0,Math.min(100,Math.round(n)));
@@ -32,7 +33,10 @@ export const outings=[
  {id:'later-adventure',title:'A new adventure in later life',glyph:'✧',min:60,max:105,kind:'Later life',partner:'any',stat:'happiness',rare:'Still discovering the world',
  rounds:[r('You have a chance to try something completely unfamiliar.',[c('Learn the basics first','Build confidence through understanding','knowledge',18,5,0),c('Invite someone to share the experience','Discover something together','social',10,18,0),c('Try a creative new approach','Enjoy uncertainty without needless danger','creativity',23,0,9)]),r('The activity turns out to be more challenging than expected.',[c('Adjust to a comfortable pace','Protect enjoyment and wellbeing','health',18,5,0),c('Ask for support if needed','Build connection without losing independence','kindness',10,19,0),c('Try a different technique','Explore an unexpected solution','creativity',24,0,9)]),r('You finish the experience with a story to tell.',[c('Record what you learned','Preserve your own memories','knowledge',18,8,0),c('Share the experience with others','Celebrate connection','social',10,20,0),c('Create an original keepsake','Make the experience your own','creativity',24,0,9)])]}
 ];
+outings.push(...socialOutings);
 const spec=id=>outings.find(x=>x.id===id);
+const livingGuest=(s,id)=>s.people.find(p=>p.id===id&&p.alive&&p.age>=18);
+function guestPreference(p){const personality=p.world?.personality;return ['Creative','Competitive'].includes(personality)?2:['Driven','Cautious'].includes(personality)?1:0;}
 function participants(s,d,e){
  const people=(s.people||[]).filter(p=>p.alive&&p.age>=5);
  if(d.partner==='peer'||d.partner==='peer-required'){
@@ -44,21 +48,22 @@ function participants(s,d,e){
  return people.filter(p=>p.age>=18&&(d.partner==='partner'?p.role==='partner':d.partner==='friend'?p.role==='friend':d.partner==='family'?['parent','sibling','partner','child','grandparent'].includes(p.role):true)).map(p=>({id:p.id,name:p.name,kind:'person',trust:p.bond}));
 }
 export function outingCommands(s,e){
- return outings.filter(d=>s.age>=d.min&&s.age<=d.max&&(d.partner!=='partner'&&d.partner!=='friend'&&d.partner!=='family'&&d.partner!=='peer-required'||participants(s,d,e).length)).map(d=>({id:'scene:start:outing:'+d.id,label:d.title,detail:d.kind+' · three choices · memorable outcomes',enabled:s.actions>0&&e.used['outing-'+d.id]!==s.age&&e.used.outing!==s.age&&!s.justice?.case}));
+ return outings.filter(d=>s.age>=d.min&&s.age<=d.max&&(d.social?participants(s,d,e).length>0:d.partner!=='partner'&&d.partner!=='friend'&&d.partner!=='family'&&d.partner!=='peer-required'||participants(s,d,e).length)).flatMap(d=>{const base={id:'scene:start:outing:'+d.id,label:d.title,detail:d.kind+' · three choices · memorable outcomes',enabled:s.actions>0&&e.used['outing-'+d.id]!==s.age&&e.used.outing!==s.age&&!s.justice?.case};if(!d.social)return [base];return participants(s,d,e).slice(0,8).map(p=>({...base,id:base.id+':'+p.id,label:d.title+' with '+p.name,detail:d.kind+' · '+(d.group?'invite up to three guests':'one companion')+' · three choices'}));});
 }
-export function beginOuting(s,e,id,ctx){
+export function beginOuting(s,e,id,ctx,guestId){
  const d=spec(id);if(!d)throw Error('Unknown outing.');
- const pool=participants(s,d,e),p=pool.length?pool[Math.floor(ctx.rng(s)*pool.length)]:null;
+ const pool=participants(s,d,e),p=d.social?pool.find(x=>x.kind==='person'&&x.id===Number(guestId)):pool.length?pool[Math.floor(ctx.rng(s)*pool.length)]:null;if(d.social&&!p)throw Error('Choose a living eligible companion.');
  const a={id:'scene-outing-'+id+'-'+s.generation+'-'+s.age,type:'outing',activityId:id,startedAge:s.age,stage:0,
   personId:p?.kind==='person'?p.id:null,classmateId:p?.kind==='classmate'?p.id:null,personName:p?.name||'On your own',personRole:p?.kind==='classmate'?'Classmate':p?'Companion':'Independent activity',
   momentum:35,trust:cap(p?.trust??45),composure:65,evidence:0,tension:10,choices:[],last:null,score:0,connection:25};
+ if(d.social){const guests=[p,...(d.group?pool.filter(x=>x.id!==p.id).sort((a,b)=>b.trust-a.trust||a.id-b.id).slice(0,2):[])];a.guests=guests.map(x=>{const person=livingGuest(s,x.id);return {id:x.id,name:x.name,preference:guestPreference(person),fit:0};});a.personName=a.guests.map(x=>x.name).join(', ');a.personRole=d.group?'Social group':'Companion';}
  e.active=a;e.used['outing-'+id]=s.age;e.used.outing=s.age;
  ctx.add(s,'Started '+d.title+'.','activity');return a;
 }
 export function outingView(a,s){
  const d=spec(a.activityId),step=d?.rounds[a.stage];if(!step)return null;
  return {id:a.id,type:'outing',title:d.title,glyph:d.glyph,track:d.kind,stage:a.stage,round:a.stage+1,total:3,phase:['Opening','Complication','Finale'][a.stage],
-  personName:a.personName,personRole:a.personRole,prompt:step.cue,meters:{momentum:a.momentum,trust:a.trust,composure:a.composure,tension:a.tension,connection:a.connection},
+  personName:a.personName,personRole:a.personRole,prompt:step.cue+(a.guests?' '+a.guests.map(g=>g.name+' '+['values a personal connection','likes a practical plan','enjoys spontaneity'][g.preference]).join('; ')+'.':''),meters:{momentum:a.momentum,trust:a.trust,composure:a.composure,tension:a.tension,connection:a.connection},
   options:step.choices.map((o,index)=>({index,label:o.label,note:o.detail+' · '+o.stat+' · '+(o.risk>=8?'high risk':o.connection>=14?'connection':'preparation'),risk:o.risk})),last:a.last,history:a.choices.slice()};
 }
 const eras=['childhood','teen','adult','later'];
@@ -81,28 +86,28 @@ export function playOuting(s,e,index,ctx){
  if(index==='leave'){e.completed.push({...a,outcome:'interrupted',endedAge:s.age});e.completed=e.completed.slice(-45);e.active=null;return null;}
  if(!Number.isInteger(index)||index<0||index>2)throw Error('Choose one of the three responses.');
  const o=d.rounds[a.stage].choices[index],skill=s.stats[o.stat]??50;
- const gain=Math.round(o.craft+(skill-50)*.16+(ctx.rng(s)-.5)*(8+o.risk));
+ const fit=a.guests?a.guests.filter(g=>g.preference===index).length:0,bonus=a.guests?Math.round(6*fit/a.guests.length):0;const gain=Math.round(o.craft+(skill-50)*.16+(ctx.rng(s)-.5)*(8+o.risk)+bonus);if(a.guests)for(const g of a.guests)if(g.preference===index)g.fit++;
  const success=gain>=12;
- a.momentum=cap(a.momentum+Math.max(0,gain));a.connection=cap(a.connection+o.connection);
+ a.momentum=cap(a.momentum+Math.max(0,gain));a.connection=cap(a.connection+o.connection+bonus);
  a.tension=cap(a.tension+o.risk-(success?3:0));a.composure=cap(a.composure+(success?4:-4)-Math.floor(o.risk/4));
  a.trust=cap(a.trust+Math.round(o.connection/4)-(o.risk>=8&&!success?3:0));
  a.score+=success?1:0;
  const record={stage:a.stage,index,approach:o.label,success,gain,connection:o.connection,fit:success};
- a.choices.push(record);a.last={...record,signal:'Momentum '+(gain>=0?'+':'')+gain+' · Connection '+(o.connection>=0?'+':'')+o.connection,reaction:success?'Your choice moves the experience forward.':'The outcome was mixed; you can adapt in the next round.'};a.stage++;
+ a.choices.push(record);a.last={...record,signal:'Momentum '+(gain>=0?'+':'')+gain+' · Connection '+(o.connection>=0?'+':'')+o.connection,reaction:a.guests?(fit?fit+' of '+a.guests.length+' guests appreciated the approach.':'Your guests have different preferences; try another approach.'):(success?'Your choice moves the experience forward.':'The outcome was mixed; you can adapt in the next round.')};a.stage++;
  if(a.stage<3)return a.last;
  const rare=a.momentum>=82&&a.connection>=62&&a.tension<=30;
  const grade=rare?'rare-memory':a.momentum>=82?'standout':a.connection>=65?'closer-bond':a.momentum>=65?'memorable':'mixed';
  const p=a.personId===null?null:(s.people||[]).find(x=>x.id===a.personId&&x.alive);
  const peer=a.classmateId===null?null:(e.classmates||[]).find(x=>x.id===a.classmateId);
  const delta=a.connection>=62?7:a.connection>=43?3:a.connection<25?-2:1;
- if(p){ctx.bond(s,p,delta,d.title+' · '+grade);if(p.world){p.world.trust=cap((p.world.trust??p.bond)+delta);p.world.rivalry=cap((p.world.rivalry??0)+(delta<0?3:-2));}}
+ if(a.guests){for(const g of a.guests){const guest=livingGuest(s,g.id);if(guest)ctx.bond(s,guest,Math.max(-2,Math.min(9,delta+g.fit-1)),d.title+' · '+grade);}}else if(p){ctx.bond(s,p,delta,d.title+' · '+grade);if(p.world){p.world.trust=cap((p.world.trust??p.bond)+delta);p.world.rivalry=cap((p.world.rivalry??0)+(delta<0?3:-2));}}
  if(peer){e.classmate=peer;peer.trust=cap(peer.trust+delta);peer.rivalry=cap(peer.rivalry+(delta<0?3:-2));peer.history??=[];peer.history.push({age:s.age,track:d.title,grade:rare?'breakthrough':grade==='mixed'?'complicated':'progress'});peer.history=peer.history.slice(-16);}
  ctx.change(s,d.stat,rare?5:grade==='mixed'?1:3);ctx.change(s,'happiness',grade==='mixed'?1:4);
  const result={...a,outcome:grade,endedAge:s.age,track:d.title,collectible:rare?d.rare:null,successful:a.score};
  e.outingLedger??=reconstruct(e);countOuting(e.outingLedger,result);
  e.completed.push(result);e.completed=e.completed.slice(-45);e.active=null;
  if(result.collectible){e.outingCollection??=[];if(!e.outingCollection.some(x=>x.activityId===d.id))e.outingCollection.push({activityId:d.id,title:result.collectible,age:s.age});}
- if(p&&s.age<=108){e.callbacks.push({id:'callback-'+a.id,title:'The '+d.title+' memory',type:'bond',startedAge:s.age,dueAge:s.age+2,personId:p.id,classmateId:null,personName:p.name,grade:grade==='mixed'?'complicated':'progress',status:'scheduled'});e.callbacks=e.callbacks.slice(-24);}
+ if(a.guests&&s.age<=108){for(const g of a.guests){const guest=livingGuest(s,g.id);if(guest)e.callbacks.push({id:'callback-'+a.id+'-guest-'+g.id,title:'The '+d.title+' memory',type:'bond',startedAge:s.age,dueAge:s.age+2,personId:g.id,classmateId:null,personName:g.name,grade:g.fit>=1||grade!=='mixed'?'progress':'complicated',status:'scheduled'});}e.callbacks=e.callbacks.slice(-24);}else if(p&&s.age<=108){e.callbacks.push({id:'callback-'+a.id,title:'The '+d.title+' memory',type:'bond',startedAge:s.age,dueAge:s.age+2,personId:p.id,classmateId:null,personName:p.name,grade:grade==='mixed'?'complicated':'progress',status:'scheduled'});e.callbacks=e.callbacks.slice(-24);}
  if(peer&&s.age<=18){e.callbacks.push({id:'callback-'+a.id,title:'The '+d.title+' reunion',type:'school',startedAge:s.age,dueAge:s.age+1,personId:null,classmateId:peer.id,personName:peer.name,grade:grade==='mixed'?'complicated':'progress',status:'scheduled'});e.callbacks=e.callbacks.slice(-24);}
  ctx.add(s,d.title+' — '+(result.collectible||grade.replaceAll('-',' '))+'.','milestone');return result;
 }
@@ -114,5 +119,5 @@ export function validateOutingCollections(e){
 }
 export function validateOuting(a){
  if(a?.type!=='outing')return true;
- return !!spec(a.activityId)&&[a.momentum,a.trust,a.composure,a.tension,a.connection].every(x=>Number.isFinite(x)&&x>=0&&x<=100)&&Number.isInteger(a.score)&&a.score>=0&&a.score<=a.stage&&a.choices.every((c,i)=>c&&c.stage===i&&[0,1,2].includes(c.index)&&typeof c.success==='boolean')&&(a.personId===null||Number.isInteger(a.personId))&&(a.classmateId===null||typeof a.classmateId==='string')&&!(a.personId!==null&&a.classmateId!==null);
+ return !!spec(a.activityId)&&[a.momentum,a.trust,a.composure,a.tension,a.connection].every(x=>Number.isFinite(x)&&x>=0&&x<=100)&&Number.isInteger(a.score)&&a.score>=0&&a.score<=a.stage&&a.choices.every((c,i)=>c&&c.stage===i&&[0,1,2].includes(c.index)&&typeof c.success==='boolean')&&(a.personId===null||Number.isInteger(a.personId))&&(a.classmateId===null||typeof a.classmateId==='string')&&!(a.personId!==null&&a.classmateId!==null)&&(!spec(a.activityId).social||Array.isArray(a.guests)&&a.guests.length>=1&&a.guests.length<=(spec(a.activityId).group?3:1)&&a.guests[0]?.id===a.personId&&new Set(a.guests.map(g=>g.id)).size===a.guests.length&&a.guests.every(g=>g&&Number.isInteger(g.id)&&typeof g.name==='string'&&[0,1,2].includes(g.preference)&&Number.isInteger(g.fit)&&g.fit>=0&&g.fit<=a.stage));
 }
