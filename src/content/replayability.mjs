@@ -36,11 +36,10 @@ export function replayAnnual(s,{change}){
 export function replayRefresh(s,worth){
  const q=s.replay??=fresh('balanced');if(q.mode==='sandbox')return;
  for(const x of secretDefs)if(!q.secrets.includes(x.id)&&x.test(s))q.secrets.push(x.id);
- for(const x of dynastyGoals)if(!q.completed.includes(x.id)&&x.value(s,q,worth(s))>=x.target)q.completed.push(x.id);
+ const w=worth(s);for(const x of dynastyGoals)if(!q.completed.includes(x.id)&&x.value(s,q,w)>=x.target)q.completed.push(x.id);
 }
 export function inheritReplay(next,old,worth){
- if(!old.replay)return;
- const prev=old.replay,q=fresh(prev.mode);q.origin=prev.origin;q.ancestors=[...prev.ancestors,{name:old.name,age:old.age,education:old.education,worth:worth(old),reconnected:reconnected(old)}].slice(-32);
+ const prev=old.replay||fresh('balanced'),q=fresh(prev.mode);q.origin=prev.origin;q.ancestors=[...prev.ancestors,{name:old.name,age:old.age,education:old.education,worth:worth(old),reconnected:reconnected(old)}].slice(-32);
  q.secrets=[...prev.secrets];q.completed=[...prev.completed];next.replay=q;
 }
 export function replayCommands(s){if(replayMode(s).id!=='sandbox'||!s.alive||s.age<18||s.justice?.case||s.justice?.years>0)return [];return [
