@@ -22,7 +22,7 @@ export const dynastyGoals=[
  {id:'longevity',name:'A Long Family Story',detail:'Complete two lives reaching age 75.',target:2,value:(s,q)=>q.ancestors.filter(a=>a.age>=75).length+Number(!s.alive&&s.age>=75)}
 ];
 const reconnected=s=>!!s.dramaticStories?.completed.some(r=>r.outcome==='reconnected');
-export function randomLifeOptions(seed,countryCount=6){let x=(Number(seed)>>>0)||12345;const next=n=>{x=(Math.imul(x,1664525)+1013904223)>>>0;return Math.floor(x/4294967296*n);};return {country:next(countryCount),background:['modest','ordinary','comfortable','royal'][next(4)],goal:['balance','wealth','family'][next(3)],seed,origin:'random'};}
+export function randomLifeOptions(seed,countryCount=6){let x=(Number(seed)>>>0)||12345;const next=n=>{x=(x+0x9e3779b9)>>>0;let z=x;z=Math.imul(z^(z>>>16),0x21f0aaad);z=Math.imul(z^(z>>>15),0x735a2d97);z=(z^(z>>>15))>>>0;return Math.floor(z/4294967296*n);};return {country:next(countryCount),background:['modest','ordinary','comfortable','royal'][next(4)],goal:['balance','wealth','family'][next(3)],seed,origin:'random'};}
 export function initReplay(s,options){
  if(options.mode===undefined&&options.origin===undefined)return;
  const q=s.replay=fresh(options.mode);q.origin=options.origin==='random'?'random':'standard';
