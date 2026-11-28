@@ -1,6 +1,6 @@
 {
   "name": "lifely",
-  "version": "1.76.0",
+  "version": "1.77.0",
   "private": true,
   "main": "index.js",
   "scripts": {
@@ -10,6 +10,7 @@
     "test": "node --test tests/*.test.mjs",
     "release:preflight": "node scripts/release-preflight.mjs",
     "audit:catalog": "node scripts/audit-catalog.mjs",
+    "audit:player": "node scripts/audit-player-experience.mjs",
     "audit:simulation": "node scripts/audit-simulation.mjs",
     "web": "expo start --web",
     "export": "expo export --platform all",
