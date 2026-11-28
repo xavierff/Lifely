@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import E from '../src/engine.mjs';
 import {outings,outingStats,validateOuting} from '../src/content/playful-life.mjs';
 import {socialOutings} from '../src/content/social-outing-content.mjs';
-const fixture=(age=30)=>{const s=E.createLife({seed:173001});s.age=age;s.actions=3;s.people[0].role='friend';s.people[1].role='friend';s.people[0].world.personality='Restless';s.people[1].world.personality='Pragmatic';return s;};
+const fixture=(age=30)=>{const s=E.createLife({seed:173001});s.age=age;s.actions=3;s.people[0].role='friend';s.people[1].role='friend';s.people[0].world.personality='Creative';s.people[1].world.personality='Cautious';assert.ok(E.validate(s),'fixture must use valid NPC personalities');return s;};
 const key=(id,p)=>'scene:start:outing:'+id+':'+p.id;
 const play=(s,choices=[0,1,2])=>choices.reduce((n,i)=>E.sceneChoice(n,i),s);
 test('six additional original experiences provide 18 scenes and 54 decisions',()=>{assert.equal(outings.length,19);assert.equal(socialOutings.length,6);assert.equal(socialOutings.flatMap(d=>d.rounds).length,18);assert.equal(socialOutings.flatMap(d=>d.rounds.flatMap(r=>r.choices)).length,54);});
