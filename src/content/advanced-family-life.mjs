@@ -41,7 +41,7 @@ export function familyLifeYear(s,ctx){
   }
  }
  if(q.courtships.length<36&&world){const busy=new Set(q.courtships.filter(d=>['dating','engaged'].includes(d.status)).flatMap(d=>d.ids));const candidates=s.people.filter(p=>free(s,p)&&!busy.has(p.id)&&roll(p.id,'courtship')<.18);
-  for(const a of candidates){const b=candidates.find(b=>b.id!==a.id&&Math.abs(b.age-a.age)<=12&&!familyRelated(s,a.id,b.id));if(!b)continue;q.courtships.push({id:++q.serial,ids:[a.id,b.id],names:[a.name,b.name],status:'dating',started:year,engaged:null,ended:null,affinity:65});note(s,q,a.name+' and '+b.name+' started dating.',ctx);break;}
+  for(const a of candidates){const b=candidates.find(b=>b.id!==a.id&&Math.abs(b.age-a.age)<=12&&!familyRelated(s,a.id,b.id)&&(['friend','community'].includes(a.role)||['friend','community'].includes(b.role)));if(!b)continue;q.courtships.push({id:++q.serial,ids:[a.id,b.id],names:[a.name,b.name],status:'dating',started:year,engaged:null,ended:null,affinity:65});note(s,q,a.name+' and '+b.name+' started dating.',ctx);break;}
  }
  for(const p of s.people.filter(minor).slice(0,12)){
   const h=q.children[p.id]??=childProfile(p);
@@ -75,7 +75,7 @@ export function familyLifeAct(s,id,ctx){
  if(tag==='succession'){q.plans[arg]=Number(extra);note(s,q,'Planned a future company succession for '+person(s,Number(extra)).name+'.',ctx);}
  if(tag==='cancel')delete q.plans[arg];
 }
-export function inheritFamilyLife(next,old){if(!state(old))return;const prev=state(old),q=blank();q.lastYear=at(old);q.tradition=prev.tradition;q.traditionYears=prev.traditionYears;q.memories=prev.memories.slice(-20);q.goals={...prev.goals};q.goals.firmsContinued+=firms(next).filter(c=>firms(old).some(o=>o.id===c.id)).length;next.familyLife=q;}
+export function inheritFamilyLife(next,old){if(!state(old))return;const prev=state(old),q=blank();q.lastYear=at(old);q.tradition=prev.tradition;q.traditionYears=prev.traditionYears;q.memories=prev.memories.slice(-20);q.serial=prev.serial;q.courtships=prev.courtships.filter(d=>d.ids.every(id=>person(next,id))).map(d=>JSON.parse(JSON.stringify(d)));q.goals={...prev.goals};q.goals.firmsContinued+=firms(next).filter(c=>firms(old).some(o=>o.id===c.id)).length;next.familyLife=q;}
 export function familyLifeView(s){const q=state(s)||blank(),family=relatives(s),spouse=partner(s);return {year:at(s),tradition:q.tradition?traditions.find(t=>t[0]===q.tradition)[1]:null,traditionYears:q.traditionYears,goals:q.goals,tree:family.map(p=>({id:p.id,name:p.name,role:p.role,age:p.age,bond:p.bond})),spouse:spouse?.name||null,children:Object.values(q.children).filter(h=>living(s,h.personId)).map(h=>({...h,name:person(s,h.personId).name,issue:h.issue?{...h.issue,...issue(h.issue.type)}:null})),courtships:q.courtships.slice(-8).reverse(),plans:Object.entries(q.plans).map(([id,heir])=>({id:Number(id),company:firms(s).find(c=>c.id===Number(id))?.name||'Former company',heir:person(s,heir)?.name||'Former heir'})),memories:q.memories.slice(-5).reverse(),news:q.news.slice(-5).reverse()};}
 export function validateFamilyLife(s){
  const q=state(s);if(q===undefined)return true;const score=n=>int(n)&&n<=100;
