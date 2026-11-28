@@ -12,6 +12,7 @@ const groups={
 export function categoryForAction(id){
  if(id.startsWith('scene:start:court'))return 'Justice';
  if(id.startsWith('scene:start:exam'))return 'Work';
+ if(/^scene:start:outing:(market-date|game-night|picnic|weekend|craft-evening|senior-club):/.test(id))return 'People';
  if(id.startsWith('scene:start:bond')||id.startsWith('scene:start:outing:first-date')||id.startsWith('scene:start:outing:reunion'))return 'People';
  if(id.startsWith('world:ent:')||id.startsWith('world:sport:')||id.startsWith('character:agent:')||id.startsWith('character:sport:'))return 'Work';
  const key=id.split(':')[0];
