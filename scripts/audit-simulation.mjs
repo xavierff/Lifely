@@ -1,18 +1,26 @@
 import E from '../src/engine.mjs';
 import {performance} from 'node:perf_hooks';
 import assert from 'node:assert/strict';
-function settle(s){
- for(let i=0;i<24&&s.alive;i++){
+export function settle(s){
+ for(let i=0;i<40&&s.alive;i++){
   if(E.pending(s))s=E.resolve(s,0);
-  else if(s.arcade?.active)s=E.arcadeDecision(s,'leave');
+  else if(s.mini)s=E.miniAction(s,s.mini.phase==='study'?'ready':0);
+  else if(s.world?.network?.conversation)s=E.dialogueReply(s,0);
+  else if(s.careerCampaigns?.active){const v=E.campaignView(s);if(v?.playfield){const choices=v.playfield.options||v.playfield.choices;if(choices?.length)s=E.campaignPlay(s,0);else throw Error('Interactive campaign requires an explicit audit strategy');}else s=E.campaignDecision(s,0);}
+  else if(s.everydayScenes?.active)s=E.sceneChoice(s,0);
+  else if(s.world?.storyDirector?.active)s=E.storyDirectorChoose(s,0);
   else if(s.fate?.active?.status==='playing')s=E.fateDecision(s,0);
+  else if(s.hobbyCircuit?.active)s=E.hobbyDecision(s,0);
+  else if(s.arcade?.active)s=E.arcadeDecision(s,'leave');
+  else if(s.matchLeague?.active)s=E.matchDecision(s,'leave');
+  else if(s.creativeProductions?.active)s=E.productionDecision(s,'cancel');
   else if(s.workplace?.active?.status==='ready')s=E.workplaceDecision(s,0);
   else if(s.familyStories?.active?.status==='ready')s=E.familyDecision(s,0);
   else if(s.worldPulse?.active?.status==='ready')s=E.worldPulseDecision(s,0);
   else return s;
   assert.ok(E.validate(s),'Invalid decision state at age '+s.age);
  }
- if(s.alive&&E.pending(s))throw Error('Unresolved decision loop');
+ if(s.alive)throw Error('Unresolved decision loop after 40 decisions at age '+s.age);
  return s;
 }
 export function auditSimulation({years=60,modes=['balanced','hardcore','sandbox'],countries=[0,1,2,3,4,5]}={}){
@@ -22,7 +30,7 @@ export function auditSimulation({years=60,modes=['balanced','hardcore','sandbox'
   for(let i=0;i<years&&s.alive;i++){
    s=settle(s);if(!s.alive)break;
    const rest=E.commands(s).find(c=>c.id==='rest'&&c.enabled);if(rest)s=E.act(s,rest.id);
-   const t=performance.now();s=E.ageUp(s);times.push(performance.now()-t);count++;
+   s=settle(s);if(!s.alive)break;const t=performance.now();try{s=E.ageUp(s);}catch(e){throw Error(mode+' country '+country+' age '+s.age+': '+e.message,{cause:e});}times.push(performance.now()-t);count++;
    assert.ok(E.validate(s),mode+' country '+country+' age '+s.age);
    assert.ok(Number.isFinite(E.worth(s)));
    const raw=JSON.stringify(s);maxBytes=Math.max(maxBytes,Buffer.byteLength(raw));maxPeople=Math.max(maxPeople,s.people.length);
@@ -36,5 +44,5 @@ export function auditSimulation({years=60,modes=['balanced','hardcore','sandbox'
 if(process.argv[1]&&process.argv[1].endsWith('audit-simulation.mjs')){
  const years=Number(process.argv[2]||60);
  if(!Number.isInteger(years)||years<1||years>110)throw Error('Specify between 1 and 110 years.');
- console.log(JSON.stringify(auditSimulation({years}),null,2));
+ const mode=process.argv[3];if(mode&&!['balanced','hardcore','sandbox'].includes(mode))throw Error('Invalid mode');console.log(JSON.stringify(auditSimulation({years,...(mode?{modes:[mode]}:{})}),null,2));
 }
