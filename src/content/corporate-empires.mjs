@@ -11,7 +11,7 @@ const hireRole=(p,c,careers)=>careers.find(j=>industryMap[c.sector]?.includes(j.
 const fresh=()=>({debt:0,listed:false,publicFloat:0,stake:0,products:0,regions:1,executiveId:null,parentId:null,offer:null,history:[],last:{},dividends:0,interest:0});
 export const corporateProfile=c=>(c.corporate??=fresh());
 const profile=c=>c.corporate||fresh();
-export const corporateEquity=c=>cash(c.cash+c.capital-profile(c).debt);
+export const corporateEquity=c=>cash(c.cash+c.capital-profile(c).debt-(c.marketNoteDebt||0));
 export const corporatePlayerValue=c=>cash(corporateEquity(c)*(c.playerOwned?100-profile(c).publicFloat:profile(c).stake)/100);
 export const corporateRevenueFactor=c=>1+profile(c).products*.07+(profile(c).regions-1)*.12+(profile(c).executiveId!==null?.06:0);
 export const corporateOverhead=c=>cash((profile(c).regions-1)*c.capital*.035);
