@@ -30,6 +30,15 @@ jobs:
         with:
           node-version: 22
       - run: npm run audit:simulation -- 60 ${{ matrix.mode }} ${{ matrix.strategy }}
+  player-experience:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run audit:player -- 25
   bundle:
     runs-on: ubuntu-24.04
     steps:
