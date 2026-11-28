@@ -5,7 +5,7 @@ const groups={
  People:['socialinvite','date','marry','breakup','child','friend','support','askhelp','reconcile','dialogue','family','household','transition','romance','estate','npcgoal','cross','clash','influence'],
  Work:['economy','job','study','education','profession','pro','company','business','mini','campaign','careerfollow','workplace','celebrity','sportdeal','spotlight','side','retire','quit','skill'],
  World:['city','world','character','circle','intergroup','publicplay','afterlife','mandate','pulse','autonomy'],
- Money:['propertymarket','corporate','lifestyle','buy','sell','invest','withdraw','bank','marketbuy','marketsell','renttenant','rentrepair','rentraise','rentlower','budget','debt','luxury','empire'],
+ Money:['globalmarket','propertymarket','corporate','lifestyle','buy','sell','invest','withdraw','bank','marketbuy','marketsell','renttenant','rentrepair','rentraise','rentlower','budget','debt','luxury','empire'],
  Justice:['justice','justicejourney'],
  Life:['identity','rest','exercise','learn','create','volunteer','pet','petcare','club','hobby','scene','fate','episode','ambition','ripple','clinic']
 };
