@@ -1,3 +1,4 @@
+import {companyCity,companyRegionalFactor,regionalCountry} from './connected-economy.mjs';
 import {corporateEquity,corporatePlayerValue,corporateRevenueFactor,corporateOverhead,corporatePrepare,corporatePayout,corporateClose,corporateSale,corporateView,corporateCleanup,validateCorporate} from './corporate-empires.mjs';
 // Independent companies in the same cast. Family enterprises from 1.54 are distinct assets.
 const MAX=20,MAX_STAFF=6;
@@ -40,7 +41,7 @@ function founder(s,q,ctx,roll,year){
  const k=candidates.find(k=>k.industries.includes(ctx.careers[p.world.job]?.industry))||candidates[Math.floor(roll(p.id,'sector')*candidates.length)];
  const capital=money(k.capital*cost),cash=money(capital*.5);p.world.cash-=capital+cash;
  const c={id:++q.serial,name:p.name+' '+k.name+' Co.',sector:k.id,ownerId:p.id,playerOwned:false,status:'active',startedYear:year,capital,cash,capacity:2,staff:[],demand:60,reputation:55,lastProfit:0,lastPayroll:0,transfers:0,partnershipYear:null};
- q.companies.push(c);news(s,q,year,c,p.name+' founded '+c.name+'.',ctx);
+ if(s.connectedEconomy)c.cityId=companyCity(s,c);q.companies.push(c);news(s,q,year,c,p.name+' founded '+c.name+'.',ctx);
 }
 export function economyYear(s,ctx){
  if(!s.alive||(s.age<18&&!state(s)))return;
@@ -51,6 +52,7 @@ export function economyYear(s,ctx){
  if(q.job&&(!s.job||s.job.companyId!==q.job.companyId||!active(company(s,q.job.companyId)||{})))q.job=null;
  for(const c of q.companies){
   if(!active(c))continue;
+  const localCountry=regionalCountry(s,c,ctx.country),cost=localCountry.cost,salary=localCountry.salary,regional=companyRegionalFactor(s,c);
   let owner=person(s,c.ownerId);
   if(!c.playerOwned&&!owner?.alive){
    const family=s.npcFamilies?.unions||[];
@@ -61,11 +63,11 @@ export function economyYear(s,ctx){
   c.staff=c.staff.filter(e=>{const p=person(s,e.personId);return p?.alive&&p.age<65&&p.world?.job===e.jobId;});
   corporatePrepare(s,c,roll);
   const competition=q.companies.filter(o=>o!==c&&active(o)&&o.sector===c.sector).length;
-  c.demand=clamp(c.demand+Math.round((s.market-1)*18+(roll(c.id,'demand')-.46)*14-competition*.7),15,100);
+  c.demand=clamp(c.demand+Math.round((s.market-1)*18+(regional-1)*18+(roll(c.id,'demand')-.46)*14-competition*.7),15,100);
   const playerHere=q.job?.companyId===c.id&&s.job?.companyId===c.id&&!ctx.inCustody;
   const playerPay=playerHere?money(ctx.careers[s.job.id].salary*salary*(1+s.job.level*.18)):0;
   const payroll=c.staff.reduce((n,e)=>{const w=person(s,e.personId).world;return n+money(ctx.careers[e.jobId].salary*salary*(1+w.level*.17));},playerPay);
-  const revenue=money((c.capital*.75+(c.staff.length+(playerHere?1:0))*56000*salary)*(c.demand/65)*s.market*(.9+c.reputation/500)*corporateRevenueFactor(c));
+  const revenue=money((c.capital*.75+(c.staff.length+(playerHere?1:0))*56000*salary)*(c.demand/65)*s.market*regional*(.9+c.reputation/500)*corporateRevenueFactor(c));
   const overhead=money(c.capital*.12+3500*cost)+corporateOverhead(c)+(c.corporate?.interest||0),profit=revenue-payroll-overhead;
   c.lastPayroll=payroll;c.lastProfit=profit;
   c.cash+=profit;
@@ -81,7 +83,7 @@ export function economyYear(s,ctx){
 }
 export function syncEconomyJob(s){const q=state(s);if(q?.job&&s.job?.companyId!==q.job.companyId)q.job=null;}
 export function economyCompetition(s,sector){return (state(s)?.companies||[]).filter(c=>active(c)&&c.sector===sector&&!c.playerOwned).length;}
-export function companySalary(s,careers,country){const q=state(s),c=company(s,q?.job?.companyId);return q?.job&&active(c||{})&&s.job?.companyId===c.id?money(careers[s.job.id].salary*country(s).salary*(1+s.job.level*.18)):null;}
+export function companySalary(s,careers,country){const q=state(s),c=company(s,q?.job?.companyId);return q?.job&&active(c||{})&&s.job?.companyId===c.id?money(careers[s.job.id].salary*regionalCountry(s,c,country).salary*(1+s.job.level*.18)):null;}
 export function economyWorth(s){return (state(s)?.companies||[]).filter(active).reduce((n,c)=>n+corporatePlayerValue(c),0);}
 export function economyCommands(s,ctx){
  if(!s.alive||s.age<18||s.justice?.years>0||s.justice?.case)return [];
@@ -89,7 +91,7 @@ export function economyCommands(s,ctx){
  for(const c of q.companies.filter(active)){
   const owner=person(s,c.ownerId),canJob=!s.retired&&!s.business&&!s.profession&&!c.playerOwned&&vacancy(c)>0&&q.job?.companyId!==c.id;
   const choices=roles(c,ctx.careers).filter(j=>j.education<=s.education&&j.knowledge<=s.stats.knowledge).slice(0,3);
-  for(const j of choices)out.push({id:'economy:apply:'+c.id+':'+j.id,label:'Join '+c.name+' · '+j.title,detail:'Real NPC employer · '+money(j.salary*ctx.country(s).salary).toLocaleString('en-US')+' annual base salary',enabled:a&&canJob});
+  for(const j of choices)out.push({id:'economy:apply:'+c.id+':'+j.id,label:'Join '+c.name+' · '+j.title,detail:'Real NPC employer · '+money(j.salary*regionalCountry(s,c,ctx.country).salary).toLocaleString('en-US')+' annual base salary',enabled:a&&canJob});
   if(!c.playerOwned){out.push({id:'economy:buy:'+c.id,label:'Acquire '+c.name,detail:'Full ownership · $'+quote(c).toLocaleString('en-US'),enabled:a&&!!owner?.alive&&s.cash>=quote(c)&&quote(c)>0&&!c.corporate?.listed&&q.job?.companyId!==c.id});
    out.push({id:'economy:partner:'+c.id,label:'Propose business partnership',detail:'$'+money(1000*ctx.country(s).cost)+' · strengthen both businesses',enabled:a&&!!s.business&&!!owner?.alive&&c.partnershipYear!==clock(s)&&s.cash>=money(1000*ctx.country(s).cost)});
   }else out.push({id:'economy:sell:'+c.id,label:'Sell '+c.name,detail:'Sell to a qualified NPC buyer at current value',enabled:a&&!c.corporate?.listed&&s.people.some(p=>p.alive&&p.age>=25&&p.world?.cash>=quote(c))});

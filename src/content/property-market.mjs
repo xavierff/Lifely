@@ -1,3 +1,4 @@
+import {localPropertyCity,propertyInitialFactor,propertyRegionalGrowth,assetCityCountry} from './connected-economy.mjs';
 // Independent property assets. Legacy property menu remains a separate inventory.
 const MAX=30,cap=(n,a,b)=>Math.min(b,Math.max(a,n)),money=n=>Math.max(0,Math.round(n)),integer=n=>Number.isSafeInteger(n)&&n>=0;
 const kinds=[
@@ -24,7 +25,7 @@ const rate=q=>q.phase==='crash'?8:q.phase==='boom'?7:5;
 const fee=(s,ctx,n)=>money(n*ctx.country(s).cost);
 function notify(s,q,p,text,ctx,force=false){q.news.push({year:clock(s),propertyId:p.id,text});q.news=q.news.slice(-40);if(force||p.playerOwned||(person(s,p.ownerId)?.bond||0)>=65)ctx.add(s,text,'finance');}
 function listing(q,k,value){const id=++q.serial;return {id,kind:k.id,name:k.name+' #'+id,value,condition:75,ownerId:null,playerOwned:false,mortgage:null,tenantId:null,rentLevel:100,lastRent:0,offer:null,offeredYear:null,project:null,upgrades:0,foreclosed:false};}
-function createListing(s,q,ctx,roll){if(q.properties.length>=MAX)return;const k=kinds[Math.floor(roll(q.serial+1,'kind')*kinds.length)%kinds.length];const p=listing(q,k,money(k.base*ctx.country(s).cost*q.priceIndex/100));q.properties.push(p);}
+function createListing(s,q,ctx,roll){if(q.properties.length>=MAX)return;const k=kinds[Math.floor(roll(q.serial+1,'kind')*kinds.length)%kinds.length];const id=localPropertyCity(s,q.serial+1),target=id?assetCityCountry(s,id):s.country;const p=listing(q,k,money(k.base*(ctx.countries?.[target]?.cost??ctx.country(s).cost)*(id?propertyInitialFactor(s,id):q.priceIndex/100)));if(id)p.cityId=id;q.properties.push(p);}
 function availableTenant(s,p){const q=state(s),rent=rentDue(p);return s.people.filter(n=>n.alive&&n.age>=18&&n.age<80&&n.id!==p.ownerId&&n.world&&n.world.cash>=rent&&!q.properties.some(h=>h.tenantId===n.id)&&!q.properties.some(h=>h.ownerId===n.id)).sort((a,b)=>b.bond-a.bond||a.id-b.id);}
 function closeLoan(p){p.mortgage=null;}
 function lenderSale(s,q,p,ctx){const o=owner(s,p),surplus=money(p.value*.85-debt(p));if(o)o.cash+=surplus;p.ownerId=null;p.playerOwned=false;p.tenantId=null;p.project=null;p.offer=null;p.foreclosed=true;closeLoan(p);notify(s,q,p,p.name+' was foreclosed; remaining equity returned after the lender sale.',ctx,true);}
@@ -45,10 +46,10 @@ export function propertyMarketYear(s,ctx){
  q.demand=cap(q.demand+Math.round((s.market-1)*20+(roll(0,'demand')-.5)*12),15,100);
  q.phase=s.market<=.78?'crash':q.demand>=75&&s.market>=1.1?'boom':s.market<.92?'cooling':'balanced';
  q.priceIndex=cap(Math.round(q.priceIndex*(1+(q.phase==='crash'?-.14:q.phase==='boom'?.12:(s.market-1)*.12+.015))),45,260);
- if(!q.properties.length){for(let i=0;i<3;i++)createListing(s,q,ctx,roll);}
+ const existing=new Set(q.properties.map(p=>p.id));if(s.connectedEconomy)q.priceIndex=Math.round(s.connectedEconomy.regions.reduce((n,r)=>n+r.housing,0)/6);if(!q.properties.length){for(let i=0;i<3;i++)createListing(s,q,ctx,roll);}
  else if(q.properties.filter(p=>!p.playerOwned&&p.ownerId===null).length<3&&roll(0,'new')<.7)createListing(s,q,ctx,roll);
  for(const p of q.properties){
-  p.lastRent=0;p.value=Math.max(1000,money(p.value*q.priceIndex/prev));if(p.offer?.year!==at)p.offer=null;
+  p.lastRent=0;p.value=Math.max(1000,money(p.value*(s.connectedEconomy?(existing.has(p.id)?propertyRegionalGrowth(s,p):1):q.priceIndex/prev)));if(p.offer?.year!==at)p.offer=null;
   if(p.ownerId!==null&&!person(s,p.ownerId)?.alive){
    const heirs=[...new Set((s.npcFamilies?.unions||[]).filter(u=>u.adults.includes(p.ownerId)).flatMap(u=>[...u.children,...(['married','player'].includes(u.status)?u.adults:[])]))].map(id=>person(s,id)).filter(n=>n?.alive&&n.age>=18&&n.id!==p.ownerId);
    if(heirs.length){p.ownerId=heirs.sort((a,b)=>b.age-a.age||a.id-b.id)[0].id;if(p.tenantId===p.ownerId)p.tenantId=null;notify(s,q,p,p.name+' passed to a family heir.',ctx);}
