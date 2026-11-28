@@ -51,12 +51,18 @@ const experientialRibbons=[
 // Major world, financial, criminal and specialist-career endings retain their
 // established priority; these precede more generic family and life outcomes.
 ribbons.splice(ribbons.findIndex(r=>r.id==='family'),0,...experientialRibbons);
-export function lifeEnding(s,w){return ribbons.find(r=>r.test(s,w))||ribbons[ribbons.length-1];}
+const branchRecords=s=>(s.dramaticStories?.completed||[]).filter(r=>r.stage===3&&r.choices.every(c=>typeof c.scene==='string'));
+ribbons.splice(ribbons.findIndex(r=>r.id==='family'),0,
+ {id:'second-chapters',name:'A Life of Second Chapters',description:'Reconnect in two branching dramas after a difficult opening decision.',test:s=>branchRecords(s).filter(r=>r.choices[0].index!==0&&r.outcome==='reconnected').length>=2},
+ {id:'unwritten-story',name:'The Unwritten Story',description:'Discover three ancestral records and complete a branching drama.',test:s=>(s.dramaticStories?.discovered?.length||0)>=3&&branchRecords(s).length>=1},
+ {id:'different-roads',name:'Different Roads, Same Heart',description:'Complete three distinct branching dramas with at least two different relationship outcomes.',test:s=>{const records=branchRecords(s);return new Set(records.map(r=>r.type)).size>=3&&new Set(records.map(r=>r.outcome)).size>=2;}}
+);
+export function lifeEnding(s,w){const recorded=!s.alive&&s.ending?ribbons.find(r=>r.id===s.ending):null;return recorded||ribbons.find(r=>r.test(s,w))||ribbons[ribbons.length-1];}
 export function emptyProfile(){return {version:1,completed:{},achievements:[],challenges:[],ribbons:[],bestAge:0,bestWorth:0,bestGeneration:0};}
 export function validProfile(p){return !!p&&p.version===1&&p.completed&&typeof p.completed==='object'&&['achievements','challenges','ribbons'].every(k=>Array.isArray(p[k])&&p[k].every(x=>typeof x==='string'))&&['bestAge','bestWorth','bestGeneration'].every(k=>Number.isFinite(p[k])&&p[k]>=0)&&Object.values(p.completed).every(x=>x&&Number.isInteger(x.age)&&typeof x.ribbon==='string');}
 export function mergeLife(profile,s,w){const p=validProfile(profile)?JSON.parse(JSON.stringify(profile)):emptyProfile();if(!s||s.replay?.mode==='sandbox')return p;
  const union=(a,b)=>[...new Set([...a,...b])];p.achievements=union(p.achievements,s.achievements||[]);p.challenges=union(p.challenges,s.completedChallenges||[]);
  p.bestAge=Math.max(p.bestAge,s.age);p.bestWorth=Math.max(p.bestWorth,w,s.peakWorth||0);p.bestGeneration=Math.max(p.bestGeneration,s.generation);
- if(!s.alive){const id=s.lifeId||['legacy',s.name,s.country,s.generation,s.rng,s.age].join(':');const r=lifeEnding(s,w);if(!Object.prototype.hasOwnProperty.call(p.completed,id))p.completed[id]={name:s.name,age:s.age,ribbon:r.id,worth:w};p.ribbons=union(p.ribbons,[r.id]);}
+ if(!s.alive){const id=s.lifeId||['legacy',s.name,s.country,s.generation,s.rng,s.age].join(':');const r=lifeEnding(s,w);if(!Object.prototype.hasOwnProperty.call(p.completed,id))p.completed[id]={name:s.name,age:s.age,ribbon:r.id,worth:w};p.ribbons=union(p.ribbons,[p.completed[id].ribbon]);}
  return p;
 }
