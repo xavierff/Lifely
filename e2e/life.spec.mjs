@@ -37,7 +37,7 @@ test('special career and NPC world are accessible and persist',async({page})=>{
  await page.getByRole('button',{name:/Train with coach/}).click();
  await expect(page.getByText('Preparation',{exact:true})).toBeVisible();
  await expect(page.getByText(/LOCAL LIFE/)).toBeVisible();
- await page.getByText('People',{exact:true}).click();
+ await page.getByRole('tab',{name:'People',exact:true}).click();
  await expect(page.getByText('Trust',{exact:true}).first()).toBeVisible();
  await page.getByRole('button',{name:/Offer financial help/}).first().click();
  await expect(page.getByText(/Received financial support/).first()).toBeVisible();
@@ -95,7 +95,7 @@ test('six-domain World hub and travel journal persist on reload',async({page})=>
 test('family tree shows persisted ancestors from inherited lives',async({page})=>{
  let s=E.createLife({name:'Elena',seed:31});s.age=40;s.cash=100000;s=E.act(s,'date');s=E.act(s,'child');const child=s.people.find(p=>p.role==='child');child.age=18;s.alive=false;s.pending=null;
  let heir=E.legacy(s,child.id);await page.goto('/');await page.evaluate(save=>localStorage.setItem('lifely.save.v2',JSON.stringify(save)),heir);await page.reload();
- await page.getByText('People',{exact:true}).click();await expect(page.getByText('Family tree',{exact:true})).toBeVisible();
+ await page.getByRole('tab',{name:'People',exact:true}).click();await expect(page.getByText('Family tree',{exact:true})).toBeVisible();
  await expect(page.getByText(/Elena · lived 40 years/)).toBeVisible();
 });
 
@@ -124,7 +124,7 @@ test('family disagreements and inherited saga chapters are visible in people and
  s=E.act(s,'character:family:start:'+parent.id);s=E.act(s,'character:legacy:start');
  const title=s.world.characters.arc.title;const childAge=25;s=E.act(s,'date');s.actions=3;s=E.act(s,'child');const child=s.people.find(p=>p.role==='child');child.age=childAge;
  await page.goto('/');await page.evaluate(save=>localStorage.setItem('lifely.save.v2',JSON.stringify(save)),s);await page.reload();
- await page.getByText('People',{exact:true}).click();
+ await page.getByRole('tab',{name:'People',exact:true}).click();
  await expect(page.getByText('Family tensions',{exact:true})).toBeVisible();
  await expect(page.getByText('Unresolved tension').first()).toBeVisible();
  await page.getByText('World',{exact:true}).click();await page.getByRole('button',{name:'Explore Family dynasty'}).click();
@@ -765,7 +765,7 @@ test('family choices are playable, change relationships and persist after reload
  s=E.act(s,'gift:'+partner.id);s=E.act(s,'marry');s.actions=3;
  await page.goto('/');
  await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);
- await page.reload();await page.getByText('People',{exact:true}).click();
+ await page.reload();await page.getByRole('tab',{name:'People',exact:true}).click();
  await expect(page.getByTestId('family-living-board')).toBeVisible();
  await page.getByTestId('family-action-family-begin-shared-futures-'+partner.id).click();
  await expect(page.getByTestId('family-active-chapter')).toContainText('The promotion abroad');
@@ -773,7 +773,7 @@ test('family choices are playable, change relationships and persist after reload
  await page.getByTestId('family-decision-0').click();
  await expect(page.getByTestId('family-active-chapter')).toHaveCount(0);
  await expect(page.getByTestId('family-story-progress')).toContainText('Chapter 2/3');
- await page.reload();await page.getByText('People',{exact:true}).click();
+ await page.reload();await page.getByRole('tab',{name:'People',exact:true}).click();
  await expect(page.getByTestId('family-story-progress')).toContainText('Chapter 2/3');
  await expect(page.getByTestId('advance-year')).toBeEnabled();
 });
@@ -784,7 +784,7 @@ test('next family chapter returns after two years and remembers the real partici
  s=E.familyDecision(s,1);
  for(let i=0;i<2;i++){s.pending=null;s=E.ageUp(s);if(s.pending!==null)s=E.resolve(s,0);}
  await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
- await page.getByText('People',{exact:true}).click();
+ await page.getByRole('tab',{name:'People',exact:true}).click();
  await expect(page.getByTestId('family-story-progress')).toContainText(partner.name);
  await page.getByTestId('family-action-family-continue').click();
  await expect(page.getByTestId('family-active-chapter')).toContainText('A different circle');
@@ -799,7 +799,7 @@ test('parenting and sibling interaction boards fit narrow phones without overflo
   for(const p of s.people.filter(x=>x.role==='child'))p.age=10;
   s.actions=3;
   await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
-  await page.getByText('People',{exact:true}).click();
+  await page.getByRole('tab',{name:'People',exact:true}).click();
   const b=page.getByTestId('family-living-board');await expect(b).toBeVisible();
   const bounds=await b.boundingBox();expect(bounds.width).toBeLessThanOrEqual(width+1);
   await page.getByTestId('family-show-stories').click();
@@ -852,7 +852,7 @@ test('household planner and financial dashboard remain legible on 320, 375 and 4
   const rect=await board.boundingBox();
   expect(rect.width).toBeLessThanOrEqual(width+1);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
-  await page.getByText('People',{exact:true}).click();
+  await page.getByRole('tab',{name:'People',exact:true}).click();
   await expect(page.getByTestId('household-family-recap')).toBeVisible();
  }
 });
@@ -863,12 +863,12 @@ test('separation creates adjustable co-parenting and preserves the original ex a
  s=E.act(s,'child');s=E.act(s,'breakup');
  s.people.find(p=>p.role==='child').age=9;s.actions=3;
  await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
- await page.getByText('People',{exact:true}).click();
+ await page.getByRole('tab',{name:'People',exact:true}).click();
  const board=page.getByTestId('family-transitions-board');await expect(board).toBeVisible();
  await expect(page.getByTestId('transition-coparenting')).toContainText(ex.name);
  await page.getByTestId('transition-transition-coparent-resident').click();
  await expect(page.getByTestId('transition-coparenting')).toContainText('resident arrangement');
- await page.reload();await page.getByText('People',{exact:true}).click();
+ await page.reload();await page.getByRole('tab',{name:'People',exact:true}).click();
  await expect(page.getByTestId('transition-coparenting')).toContainText('resident arrangement');
 });
 test('a family property can be disputed, sold, and its proceeds transferred to an actual NPC',async({page})=>{
@@ -877,7 +877,7 @@ test('a family property can be disputed, sold, and its proceeds transferred to a
  s=E.act(s,'breakup');s.properties.push({id:'house',value:100000});s.actions=3;
  const oldMoney=s.people.find(p=>p.id===ex.id).world.cash;
  await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
- await page.getByText('People',{exact:true}).click();
+ await page.getByRole('tab',{name:'People',exact:true}).click();
  await page.getByTestId('transition-transition-property-open-house').click();
  await expect(page.getByTestId('transition-property-case')).toContainText('$100,000');
  await page.getByTestId('transition-transition-property-split').click();
@@ -892,7 +892,7 @@ test('guiding a teenager raises autonomy without choosing their later job for th
  s=E.act(s,'date');s=E.act(s,'child');
  const child=s.people.find(p=>p.role==='child');child.age=16;s.actions=3;
  await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
- await page.getByText('People',{exact:true}).click();
+ await page.getByRole('tab',{name:'People',exact:true}).click();
  await page.getByTestId('transition-transition-guide-'+child.id+'-listen').click();
  await expect(page.getByTestId('transition-independent-youth')).toContainText(child.name);
  const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('lifely.save.v2')));
@@ -906,7 +906,7 @@ test('co-parenting, property and elder care views fit narrow phone screens',asyn
   s=E.act(s,'date');s=E.act(s,'child');s=E.act(s,'breakup');
   s.people.find(p=>p.role==='child').age=13;s.people.find(p=>p.role==='parent').age=65;s.actions=3;
   await page.goto('/');await page.evaluate(v=>localStorage.setItem('lifely.save.v2',JSON.stringify(v)),s);await page.reload();
-  await page.getByText('People',{exact:true}).click();
+  await page.getByRole('tab',{name:'People',exact:true}).click();
   const board=page.getByTestId('family-transitions-board');await expect(board).toBeVisible();
   const box=await board.boundingBox();expect(box.width).toBeLessThanOrEqual(width+1);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+2);
