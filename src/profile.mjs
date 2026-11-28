@@ -54,7 +54,7 @@ ribbons.splice(ribbons.findIndex(r=>r.id==='family'),0,...experientialRibbons);
 export function lifeEnding(s,w){return ribbons.find(r=>r.test(s,w))||ribbons[ribbons.length-1];}
 export function emptyProfile(){return {version:1,completed:{},achievements:[],challenges:[],ribbons:[],bestAge:0,bestWorth:0,bestGeneration:0};}
 export function validProfile(p){return !!p&&p.version===1&&p.completed&&typeof p.completed==='object'&&['achievements','challenges','ribbons'].every(k=>Array.isArray(p[k])&&p[k].every(x=>typeof x==='string'))&&['bestAge','bestWorth','bestGeneration'].every(k=>Number.isFinite(p[k])&&p[k]>=0)&&Object.values(p.completed).every(x=>x&&Number.isInteger(x.age)&&typeof x.ribbon==='string');}
-export function mergeLife(profile,s,w){const p=validProfile(profile)?JSON.parse(JSON.stringify(profile)):emptyProfile();if(!s)return p;
+export function mergeLife(profile,s,w){const p=validProfile(profile)?JSON.parse(JSON.stringify(profile)):emptyProfile();if(!s||s.replay?.mode==='sandbox')return p;
  const union=(a,b)=>[...new Set([...a,...b])];p.achievements=union(p.achievements,s.achievements||[]);p.challenges=union(p.challenges,s.completedChallenges||[]);
  p.bestAge=Math.max(p.bestAge,s.age);p.bestWorth=Math.max(p.bestWorth,w,s.peakWorth||0);p.bestGeneration=Math.max(p.bestGeneration,s.generation);
  if(!s.alive){const id=s.lifeId||['legacy',s.name,s.country,s.generation,s.rng,s.age].join(':');const r=lifeEnding(s,w);if(!Object.prototype.hasOwnProperty.call(p.completed,id))p.completed[id]={name:s.name,age:s.age,ribbon:r.id,worth:w};p.ribbons=union(p.ribbons,[r.id]);}
