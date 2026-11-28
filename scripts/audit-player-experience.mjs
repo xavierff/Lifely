@@ -41,7 +41,7 @@ export function auditPlayer(profile,{years=25,country=0}={}){
   maxBytes=Math.max(maxBytes,Buffer.byteLength(JSON.stringify(s)));maxPeople=Math.max(maxPeople,s.people.length);if(i%3===0)s=snapshot(s);
  }
  const actions=Object.values(count).reduce((a,b)=>a+b,0),top=Object.entries(count).sort((a,b)=>b[1]-a[1])[0];
- return {profile,country,years:times.length,age:s.age,alive:s.alive,startWorth,endWorth:E.worth(s),cash:s.cash,debt:s.debt,health:s.stats.health,happiness:s.stats.happiness,stress:s.stats.stress,job:s.job?.id??null,business:!!s.business,releases,matches,children:s.people.filter(p=>p.role==='child').length,maxPeople,maxBytes,actions,distinctActions:Object.keys(count).length,mostRepeated:top?{id:top[0],count:top[1],share:top[1]/actions}:null};
+ return {profile,country,years:times.length,age:s.age,alive:s.alive,startWorth,endWorth:E.worth(s),cash:s.cash,debt:s.debt,health:s.stats.health,happiness:s.stats.happiness,stress:s.stats.stress,job:s.job?.id??null,business:!!s.business,productionsCompleted:releases,successfulReleases:s.creativeProductions?.totals.releases||0,productionNet:s.creativeProductions?s.creativeProductions.totals.gross-s.creativeProductions.totals.fees-s.creativeProductions.totals.spent:0,matchesCompleted:matches,sportWins:s.world.sports.wins,sportLosses:s.world.sports.losses,children:s.people.filter(p=>p.role==='child').length,maxPeople,maxBytes,actions,distinctActions:Object.keys(count).length,mostRepeated:top?{id:top[0],count:top[1],share:top[1]/actions}:null};
 }
 export function auditLineage(){
  let s=E.createLife({seed:177999,mode:'balanced'});s.age=30;s.cash=250000;const history=[];
@@ -54,7 +54,7 @@ export function auditLineage(){
   const child=s.people.find(p=>p.role==='child'&&p.alive);assert.ok(child);
   for(let i=0;i<5&&s.alive;i++){s=settle(s);if(s.alive)s=E.ageUp(s);assert.ok(E.validate(s));}
   s=snapshot(s);history.push({generation,age:s.age,people:s.people.length,worth:E.worth(s),bytes:Buffer.byteLength(JSON.stringify(s))});
-  if(generation<3){const heir=s.people.find(p=>p.id===child.id&&p.alive);assert.ok(heir);s.age=60;heir.age=30;s.alive=false;s.pending=null;const previous=JSON.stringify(s);s=E.legacy(s,heir.id);assert.equal(s.generation,generation+1);assert.equal(JSON.parse(previous).generation,generation);assert.ok(E.validate(s));s=snapshot(s);}
+  if(generation<3){const heir=s.people.find(p=>p.id===child.id&&p.alive);assert.ok(heir);s.age=60;heir.age=30;s.alive=false;s.pending=null;const prior=s,previous=JSON.stringify(prior);s=E.legacy(prior,heir.id);assert.equal(s.generation,generation+1);assert.equal(JSON.stringify(prior),previous);assert.ok(E.validate(s));s=snapshot(s);}
  }
  return history;
 }
