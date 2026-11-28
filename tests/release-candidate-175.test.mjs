@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import E from '../src/engine.mjs';
+import {releasePreflight} from '../scripts/release-preflight.mjs';
+import {settle} from '../scripts/audit-simulation.mjs';
+test('release preflight validates matching native identity, assets and actual catalog',()=>{const r=releasePreflight();assert.ok(r.build>=85);assert.ok(r.catalog.ribbons>=42);assert.ok(r.catalog.everydayOutings>=19);});
+test('older optional-module saves roundtrip without inventing historical accomplishments',()=>{const s=E.createLife({seed:17501});s.age=25;for(const k of ['replay','arcade','matchLeague','creativeProductions','dramaticStories'])delete s[k];const n=JSON.parse(JSON.stringify(s));assert.ok(E.validate(n));assert.equal(E.replayView(n).mode.id,'balanced');assert.equal(E.productionView(n).totals.releases,0);assert.equal(E.dramaView(n).completed.length,0);assert.equal(E.worth(n),E.worth(s));const next=E.ageUp(n);assert.ok(E.validate(next));});
+test('audit settles an active arcade match and keeps valid state',()=>{const s=E.createLife({seed:17502});s.age=25;s.actions=3;const active=E.act(s,'arcade:start:football');assert.ok(active.arcade.active);const next=settle(active);assert.equal(next.arcade.active,null);assert.ok(E.validate(next));assert.equal(next.actions,2);});
+test('sandbox descendants retain the mode and their previous life survives serialization',()=>{let s=E.createLife({seed:17503,mode:'sandbox'});s.age=40;s.cash=100000;s.actions=3;s=E.act(s,'date');s=E.act(s,'child');const child=s.people.find(p=>p.role==='child');child.age=20;s.alive=false;s.pending=null;const old=JSON.stringify(s),n=E.legacy(s,child.id);assert.equal(JSON.stringify(s),old);assert.equal(n.generation,2);assert.equal(n.replay.mode,'sandbox');assert.ok(E.validate(JSON.parse(JSON.stringify(n))));assert.ok(E.validate(E.ageUp(n)));});

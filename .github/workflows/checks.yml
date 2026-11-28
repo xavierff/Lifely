@@ -14,7 +14,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - run: npm run release:preflight
       - run: npm test
+  longevity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [balanced, hardcore, sandbox]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run audit:simulation -- 60 ${{ matrix.mode }}
   bundle:
     runs-on: ubuntu-24.04
     steps:

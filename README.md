@@ -1,6 +1,6 @@
 # Lifely
 
-An original, offline, choice-driven life simulator. **1.74.0 premium UX development candidate (build 84)**. This is not an App Store-ready or externally verified BitLife-parity release. Historical release notes below are not live catalog totals. Run `npm run audit:catalog` for the current runtime inventory and `npm run audit:simulation -- 60` for deterministic cross-mode quality measurements. See [release audit and competitive review](docs/1.69.0_RELEASE_AUDIT.md).
+An original, offline, choice-driven life simulator. **1.75.0 release candidate (build 85)**. This is not an App Store-ready or externally verified BitLife-parity release. Historical release notes below are not live catalog totals. Run `npm run audit:catalog` for the current runtime inventory and `npm run audit:simulation -- 60` for deterministic cross-mode quality measurements. See [release audit and competitive review](docs/1.69.0_RELEASE_AUDIT.md).
 
 ## 1.1.0 interactive career playfields (build 10 candidate)
 
