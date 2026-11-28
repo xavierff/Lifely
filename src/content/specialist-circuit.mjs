@@ -41,7 +41,7 @@ const track=id=>specialistTracks.find(t=>t.id===id),state=s=>s.specialistCircuit
 const clock=s=>s.age+(s.livingEconomy?.offset??0);
 const empty=()=>({version:1,serial:0,lastYear:null,active:null,records:[],rivals:{},history:[],legacy:[],wins:0,completed:0,totalReward:0});
 const hash=x=>{let h=2166136261;for(const c of String(x))h=Math.imul(h^c.charCodeAt(0),16777619);return (h>>>0)/4294967296;};
-const eligible=(s,t)=>s.profession?.id===t.profession||(t.id==='sports'&&!!s.world?.sports?.sport)||(t.id==='film'&&s.world?.entertainment?.path==='Film actor')||(t.id==='music'&&s.world?.entertainment?.path==='Recording musician')||(t.id==='business'&&!!s.business);
+const eligible=(s,t)=>!s.retired&&!(t.id==='sports'&&(s.profession?.injury||s.world?.sports?.injury))&&(s.profession?.id===t.profession||(t.id==='sports'&&!!s.world?.sports?.sport)||(t.id==='film'&&s.world?.entertainment?.path==='Film actor')||(t.id==='music'&&s.world?.entertainment?.path==='Recording musician')||(t.id==='business'&&!!s.business));
 const cost=(s,ctx,n)=>cash(n*ctx.country(s).cost);
 const score=(a)=>clamp(a.quality*.45+a.morale*.25+a.reach*.20+(100-a.risk)*.10);
 const rival=(q,t)=>q.rivals[t.id]||{name:t.name+' rival',rating:58,record:0,respect:50};
