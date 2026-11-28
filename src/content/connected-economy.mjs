@@ -18,13 +18,13 @@ const local=(s,id)=>city(id)?.country??s.country;
 export const companyCity=(s,c)=>c.cityId||s.internationalLife?.contacts[c.ownerId]?.city||current(s);
 export const assetCity=(s,p)=>p.cityId||s.internationalLife?.contacts[p.ownerId]?.city||current(s);
 export const npcCity=(s,p)=>s.internationalLife?.contacts[p.id]?.city||current(s);
-export function regionalCountry(s,c,base){return base(c.cityId?city(c.cityId).country:s.country);}
+export function regionalCountry(s,c,base){return base({...s,country:c.cityId?city(c.cityId).country:s.country});}
 export function regionalActivity(s,id){return (region(s,id)?.activity??100)/100;}
 export function companyRegionalFactor(s,c){if(!state(s))return 1;const homeRegion=local(s,companyCity(s,c)),ids=[...new Set([homeRegion,...(c.marketRegions||[])])];return ids.reduce((n,id)=>n+regionalActivity(s,id),0)/ids.length;}
 export function propertyRegionalGrowth(s,p){if(!state(s))return 1;const r=region(s,local(s,assetCity(s,p)));return clamp(r.housing/(r.previousHousing??r.housing),.8,1.2);}
 export function propertyInitialFactor(s,id){return state(s)?(region(s,local(s,id)).housing/100)*(city(id)?.cost||1):1;}
 export function localPropertyCity(s,serial){return state(s)?internationalCities[(serial+Math.floor(hash(s.name+':property-region')*18))%18].id:undefined;}
-export function regionalCost(s,p,base){return base(city(npcCity(s,p)).country);}
+export function regionalCost(s,p,base){return base({...s,country:city(npcCity(s,p)).country});}
 function log(s,q,text,ctx){q.news.push({year:clock(s),text});q.news=q.news.slice(-35);ctx.add(s,text,'finance');}
 export function connectedPrepare(s,ctx){
  if(!s.alive||s.age<18&&!state(s))return;
@@ -68,7 +68,7 @@ export function connectedCommands(s,ctx){
  const q=state(s);if(!q||!s.alive||s.age<18||s.justice?.years>0||s.justice?.case)return [];
  const out=[],a=s.actions>0,y=clock(s),put=(id,label,detail,ok)=>out.push({id:'connected:'+id,label,detail,enabled:!!(a&&ok)});
  for(const c of firms(s).filter(active)){
-  if(c.playerOwned){const profile=corporateProfile(c),fee=cash(4000*ctx.countries[local(s,companyCity(s,c))].cost);
+  if(c.playerOwned){const fee=cash(4000*ctx.countries[local(s,companyCity(s,c))].cost);
    for(const r of q.regions.filter(r=>r.id!==local(s,companyCity(s,c))&&!(c.marketRegions||[]).includes(r.id)))put('region:'+c.id+':'+r.id,'Open '+ctx.countries[r.id].name+' branch · '+c.name,'$'+fee+' company cash converted to operating capital · diversified demand',(c.marketRegions||[]).length<5&&c.cash>=fee&&q.lastActions['region:'+c.id]!==y);
    for(const [id,label] of [['quality','Prioritize product reliability'],['staff','Protect employee stability'],['reserve','Strengthen reserves']])put('board:'+c.id+':'+id,label+' · '+c.name,'Company board decision · one per year',q.lastActions['board:'+c.id]!==y&&c.cash>=cash(1000*ctx.countries[local(s,companyCity(s,c))].cost));
   }else if(!c.corporate?.listed&&person(s,c.ownerId)?.alive&&quote(c)>0&&s.livingEconomy?.job?.companyId!==c.id){
