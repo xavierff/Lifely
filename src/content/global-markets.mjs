@@ -1,3 +1,4 @@
+import {npcPortfolioWorth} from './connected-economy.mjs';
 // Fictional market instruments linked to existing economy and property records.
 // Direct listed-company ownership stays in corporate-empires; funds are external pooled instruments.
 const cap=(n,a,b)=>Math.min(b,Math.max(a,n)),money=n=>Math.max(0,Math.round(n)),int=n=>Number.isSafeInteger(n)&&n>=0;
@@ -81,7 +82,7 @@ export function inheritGlobalMarkets(next,old){
 }
 export function globalMarketView(s,worth){
  const q=state(s)||fresh(s);const companyRows=firms(s).filter(live).map(c=>({id:c.id,name:c.name,equity:corpValue(c),earnings:c.lastProfit,listed:!!c.corporate?.listed,owner:c.playerOwned?'You':person(s,c.ownerId)?.name||'Unknown'}));
- const ranks=s.people.filter(p=>p.alive&&p.age>=18&&p.world).map(p=>({id:p.id,name:p.name,worth:p.world.cash-p.world.debt+firms(s).filter(c=>live(c)&&c.ownerId===p.id&&!c.playerOwned).reduce((n,c)=>n+money(corpValue(c)*(100-(c.corporate?.publicFloat||0))/100),0)+(s.propertyMarket?.properties||[]).filter(h=>h.ownerId===p.id&&!h.playerOwned).reduce((n,h)=>n+h.value-(h.mortgage?.balance||0),0)}));
+ const ranks=s.people.filter(p=>p.alive&&p.age>=18&&p.world).map(p=>({id:p.id,name:p.name,worth:p.world.cash-p.world.debt+npcPortfolioWorth(s,p.id)+firms(s).filter(c=>live(c)&&c.ownerId===p.id&&!c.playerOwned).reduce((n,c)=>n+money(corpValue(c)*(100-(c.corporate?.publicFloat||0))/100),0)+(s.propertyMarket?.properties||[]).filter(h=>h.ownerId===p.id&&!h.playerOwned).reduce((n,h)=>n+h.value-(h.mortgage?.balance||0),0)}));
  ranks.push({id:0,name:s.name,worth:worth(s)});ranks.sort((a,b)=>b.worth-a.worth||a.id-b.id);
  return {year:clock(s),phase:q.phase,inflation:q.inflation,policyRate:q.policyRate,worth:globalMarketWorth(s),annual:q.annual,funds:funds.map(f=>({...f,price:q.prices[f.id],units:q.holdings[f.id]?.units||0,cost:q.holdings[f.id]?.cost||0,value:(q.holdings[f.id]?.units||0)*q.prices[f.id]})),bonds:q.bonds.filter(b=>b.owned).slice().reverse(),companies:companyRows,rankings:ranks.slice(0,10),playerRank:ranks.findIndex(r=>r.id===0)+1,manager:q.manager,history:q.history.filter(h=>h.kind==='snapshot').slice(-8),news:q.news.slice(-5).reverse()};
 }
