@@ -36,7 +36,7 @@ export const outings=[
 outings.push(...socialOutings);
 const spec=id=>outings.find(x=>x.id===id);
 const livingGuest=(s,id)=>s.people.find(p=>p.id===id&&p.alive&&p.age>=18);
-function guestPreference(p){const personality=p.world?.personality;return ['Restless','Adventurous','Competitive'].includes(personality)?2:['Pragmatic','Driven','Cautious'].includes(personality)?1:0;}
+function guestPreference(p){const personality=p.world?.personality;return ['Creative','Competitive'].includes(personality)?2:['Driven','Cautious'].includes(personality)?1:0;}
 function participants(s,d,e){
  const people=(s.people||[]).filter(p=>p.alive&&p.age>=5);
  if(d.partner==='peer'||d.partner==='peer-required'){
