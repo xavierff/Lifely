@@ -3,6 +3,7 @@ import {View,Text,Pressable,StyleSheet} from 'react-native';
 const dollars=n=>(n<0?'−$':'$')+Math.abs(Math.round(n)).toLocaleString('en-US');
 export default function LivingEconomyBoard({mode,view,commands,blocked,onAction}){
  const [all,setAll]=useState(false);
+ const [expanded,setExpanded]=useState({});
  const rows=view.companies.filter(c=>c.status==='active');
  return <View testID={'living-economy-'+mode} style={S.board}>
  <Text style={S.kicker}>WORLD YEAR {view.year} · {view.cycle.toUpperCase()}</Text>
@@ -15,6 +16,7 @@ export default function LivingEconomyBoard({mode,view,commands,blocked,onAction}
  <Text style={S.label}>{c.name}</Text><Text style={S.muted}>Owner: {c.owner} · {c.sector} · {c.vacancies} vacancies</Text>
  <Text style={S.muted}>Value {dollars(c.value)} · last profit {dollars(c.lastProfit)} · payroll {dollars(c.lastPayroll)}</Text>
  <Text style={S.muted}>Demand {c.demand}/100 · reputation {c.reputation}/100</Text>
+ {mode==='money'?<><Text style={S.muted}>Corporate debt {dollars(c.corporate.debt)} · {c.corporate.listed?'Listed':'Private'} · {c.corporate.regions} markets · {c.corporate.products} products</Text><Text style={S.muted}>Your equity {dollars(c.corporate.playerValue)} · dividends {dollars(c.corporate.dividends)} · public float {c.corporate.publicFloat}%</Text>{c.corporate.parentId?<Text style={S.muted}>Subsidiary of {view.companies.find(o=>o.id===c.corporate.parentId)?.name||'Group company'}</Text>:null}<Pressable testID={'corporate-toggle-'+c.id} accessibilityRole="button" accessibilityState={{expanded:!!expanded[c.id]}} style={S.button} onPress={()=>setExpanded(v=>({...v,[c.id]:!v[c.id]}))}><Text style={S.label}>{expanded[c.id]?'Hide corporate decisions':c.playerOwned?'Open CEO dashboard':'Invest & negotiate'}</Text></Pressable>{expanded[c.id]?<View testID={'corporate-panel-'+c.id} style={{gap:6}}>{c.corporate.offer?<Text style={S.label}>Counteroffer: {dollars(c.corporate.offer.price)}</Text>:null}{commands.filter(x=>x.id.startsWith('corporate:')&&Number(x.id.split(':')[2])===c.id).map(x=><Pressable key={x.id} testID={x.id} accessibilityRole="button" accessibilityState={{disabled:blocked||!x.enabled}} disabled={blocked||!x.enabled} onPress={()=>onAction(x.id)} style={[S.button,(blocked||!x.enabled)&&S.disabled]}><Text style={S.label}>{x.label}</Text><Text style={S.muted}>{x.detail}</Text></Pressable>)}{c.corporate.history.slice(-3).reverse().map((h,i)=><Text key={i} style={S.muted}>Year {h.year} · {h.text}</Text>)}</View>:null}</>:null}
  {c.staff.map(e=><Text key={e.personId} style={S.muted}>{e.name} · {e.title}</Text>)}
  {commands.filter(x=>{const [prefix,action,id]=x.id.split(':');return prefix==='economy'&&Number(id)===c.id&&(mode==='work'?action==='apply':action!=='apply');}).map(x=><Pressable testID={x.id} accessibilityRole="button" accessibilityState={{disabled:blocked||!x.enabled}} disabled={blocked||!x.enabled} key={x.id} onPress={()=>onAction(x.id)} style={[S.button,(blocked||!x.enabled)&&S.disabled]}><Text style={S.label}>{x.label}</Text><Text style={S.muted}>{x.detail}</Text></Pressable>)}
  </View>)}
