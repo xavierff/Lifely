@@ -104,10 +104,11 @@ export function economyAct(s,command,ctx){
  if(action==='sell'){const buyer=s.people.filter(p=>p.alive&&p.age>=25&&p.world?.cash>=quote(c)).sort((a,b)=>b.world.cash-a.world.cash||a.id-b.id)[0],price=quote(c);buyer.world.cash-=price;s.cash+=price;c.ownerId=buyer.id;c.playerOwned=false;c.transfers++;corporateSale(c);ctx.add(s,'Sold '+c.name+' to '+buyer.name+'.','finance');}
  if(action==='partner'){const fee=money(1000*ctx.country(s).cost);ctx.spend(s,fee);c.cash+=fee;c.demand=clamp(c.demand+5,15,100);s.business.demand=clamp((s.business.demand??60)+5,0,100);c.partnershipYear=clock(s);ctx.add(s,'Formed a commercial partnership with '+c.name+'.','finance');}
 }
-export function inheritEconomy(next,old,heir){
+export function inheritEconomy(next,old,heir,estateShare=0){
  if(!state(old))return;next.livingEconomy=copy(state(old));const q=state(next);q.offset=clock(old)-next.age;q.lastYear=clock(old);q.job=null;
- // Existing player estate already includes the company value. Convert inherited player firms to closed historical records.
- for(const c of q.companies){if(c.playerOwned){c.playerOwned=false;c.status='closed';c.capital=0;c.cash=0;c.staff=[];corporateClose(c);}if(c.corporate)c.corporate.stake=0;if(c.ownerId===heir.id&&active(c)){c.ownerId=null;c.playerOwned=true;}}
+ // Retain a designated operating firm only against already allocated estate equity.
+ let allocated=Math.max(0,estateShare);
+ for(const c of q.companies){if(c.playerOwned){const value=corporatePlayerValue(c);const keep=active(c)&&heir.age>=18&&old.familyLife?.plans?.[c.id]===heir.id&&value>0&&value<=allocated&&value<=next.cash;if(keep){allocated-=value;next.cash-=value;}else{c.playerOwned=false;c.status='closed';c.capital=0;c.cash=0;c.staff=[];corporateClose(c);}}if(c.corporate)c.corporate.stake=0;if(c.ownerId===heir.id&&active(c)){c.ownerId=null;c.playerOwned=true;}}
  const refs=new Set(q.companies.flatMap(c=>[c.ownerId,...c.staff.map(e=>e.personId)]).filter(x=>x!==null));
  const kept=new Map(next.people.map(p=>[p.id,p]));
  for(const p of old.people)if(refs.has(p.id)&&p.id!==heir.id&&!kept.has(p.id)&&!next.npcFamilies?.society?.identities.some(i=>i.id===p.id))kept.set(p.id,{...copy(p),role:'community',married:false});

@@ -39,7 +39,7 @@ export function npcFamilyYear(s,ctx){
    for(const p of adults){const w=p.world;if(!w||w.job===null||p.age>=60||roll(p.id,'career')>=.035)continue;const options=ctx.careers.filter(j=>j.id!==w.job&&j.education<=w.education&&j.knowledge<=w.talent);if(options.length){const job=options[Math.floor(roll(p.id,'career-choice')*options.length)%options.length];w.job=job.id;w.level=0;ctx.npcNews(s,p,'Changed careers to '+job.title+' while managing family responsibilities.');}}
  }
  // At most one new marriage a year. Known friends can marry each other; relatives never pair with known relatives.
- if(q.unions.length<MAX_UNIONS){const candidates=existing.filter(p=>!active(q,p.id)&&roll(p.id,'marriage')<.13);
+ if(q.unions.length<MAX_UNIONS){const courting=new Set((s.familyLife?.courtships||[]).filter(d=>['dating','engaged'].includes(d.status)).flatMap(d=>d.ids));const candidates=existing.filter(p=>!active(q,p.id)&&!courting.has(p.id)&&roll(p.id,'marriage')<.13);
    for(const a of candidates){
      let b=a.role==='friend'?candidates.find(p=>p.id!==a.id&&p.role==='friend'&&!active(q,p.id)&&!familyRelated(s,a.id,p.id)&&Math.abs(a.age-p.age)<=12):null;
      if(!b)b=newMember(s,q,ctx,bounded(a.age+Math.floor(roll(a.id,'partner-age')*9)-4,22,65));
