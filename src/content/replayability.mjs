@@ -22,7 +22,7 @@ export const dynastyGoals=[
  {id:'longevity',name:'A Long Family Story',detail:'Complete two lives reaching age 75.',target:2,value:(s,q)=>q.ancestors.filter(a=>a.age>=75).length+Number(!s.alive&&s.age>=75)}
 ];
 const reconnected=s=>!!s.dramaticStories?.completed.some(r=>r.outcome==='reconnected');
-export function randomLifeOptions(seed,countryCount=6){let x=(Number(seed)>>>0)||12345;const next=n=>{x=(Math.imul(x,1664525)+1013904223)>>>0;return x%n;};return {country:next(countryCount),background:['modest','ordinary','comfortable','royal'][next(4)],goal:['balance','wealth','family'][next(3)],seed,origin:'random'};}
+export function randomLifeOptions(seed,countryCount=6){let x=(Number(seed)>>>0)||12345;const next=n=>{x=(Math.imul(x,1664525)+1013904223)>>>0;return Math.floor(x/4294967296*n);};return {country:next(countryCount),background:['modest','ordinary','comfortable','royal'][next(4)],goal:['balance','wealth','family'][next(3)],seed,origin:'random'};}
 export function initReplay(s,options){
  if(options.mode===undefined&&options.origin===undefined)return;
  const q=s.replay=fresh(options.mode);q.origin=options.origin==='random'?'random':'standard';
@@ -36,7 +36,7 @@ export function replayAnnual(s,{change}){
 export function replayRefresh(s,worth){
  const q=s.replay??=fresh('balanced');if(q.mode==='sandbox')return;
  for(const x of secretDefs)if(!q.secrets.includes(x.id)&&x.test(s))q.secrets.push(x.id);
- const w=worth(s);for(const x of dynastyGoals)if(!q.completed.includes(x.id)&&x.value(s,q,w)>=x.target)q.completed.push(x.id);
+ const w=s.alive?0:worth(s);for(const x of dynastyGoals)if(!q.completed.includes(x.id)&&x.value(s,q,w)>=x.target)q.completed.push(x.id);
 }
 export function inheritReplay(next,old,worth){
  const prev=old.replay||fresh('balanced'),q=fresh(prev.mode);q.origin=prev.origin;q.ancestors=[...prev.ancestors,{name:old.name,age:old.age,education:old.education,worth:worth(old),reconnected:reconnected(old)}].slice(-32);
