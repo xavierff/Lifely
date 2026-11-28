@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import E from '../src/engine.mjs';
+import {chooseWorkingAction,auditSimulation} from '../scripts/audit-simulation.mjs';
+import {dashboardModel} from '../src/content/premium-ux.mjs';
+import {categoryForAction} from '../src/content/action-discovery.mjs';
+test('working strategy selects a real enabled job and not a locked one',()=>{const s=E.createLife({seed:17601});s.age=25;s.actions=3;s.stats.knowledge=100;const cmds=E.commands(s),c=chooseWorkingAction(s,cmds);assert.ok(c.enabled&&c.id.startsWith('job:'));assert.ok(E.act(s,c.id).job);});
+test('debt repayment is categorized as Money and suggested with sufficient cash',()=>{const s=E.createLife({seed:17602});s.age=30;s.debt=15000;s.cash=12000;s.actions=3;assert.equal(categoryForAction('repay:10000'),'Money');const cmds=E.commands(s),v=dashboardModel(s,cmds);assert.ok(v.suggestions.some(c=>c.category==='Money'&&c.id.startsWith('repay:')));const c=cmds.find(c=>c.id==='repay:10000');assert.ok(c.enabled);const next=E.act(s,c.id);assert.equal(next.debt,5000);assert.equal(next.cash,2000);assert.equal(E.worth(next),E.worth(s));});
+test('working strategy advances an active social and economic life',()=>{const report=auditSimulation({years:30,modes:['balanced'],countries:[0],strategy:'working'});console.log('LIFELY WORKING SMOKE',JSON.stringify(report));assert.equal(report.strategy,'working');assert.ok(report.totalYears>=18);assert.ok(report.maxNPCs>2);assert.ok(report.maxSaveBytes>0);});
+test('working strategy uses no arbitrary credit or difficulty changes',()=>{const s=E.createLife({seed:17603});s.age=32;s.cash=0;s.debt=15000;s.actions=3;s.budget='frugal';s.job={id:0,level:0,experience:0};const cmds=E.commands(s),c=chooseWorkingAction(s,cmds);assert.ok(!c||cmds.some(x=>x.id===c.id&&x.enabled));assert.ok(!c?.id.startsWith('repay:'));});
