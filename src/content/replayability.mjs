@@ -34,7 +34,7 @@ export function replayAnnual(s,{change}){
  if(id==='sandbox'){change(s,'stress',-3);if(s.age>=18&&s.stats.health<55)change(s,'health',4);}
 }
 export function replayRefresh(s,worth){
- const q=s.replay;if(!q||q.mode==='sandbox')return;
+ const q=s.replay??=fresh('balanced');if(q.mode==='sandbox')return;
  for(const x of secretDefs)if(!q.secrets.includes(x.id)&&x.test(s))q.secrets.push(x.id);
  for(const x of dynastyGoals)if(!q.completed.includes(x.id)&&x.value(s,q,worth(s))>=x.target)q.completed.push(x.id);
 }
